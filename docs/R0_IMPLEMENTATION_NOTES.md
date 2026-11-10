@@ -33,7 +33,8 @@ other documents in `docs/`; this file records how R0 implements it and where it 
   non-local bind without authentication, refusal of not-yet-implemented auth modes, private
   content-addressed file storage.
 - `GraphService` interface with the PostgreSQL implementation skeleton and backend-neutral
-  `GraphView`; multi-hop paths return `graph-capability-unavailable` (available from R2).
+  `GraphView`. R0 advertises no traversal capabilities: direct-neighbour traversal returns
+  `graph_capability_unavailable` (available from R1) and multi-hop paths likewise (R2).
 - Journey registry with the nine stages and one next step.
 - Frontend shell (Vite, React 18, TypeScript, Tailwind, TanStack Query, React Router):
   dashboard, three-field new-project form, project overview with journey bar, system-check
@@ -45,16 +46,17 @@ other documents in `docs/`; this file records how R0 implements it and where it 
 
 | Test | Where | Status |
 |---|---|---|
-| R0-1 `make up` from a clean clone, all services healthy | `make up`, `.github/workflows/stack.yml` | pass locally (all 6 services healthy; end-to-end smoke test and UI flow through nginx); CI workflow not yet run on GitHub |
+| R0-1 `make up` from a clean clone, all services healthy | `make up`, `.github/workflows/stack.yml` | pass locally and on GitHub (see CI results) |
 | R0-2 readiness 200 / problem+json 503 | `tests/integration/test_api.py` | pass |
 | R0-3 SSE streaming, checkpoint pause, worker restart, resume | `tests/integration/test_runs_e2e.py` | pass (incl. crash mid-step) |
+| R0-3 cancellation and retry limit (review fixes) | `tests/integration/test_run_lifecycle.py` | pass |
 | R0-4 rolled-back events never dispatched; idempotent retries | `tests/integration/test_outbox.py` | pass |
 | R0-5 secrets never logged | `tests/unit/test_logging.py` | pass |
 | R0-6 migrations up/down/up; models match migrations | `tests/integration/test_migrations.py` | pass |
 | R0-7 nine stages, deterministic states, one next step | `tests/unit/test_journey.py`, `test_api.py` | pass |
 | R0-8 provider independence (fake swap, lint rule, manifest) | `test_llm_config.py`, `test_import_rules.py`, `test_runs_e2e.py` | pass |
 | R0-9 project scope on every route; no non-local bind without auth | `test_route_inventory.py`, `test_security.py`, `test_api.py` | pass |
-| R0-10 graph readiness (registration, conditions, immutability, GraphService, lint) | `test_graph_readiness.py`, `test_api.py`, `test_import_rules.py` | pass |
+| R0-10 graph readiness (registration, conditions, immutability, GraphService, lint) | `test_graph_readiness.py`, `test_graph_capabilities.py`, `test_api.py`, `test_import_rules.py` | pass |
 
 ## Decisions and deviations
 
@@ -77,3 +79,35 @@ other documents in `docs/`; this file records how R0 implements it and where it 
 | 15 | GROBID image | `lfoppiano/grobid:0.8.1` (CPU, CRF models) | Smaller image; the deep-learning image can be swapped in later |
 | 16 | Build behind TLS proxies | Optional `extra_ca` build secret (empty by default, never in an image layer) | Needed in environments with TLS-inspecting proxies, including this one |
 | 17 | Project deletion | `DELETE /projects/{id}` archives only | Permanent deletion arrives with the retention and deletion-marker work in R1 |
+
+## Review fixes (before R0 sign-off)
+
+| # | Finding | Fix | Tests |
+|---|---|---|---|
+| 1 | A running job could overwrite a CANCELLED run with SUCCEEDED | Every run status transition (`mark_running`, `open_checkpoint`, `finish`, the queued update on a decision) is a conditional update that applies only while the run is not terminal. Workflows check for cancellation at every progress event and step boundary (`RunCancelled`); the worker heartbeat checks the run and interrupts the job's task when the run was cancelled, then completes the job without retry. Cancelling also closes pending checkpoints (`rejected`, "run cancelled"); deciding a checkpoint of a finished run returns 422 | `test_run_lifecycle.py`: cancel while a step executes, cooperative stop without the heartbeat, terminal runs cannot change state, cancel while awaiting approval |
+| 2 | Stale running jobs were reclaimed regardless of `attempts < max_attempts` | `claim()` reclaims a stale job only while attempts remain. Each worker tick calls `fail_exhausted_stale()`, which marks exhausted stale jobs `failed` ("worker stopped responding; retry limit reached") and fails their runs with error type `WorkerLost` (a cancelled run stays cancelled) | `test_run_lifecycle.py`: three simulated hard crashes, no fourth claim, job and run end failed with a `run.failed` event; exhausted job does not override a cancelled run |
+| 3 | R0 graph service advertised NEIGHBORS but returned only the requested node | `PostgresGraphService.capabilities()` is empty in R0; `neighbors()` raises `CapabilityUnavailable` (`capability=neighbors`, `available_from=R1`), returned as 501 problem+json `graph_capability_unavailable` | `test_graph_capabilities.py`, `test_api.py::test_neighbour_traversal_is_unavailable_until_r1` |
+| 4 | Stack CI only ran on pushes to `main` | `stack.yml` runs on pushes to every branch (plus pull requests and manual runs) | Stack workflow run below |
+| 5 | Frontend CI installed pnpm 9; `package.json` declares pnpm 10.28.0 | `pnpm/action-setup` reads the version from `frontend/package.json` (`package_json_file`) | Frontend workflow run below |
+
+## CI results
+
+Pending: the workflow runs for this commit are still in progress.
+
+## Remaining limitations
+
+- **Cancellation granularity.** Cancellation is cooperative: a running step stops at its next
+  progress event or step boundary, or when the worker heartbeat (every
+  `JOB_HEARTBEAT_SECONDS`, 5 s by default) sees the cancellation and interrupts the job's
+  task. Code that does not yield to the event loop (CPU-bound or blocking calls) cannot be
+  interrupted until it returns; whatever it does afterwards can no longer change the run's
+  state. Long blocking work in later releases must run in a cancellable subprocess or check
+  for cancellation itself.
+- **Side effects after cancellation.** Conditional transitions protect the run's state, not
+  other writes a step may already have made. R0's only workflow (system check) has none;
+  workflows from R1 must make their writes idempotent and scoped to the run, as already
+  required by the architecture.
+- **Retry limit after crashes.** A crashed job is detected after `JOB_STALE_AFTER_SECONDS`
+  (30 s by default), so a run whose worker dies on its last attempt fails about 30 s later.
+- **Anthropic adapter** not run against the live API (no key in this environment; D1 open).
+- **Frontend API types** are hand-written until OpenAPI generation in R1.
