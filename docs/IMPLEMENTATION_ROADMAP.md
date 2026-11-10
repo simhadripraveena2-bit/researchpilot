@@ -68,10 +68,13 @@ graph TD
   EXPP[Experiment plans + tracking]
   PROP[Reports, proposals, LaTeX/PDF export]
   MON[Monitoring + impact alerts]
-  DATE[Date Resolver: date claims, first public date, release types]
+  VM[Version Matcher: confidence-aware preprint/publication matching]
+  DATE[Date Resolver: date claims, confidence, release types, UTC windows]
   LAT[Latest Research scans + page]
   RET[Evidence Retriever + Context Builder]
-  ASK[Ask & Learn conversations]
+  ASK[Ask & Learn conversations + summaries with carried evidence]
+  LES[Progressive lessons + project learning progress]
+  RETN[Retention + deletion controls]
 
   F0 --> D1 --> D2 --> RA
   F0 --> OBJ --> RA
@@ -93,12 +96,13 @@ graph TD
   RIG --> EXPP --> PROP
   CMP --> PROP
   D1 --> DATE
-  D2 --> DATE --> LAT
+  D2 --> VM --> DATE --> LAT
   RB --> LAT
   CARD --> LAT
   PDF --> RET --> ASK
   EXPL --> ASK
-  ASK --> LP
+  ASK --> LES --> LP
+  ASK --> RETN
   EQ --> ASK
   EXT --> ASK
   LAT --> MON
@@ -143,6 +147,17 @@ Ask & Learn depends on the PDF pipeline and retrieval; it gains equations
 R1 ships in four internal milestones so value appears early:
 **M1a Discover** → **M1b Filter** → **M1c Latest Research** → **M1d Learn & Ask**.
 
+### Implementation order (after approval)
+1. **R0 Foundation:** two PRs (scaffold + DB/migrations; API/worker/SSE/frontend shell/compose).
+2. **M1a Discover:** identifiers → SourceClient → clients (arXiv, S2, OpenAlex basic, Crossref, bioRxiv/medRxiv) → paper tables + Version Matcher + G-MATCH → Date Resolver (D28) + UTC/time-zone handling + G-LATEST-DATES → objective + Planner → discovery workflow.
+3. **M1b Filter:** signals → scoring/tiers/anti-proxy → Stage B + cross-checks → cards + validator → overrides/feedback → triage UI.
+4. **M1c Latest Research:** scan planner + W8 → abstract-mode extraction, relation_to_project, linker, Action Recommender → Latest brief + digest → page.
+5. **M1d Learn & Ask:** field map → PDF pipeline → retrieval + context builder → Tutor answer mode + conversations + summaries → progressive teaching + progress → saved explanations → retention → glossary + learning path → read-with-me.
+6. Evaluation sets in parallel from M1a. Usability round. R1 release gates (EVALUATION_FRAMEWORK §6).
+
+Within each milestone, the parts that work without an LLM are built and
+tested before the LLM layer that enriches them.
+
 ## 4. Phase tasks and acceptance tests
 
 Acceptance tests have IDs. "(E)" means the test is defined in
@@ -173,9 +188,9 @@ EVALUATION_FRAMEWORK.
 **M1a Discover — tasks**
 1. Identifier parsing/normalisation (DOI, arXiv old/new, S2, OpenAlex) with property tests.
 2. `SourceClient` base: rate limits, retries, circuit breaker, HTTP cache, source records, usage budgets.
-3. Clients: arXiv, Semantic Scholar, OpenAlex (optional, budgeted), Crossref; integration docs with verified-on dates.
-4. Paper tables, dedup (identifier union-find + conservative fuzzy), enrichment, citations, survey detection.
-4a. Date provenance: `paper_dates`, `paper_versions`, Date Resolver (claims, first public date, confidence, release-type rules) with table-driven tests from G-LATEST-DATES. Built here because every discovered paper stores its dates.
+3. Clients: arXiv, Semantic Scholar, OpenAlex (basic access, budgeted; `OPENALEX_CAPABILITIES` switch with both paths tested, D24), Crossref (incl. `relation` and `posted` fields), bioRxiv/medRxiv (`/details`, `/pubs`; D22); integration docs with verified-on dates.
+4. Paper tables, dedup (identifier union-find), **Version Matcher** with `paper_match_decisions` (decisive / strong / supporting / contradicting evidence; possible matches linked, not merged; reversible merges; D29), enrichment, citations, survey detection. G-MATCH (first 300 pairs, incl. 100 adversarial) before tuning thresholds.
+4a. Date provenance: `paper_dates` (role, manifestation, identifier), `paper_versions`, Date Resolver (claims, corroboration lookups, confidence incl. `corroborated`/`single_secondary` (D28), first public date, release-type rules), UTC storage and window computation with boundary-day flags (D23); user time zone preference and the `LocalTime` display component; table-driven tests from G-LATEST-DATES. Built here because every discovered paper stores its dates.
 5. Research objective model + Planner (LLM) + rule-based fallback; objective editor UI.
 6. Discovery workflow W1 with plain-language checkpoints; search log; manual add by identifier.
 
@@ -188,10 +203,10 @@ EVALUATION_FRAMEWORK.
 12. Filter/Triage UI with beginner and advanced views; seed selection for citation expansion uses Stage A priority.
 
 **M1c Latest Research — tasks**
-12a. Planner `LatestScanPlan` (per-subtopic queries, arXiv category mapping) and the Latest Scan Planner service; date-bounded source queries (arXiv `submittedDate` + category sweep; S2 date-range search; OpenAlex publication-date filter, plus created-date filter only on a paid plan; Crossref `from-pub-date` and DOI date confirmation).
+12a. Planner `LatestScanPlan` (per-subtopic queries, arXiv category mapping, bioRxiv/medRxiv category mapping for life-science objectives) and the Latest Scan Planner service; date-bounded source queries (arXiv `submittedDate` + category sweep; bioRxiv/medRxiv `/details` + `/pubs`; S2 date-range search; OpenAlex publication-date filter, plus created-date filter only when the premium capability is enabled; Crossref `from-pub-date` and DOI date confirmation).
 12b. W8 Latest scan workflow; `latest_scans`, `latest_scan_entries`, `latest_views`; coverage and failure recording; refresh on open if older than 24 h.
-12c. Relevance Judge `relation_to_project`; Extractor abstract mode; Related Item Linker (cites vs similar); Card Writer "What's new" field and digest mode.
-12d. Latest Research page: window picker, release-type tabs, filters, date provenance popover, entry cards, actions (save, dismiss, read later, notes, Ask about this), "new since last visit".
+12c. Relevance Judge `relation_to_project` (challenges cross-checked); Extractor abstract mode (incl. comparative statements and author-stated limitations/future work); Related Item Linker (cites vs similar); Action Recommender; Card Writer **Latest brief** (eight questions), "What's new" and digest mode.
+12d. Latest Research page: window picker (local-time display), release-type tabs, eight-question briefs (beginner/advanced views), action chips with override, filters (incl. action), date provenance popover, possible-match prompts, entry actions (save, dismiss, read later, notes, Ask about this), "new since last visit".
 12e. G-LATEST-DATES and G-LATEST-RELEVANCE (first 5 topics × 2 weeks of frozen responses).
 
 **M1d Learn & Ask — tasks**
@@ -199,8 +214,10 @@ EVALUATION_FRAMEWORK.
 14. PDF pipeline: resolver chain (arXiv, S2 OA, OpenAlex OA, Unpaywall, upload), downloader, GROBID sections, chunks + embeddings; precise failure reasons.
 15. Explanation service (on-demand, cached, streamed) + Tutor: primer, glossary definitions, section explanations; grounded/background labelling; level switch.
 15a. Evidence Retriever (hybrid pgvector + full-text, scoped) and Context Builder (project + view context + memory within budget).
-15b. Ask & Learn: `tutor_conversations`, `tutor_messages`, `tutor_message_evidence`; Scope Router; Tutor conversational mode with seven styles and follow-up intents; rolling summaries; `TutorAnswer` validation (grounding, not-found, equation rule, background restrictions); save to project; feedback; prerequisite offers → Curriculum Builder.
-15c. Ask & Learn panel available on every page (context chips, scope switch, follow-up chips, sources); text selection → Ask; history page.
+15b. Ask & Learn: `tutor_conversations`, `tutor_messages`, `tutor_message_evidence`, `conversation_summaries` (summary text + deterministically collected `carried_refs`); Scope Router; Tutor answer mode with seven styles and follow-up intents; `TutorAnswer` validation (grounding, not-found, equation rule, background restrictions, **no summary/assistant-message evidence**); saved explanations (independent copies); feedback; prerequisite offers → Curriculum Builder.
+15b-2. **Progressive teaching:** `teaching_sessions`, `understanding_checks`, `concept_progress`; Tutor teaching mode (eight steps, lazy generation, skip reasons, simpler/deeper/jump, interrupt and resume); check grading; Learning Progress Tracker; progress on the Learn page and learning path.
+15b-3. **Retention:** project retention policy, delete conversation / delete all / reset progress, Retention Enforcer daily job, cascade rules.
+15c. Ask & Learn panel available on every page (context chips, scope switch, follow-up chips, sources, lesson stepper and controls); text selection → Ask; history, saved explanations and learning progress page; retention settings.
 16. Term Miner + glossary UI with "appears in" links.
 17. Curriculum Builder + learning path UI with progress.
 18. Read-with-me UI (paper + Ask & Learn side by side); reading status, notes, saved items, project history.
@@ -236,7 +253,7 @@ EVALUATION_FRAMEWORK.
 - R1-24 Release-type classification passes every G-LATEST-DATES case: revisions never appear as new preprints; metadata-only changes never appear as new; journal versions of earlier preprints are labelled with the preprint date; month/year-precision and conflicting dates go to *Date uncertain*.
 - R1-25 Automated audit: every displayed date equals a stored source-record value of the stated type and source, and shows its retrieval timestamp; 0 violations.
 - R1-26 The same work from arXiv, S2, OpenAlex and Crossref appears once; a recent paper already in the project shows its existing state (saved, notes, overrides).
-- R1-27 Recall ≥ 0.90 (arXiv-covered fields) and "Read first" nDCG@10 ≥ 0.70 on G-LATEST-RELEVANCE; shuffling dates within the window doesn't change "Read first" order.
+- R1-27 Recall ≥ 0.90 (arXiv-covered fields) and default-order nDCG@10 ≥ 0.70 on G-LATEST-RELEVANCE; shuffling dates within the window doesn't change "Read first" order.
 - R1-28 Contribution, method and dataset statements verify against the abstract or say "Not stated in the abstract"; "cites" links are backed by citation records, and "similar" links are labelled.
 - R1-29 A failed or rate-limited source shows in the coverage line, and the scan completes as partial; an empty window shows an explanation and a wider-window suggestion.
 - R1-30 Save, dismiss (with reason), read later and notes from Latest Research appear consistently on Papers, Filter and History; "new since last visit" counts are correct across visits.
@@ -249,10 +266,27 @@ EVALUATION_FRAMEWORK.
 - R1-35 Validator rejects paper-attributed equations not matching an extracted equation or user selection, unverifiable quotes and background blocks naming papers or results not in the project (adversarial suite).
 - R1-36 Each style and follow-up intent produces the requested form (rater check ≥ 0.9); code blocks are labelled "not run".
 - R1-37 Level fit and accuracy targets met on G-TUTOR R1 subset (E §3.9).
-- R1-38 Saving an answer creates a project note with its sources and claim kinds intact; deleting a conversation removes its messages and keeps saved notes.
+- R1-38 Saving an answer creates a **saved explanation** that keeps its sources and claim kinds; deleting the conversation leaves the saved explanation intact (its link to the source message becomes empty).
 - R1-39 Prerequisite offers map to glossary/concept items; "Build a learning sequence" adds ordered items to the learning path without violating recorded prerequisites.
 - R1-40 Ask & Learn opens from paper reading, cards, Latest Research, glossary, learning path and field map with the correct context chips; time to first token p50 ≤ 3 s.
 - R1-41 Canonical asks (same subject, level, style, no prior turns) are served from cache with no LLM call.
+
+*Final-review additions (dates, matching, teaching, memory)*
+- R1-42 **Secondary-source-only dates:** a paper whose only day-precision date is from OpenAlex (or only from Semantic Scholar) is classified *Date uncertain*, shows the date as "unconfirmed", and never appears in *New research*. When Crossref/arXiv/bioRxiv corroboration is found later, it is reclassified with a "Reclassified" badge. Two agreeing secondary sources → *New research* with the corroborated badge.
+- R1-43 **Conflicting publication dates:** authoritative claims more than 2 days apart → *Date uncertain* with all claims and sources listed; a secondary claim disagreeing with an authoritative claim is flagged in provenance but the authoritative date stands.
+- R1-44 **Preprint-to-journal matching:** arXiv and bioRxiv/medRxiv preprints with Crossref `relation`, bioRxiv `/pubs` or arXiv `doi` links are auto-matched; the journal version is classified "Published version of an earlier preprint" with the preprint date shown; G-MATCH precision/recall targets met (E §3.1).
+- R1-45 **Similar-title false matches:** none of the G-MATCH adversarial pairs (different authors, Part I/II, comment/reply/erratum, conference vs extended version, thesis vs article) is merged; a property test confirms title similarity alone never produces a match; possible matches are linked, not merged, until the user confirms.
+- R1-46 **Match preservation:** after a merge, every original source record, identifier and date claim (with manifestation) is still present; splitting restores both papers exactly; user confirm/reject decisions survive re-matching.
+- R1-47 **Local time-zone display:** with the user zone set to Europe/Berlin, America/Los_Angeles, Asia/Kolkata and Pacific/Kiritimati, timestamps and window bounds display correctly (incl. DST transitions); date-only values display the same calendar date in every zone; changing the zone never changes which papers are in the window.
+- R1-48 **Seven-day window boundaries:** with a fixed clock, a timestamp exactly at `now − 168 h` is included, one second earlier is excluded, `now` itself is excluded; date-only values on the start or end day are included and flagged `boundary_day`; month-precision values are never included.
+- R1-49 **Latest brief:** every relevant entry has all eight answers, each evidence-backed or an explicit "can't tell / not stated / none stated"; opportunities cite an author-stated sentence; `challenges` relations are cross-checked; changing only dates or citation counts never changes the action (property test).
+- R1-50 **bioRxiv/medRxiv:** enabled automatically for life-science objectives and toggleable per project; v1 posting dates classify New preprints; later versions classify as Revised; medRxiv entries show "Preprint — not peer-reviewed".
+- R1-51 **OpenAlex capabilities:** with the default `basic` capability, no premium filter is ever requested (asserted on the HTTP mock); with `premium_filters` enabled, created-date detection is used; both paths produce the documented "newly indexed" behaviour.
+- R1-52 **Progressive teaching:** a lesson presents steps in order; a beginner starts at Intuition, an expert at Technical; "Simpler", "Go deeper", "Skip to" and "Stop" work; a mid-lesson question is answered and "Resume lesson" returns to the same step; inapplicable steps are skipped with a reason; check results update `concept_progress`; rubric targets met on G-TUTOR (h).
+- R1-53 **Multi-turn tutor context:** in 25-turn scripted dialogues, questions that depend on turns 1–10 are answered correctly after summarisation (≥ 0.9), and pronoun and anchor references resolve.
+- R1-54 **Project memory after summarisation:** after older turns are summarised, the objective, notes, saved explanations, concept progress and learning path are still loaded into context and unchanged; the summary is never cited as a source.
+- R1-55 **Conversation deletion and retention:** deleting a conversation removes its messages, evidence links, summaries and conversation-only claims, and keeps saved explanations, concept progress and check results; "delete all" does the same project-wide; "delete after N days" expires conversations via the daily job (fixed clock); "don't keep history" stores no messages after the session; "reset learning progress" is separate and requires confirmation.
+- R1-56 **Evidence preservation:** after summarisation and after the user saves an explanation, every evidence reference (span, chunk, equation, item) from the original turns still resolves to the same quote, page and section; the validator rejects citations of summaries or earlier assistant messages (adversarial suite).
 
 ### R2 — Understand & Compare
 **Tasks:** Ask & Learn gains paper equations (from arXiv LaTeX) with step-by-step maths, algorithm/architecture walkthroughs with pseudocode, and multi-paper questions grounded in extractions; Latest Research cards gain full-text-verified contributions/datasets for open-access recent papers; Extractor (contributions, methods, datasets, metrics, results, limitations, assumptions, protocols, compute) with quote verification and Batches API option; typed entity normalisation + detail tables; arXiv LaTeX source + equation explainer; algorithm explainer; exercises (not run); Comparator (tables, `paper_relations`, evolution, conflicts with comparability); field map v2 (methods/datasets per direction, taxonomy); RIE signals for papers using full text, plus RIE for methods, datasets, benchmarks and metrics; resources UI; G-EXTRACT and G-RESOURCES evaluation.
@@ -311,7 +345,7 @@ EVALUATION_FRAMEWORK.
 | PDF retrieval, GROBID sections, read-with-me (without explanations) | Equation and algorithm explanations, exercises |
 | Glossary term list with "appears in" links | |
 | Latest Research: date-verified entries, release types, dedup, Stage A tiers, cites/similar links, filters, actions | Latest Research relevance reasons, contributions, overlap/challenge flags, digest |
-| Ask & Learn passage search ("where does this term appear?") | Ask & Learn answers |
+| Ask & Learn passage search ("where does this term appear?"); saved explanations and learning-progress views; retention controls; version matching from identifier links | Ask & Learn answers, progressive lessons and checks; Latest briefs |
 | Overrides, notes, decisions, history, exports | |
 | GitHub and Hugging Face metadata (R4) | |
 
@@ -333,30 +367,48 @@ before the LLM layer that enriches it.
 | T9 | Licensing (PyMuPDF AGPL if adopted; CC-BY-SA dumps; publisher PDFs) | Low–Medium | Medium | GROBID + pypdfium2; store licences; no redistribution of PDFs |
 | T10 | Clustering instability makes field maps change between runs | Medium | Low | Fixed seeds; stability tracked; user-pinned directions later |
 | T11 | Date metadata is inconsistent across sources (OpenAlex dates unreliable for recency; Crossref month-only or future dates; arXiv announcement lag) | High | High for Latest Research | Separate date claims, authoritative-source rules, *Date uncertain* tab, 3-day fetch overlap, frozen-response test set |
-| T12 | Recent papers missing from S2/OpenAlex for days; weak preprint coverage outside arXiv fields | High | Medium | arXiv category sweep + Crossref; per-source coverage shown; optional extra preprint servers (D22) |
+| T12 | Recent papers missing from S2/OpenAlex for days; weak preprint coverage outside arXiv fields | High | Medium | arXiv category sweep, bioRxiv/medRxiv for life sciences (D22) and Crossref; per-source coverage shown |
 | T13 | Tutor sounds confident when the paper doesn't support the answer | Medium | High | Scope-first grounding, "not found" status, validator, G-TUTOR unanswerable set, feedback hiding |
 | T14 | Tutor cost grows with long conversations | Medium | Medium | Rolling summaries, prompt caching, retrieval budget, per-project LLM budget |
 | T15 | arXiv category sweeps are large in busy categories | Medium | Low | Category caps, Stage A prescore before any LLM use, cache |
+| T16 | Wrong preprint/journal merges, or missed matches without identifier links | Medium | High (wrong dates and duplicates) | Never merge on title alone; adversarial G-MATCH; possible matches need confirmation; reversible merges with full provenance |
+| T17 | D28 lowers recall for papers dated only by secondary sources (venues outside arXiv, bioRxiv/medRxiv and Crossref) | Medium | Medium | Corroboration lookups; *Date uncertain* tab is visible and searchable; recall measured per field |
+| T18 | bioRxiv/medRxiv API changes or throttling (no published rate limit) | Low–Medium | Medium | Conservative client, caching, coverage notices; verify terms at implementation |
+| T19 | Lesson or check content wrong at beginner level (most trusting users) | Medium | High | Expert rubric per step, answer-key validation, background labelling, "wrong" feedback hides content |
+| T20 | Retention bugs (data kept after deletion, or progress lost) | Low | High (trust/privacy) | Cascade rules tested with fixed clocks; deletion audit test; separate confirmed reset for progress |
+| T21 | Summaries drift and lose context in long conversations | Medium | Medium | Carried references collected deterministically, not from summary text; long-dialogue test set |
 
-## 7. Decisions needed before coding
+## 7. Decisions
 
+### 7.1 Approved
+| # | Decision | Approved approach |
+|---|---|---|
+| D21 | Latest Research and Ask & Learn in the MVP | **Approved.** Both in R1, as milestones M1c and M1d |
+| D22 | bioRxiv and medRxiv | **Approved** for life-science objectives (auto-enabled when the objective maps to life-science categories; toggleable per project) |
+| D23 | Time | **Approved.** UTC for storage and rolling-window calculation (`[now − N×24 h, now)`); display in the user's local time zone; date-only values never shifted across zones |
+| D24 | OpenAlex | **Approved.** No paid plan required initially; capability-based client (`OPENALEX_CAPABILITIES=basic` by default, `premium_filters` can be enabled later by configuration) |
+| D25 | Release types | **Approved.** "Published version of an earlier preprint" is a separate type (six types including Date uncertain) |
+| D26 | Tutor memory and retention | **Approved.** Last 12 turns verbatim + structured summary of older turns with carried evidence references; project memory independent of conversations; deletion and retention controls (§4.10.1–4.10.2 in ARCHITECTURE) |
+| D27 | Tutor scope | **Approved.** General research questions allowed; unrelated requests politely redirected |
+| D28 | Unverified dates | **Approved (new).** A first public date supported only by one uncorroborated secondary source is *Date uncertain* by default; never a confirmed new release |
+| D29 | Preprint/publication matching | **Approved (new).** Confidence-aware matching using DOI, arXiv ID, explicit version relations, title and author similarity, publication metadata; never on title alone; possible matches linked, not merged; source records and date provenance always preserved |
+
+### 7.2 Recommended defaults, not yet explicitly approved
 | # | Decision | Recommendation |
 |---|---|---|
 | D1 | LLM provider and models | Anthropic via a provider-agnostic gateway; `claude-opus-5-5` default for all tasks; per-task overrides only after evaluation shows quality holds |
 | D2 | PDF text library | GROBID + pypdfium2 (avoid AGPL PyMuPDF) |
-| D3 | Job queue | Postgres-backed queue; no Redis in the MVP |
+| D3 | Job queue | Postgres-backed queue (also runs the daily retention job); no Redis in the MVP |
 | D4 | Embeddings | Local open model (no API cost); version recorded |
 | D5 | Auth | Single user until R5; `user_id` columns from day one |
-| D11 | OpenAlex | Optional, with a daily budget; free core works without it |
+| D11 | OpenAlex budget | Daily usage budget; free core works with OpenAlex disabled |
 | D12 | Vector store | pgvector behind an interface |
 | D13 | Graph store | Postgres + networkx; Neo4j deferred |
-| D18 | MVP scope | R1 = Discover, Filter (papers), Latest Research and Learn & Ask, in milestones M1a–M1d |
-| D19 | Gold-set annotators | Who annotates the 5 initial topics (needed before M1b is tuned) |
+| D18 | MVP scope | R1 = Discover, Filter (papers), Latest Research, Learn & Ask, in milestones M1a–M1d |
 | D20 | RIE default weights and thresholds | Start with the profiles in RIE §5.2; calibrate on G-RELEVANCE before release |
-| D21 | Latest Research and Ask & Learn in the MVP | Yes: as R1 milestones M1c and M1d (mostly reuse). Alternative: ship them as R1.1 to keep the first release smaller |
-| D22 | Extra preprint servers for non-arXiv fields (e.g. bioRxiv/medRxiv, which have a free public API) | Add as an optional source in R1 for life-science projects, behind the same `SourceClient` and Date Resolver rules. Needs your approval because it is a new integration |
-| D23 | Date window semantics | Rolling `[now − 7×24 h, now)` in UTC on the first public date; arXiv uses the v1 *submission* date (labelled as such), with a 3-day fetch overlap for announcement lag |
-| D24 | "Newly indexed" detection | Use OpenAlex `from_created_date` only if you have a paid OpenAlex plan; otherwise use our own first-seen date (less complete, labelled) |
-| D25 | Release types | Six types: the four you specified + "Published version of an earlier preprint" (so journal versions of old preprints aren't presented as new research) + "Date uncertain" |
-| D26 | Tutor memory | Last 12 turns verbatim + rolling summary; conversations are project-scoped, kept until the user deletes them |
-| D27 | Tutor scope | General research and technical questions allowed; non-research requests get a short redirect (changes the earlier "no open chat" non-goal) |
+| D30 | Matching and date thresholds | Start with the thresholds in ARCHITECTURE §4.8–4.8a; calibrate on G-MATCH and G-LATEST-DATES before release |
+
+### 7.3 Still open
+| # | Decision | Needed by |
+|---|---|---|
+| D19 | Who annotates the gold sets (5 initial topics; G-MATCH and G-LATEST-DATES can be built by the team; G-RELEVANCE, G-LATEST-RELEVANCE and G-TUTOR need domain experts) | Before M1b tuning (G-RELEVANCE) and M1c/M1d release |

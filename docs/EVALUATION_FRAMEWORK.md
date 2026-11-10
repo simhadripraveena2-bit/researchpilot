@@ -34,9 +34,10 @@ data store (larger). They record annotator, date and guidelines version.
 | **G-EXTRACT** | OA papers with hand-labelled datasets, metrics, results tuples, limitations, assumptions, protocols, compute | ≥ 40 papers | team | R2 |
 | **G-EXPLAIN** | Subjects (sections, equations, concepts) with reference points to cover per level | ~150 subjects × 3 levels | domain experts + educators | R1/R2 |
 | **G-STRUCTURE** | Expert field outlines and prerequisite orderings per topic | per topic | experts | R1 |
-| **G-LATEST-DATES** | Frozen source responses (arXiv, Crossref, OpenAlex, S2) for ≥ 400 papers, covering: new v1 preprints, revisions (v2+) of old papers, journal versions of old preprints, new journal articles without preprints, older papers newly indexed, metadata-only updates (Crossref deposited/indexed, OpenAlex updated), month/year-precision dates, conflicting dates, future dates, window-boundary cases (exact start/end, timezones). Each labelled with true first public date, date type and expected release type for given windows | ≥ 400 papers | team (verified against arXiv abstract pages and publisher pages) | R1 |
+| **G-LATEST-DATES** | Frozen source responses (arXiv, bioRxiv/medRxiv, Crossref, OpenAlex, S2) for ≥ 500 papers, covering: new v1 preprints (arXiv and bioRxiv/medRxiv); revisions (v2+) of old papers; journal versions of old preprints; new journal articles without preprints; older papers newly indexed (with and without OpenAlex premium filters); metadata-only updates (Crossref deposited/indexed, OpenAlex updated); **secondary-source-only dates** (OpenAlex only, S2 only); **corroborated secondary dates** (both agree); **conflicting dates** (authoritative vs authoritative; secondary vs secondary; secondary vs authoritative); month/year precision; future dates; **window boundaries** (timestamp exactly at start/end, 1 s either side, date-only values on boundary days); **time-zone display** cases (UTC±14, DST transitions in Europe and North America). Each labelled with true first public date, confidence, expected release type for given windows, and expected local display strings | ≥ 500 papers | team (verified against arXiv/bioRxiv abstract pages and publisher pages) | R1 |
+| **G-MATCH** | Record pairs labelled same work / preprint→published / related-not-same / different: true preprint↔journal pairs (arXiv and bioRxiv/medRxiv, with and without identifier links); **adversarial similar-title pairs**: same title with different authors, generic titles, Part I/II, comment/reply/erratum/retraction, conference vs extended journal version, thesis vs article, same authors with a different paper | ≥ 600 pairs (≥ 200 adversarial) | team | R1 |
 | **G-LATEST-RELEVANCE** | For 5 topics × 2 weeks: all papers in the mapped arXiv categories + other-source candidates for the window, with expert labels (relevant to objective: 0–3; sub-question) | ~5 × 2 × 300 | domain experts | R1 |
-| **G-TUTOR** | Per topic: (a) concept questions at 3 levels; (b) paper-specific questions with gold answer spans; (c) equation questions with gold symbol definitions (arXiv LaTeX papers); (d) algorithm/architecture questions; (e) **unanswerable-from-paper** questions (answer not in the paper or only abstract available); (f) scripted multi-turn dialogues with follow-ups ("simpler", "example", "show the maths", pronoun references, scope switches); (g) anchored questions (e.g. "What is message passing?" while reading a GNN paper) with the expected paper-specific meaning | ≥ 300 questions + 50 dialogues | domain experts + educators | R1 (a,b,d,e,f,g) / R2 (c) |
+| **G-TUTOR** | Per topic: (a) concept questions at 3 levels; (b) paper-specific questions with gold answer spans; (c) equation questions with gold symbol definitions (arXiv LaTeX papers); (d) algorithm/architecture questions; (e) **unanswerable-from-paper** questions (answer not in the paper or only abstract available); (f) scripted multi-turn dialogues with follow-ups ("simpler", "example", "show the maths", pronoun references, scope switches), including **long dialogues (≥ 25 turns) whose later questions depend on facts and sources from turns 1–10** (so they are answered from the summary + carried references); (g) anchored questions (e.g. "What is message passing?" while reading a GNN paper) with the expected paper-specific meaning; (h) **progressive lessons**: per concept, expert reference points for each of the eight steps, valid check questions with answer keys, and scripted user actions (next, simpler, deeper, jump, interrupt + resume, stop) | ≥ 300 questions + 50 dialogues + 40 lessons | domain experts + educators | R1 (a,b,d,e,f,g,h) / R2 (c) |
 | **G-GAPS** | Expert-rated gap candidates and ideas (real / already addressed / weak), with known prior work | ~20 per topic | senior researchers | R3 |
 
 Annotation guidelines are written before annotation. Inter-annotator
@@ -49,6 +50,7 @@ reported. Labels with agreement below 0.6 are revised before use.
 - Recall@all against expert "must-include" lists per topic: **≥ 0.85**.
 - Dedup precision **≥ 0.99**, recall **≥ 0.90** (G-DEDUP).
 - Zero duplicate canonical papers sharing any identifier (DB constraint test).
+- **Version matching (G-MATCH):** auto-match precision ≥ 0.995; recall ≥ 0.98 for pairs with decisive identifier links and ≥ 0.70 for pairs without (the rest should surface as possible matches); **0 merges of adversarial similar-title pairs**; 0 merges supported by title similarity alone (property test); 100% of merged papers keep every original source record and date claim, and a split restores them exactly.
 
 ### 3.2 Research Intelligence Engine
 | Metric | Definition | Target (R1) |
@@ -72,6 +74,9 @@ reported. Labels with agreement below 0.6 are revised before use.
 - **Banned novelty phrasings** ("novel", "first ever", "guaranteed") in idea outputs: 0, by automated scan.
 - **Fabricated or mis-typed dates** on Latest Research: 0 (§3.8).
 - **Fabricated equations, quotations or paper claims** in Ask & Learn: 0 (§3.9).
+- **Merges supported by title similarity alone**: 0 (§3.1).
+- **Secondary-only dates shown as confirmed new releases**: 0 (§3.8).
+- **Conversation summaries or earlier AI answers cited as evidence**: 0 (§3.9).
 
 ### 3.4 Explanations
 Human rubric (1–5) per explanation, rated by an annotator at the target level
@@ -115,12 +120,21 @@ rate ≥ 0.95 of raw outputs.
 | Journal versions | Published versions of earlier preprints are classified as such and show the preprint date | ≥ 0.98 accuracy |
 | Newly indexed | Older papers first indexed in window go to *Newly indexed* | ≥ 0.95 accuracy (depends on OpenAlex created-date availability; fallback measured separately) |
 | Uncertain dates | Month/year-precision or conflicting dates go to *Date uncertain* | 1.0 |
+| **Secondary-source-only dates** (D28) | A paper whose only day-precision date comes from one secondary source is *Date uncertain*, never *New research*, and shows the unconfirmed date as such | 1.0 |
+| Corroborated secondary dates | Two independent secondary sources agreeing within ±1 day → allowed in *New research* with the corroborated badge; disagreement → *Date uncertain* | 1.0 |
+| Conflicting publication dates | Authoritative claims > 2 days apart → *Date uncertain* with all claims shown; a secondary claim disagreeing with an authoritative one is flagged but doesn't block | 1.0 |
+| Window boundaries | Start inclusive, end exclusive (timestamps); 1 s before start excluded; date-only boundary days flagged; results identical whatever the user's time zone | 1.0 |
+| **Local time-zone display** | Timestamps converted to the user's zone (incl. DST); date-only values never shifted; window bounds shown in local time | 100% of G-LATEST-DATES display cases |
+| Latest brief completeness | Every relevant entry has all eight answers, each evidence-backed or an explicit "can't tell / not stated / none stated" | 100% |
+| Opportunity grounding | Every "possible opportunity" cites an author-stated limitation/open problem/future-work sentence (or an R3 gap) | 100% |
+| Challenge flags | Expert precision on cross-checked `challenges` relations | ≥ 0.80 |
+| Action recommendations | Expert agreement with Read now / Save for later / Deprioritise | ≥ 0.75; changing only dates or citation counts never changes an action (property test) |
 | **No fabricated dates** | Every displayed date equals a value in a stored source record of the stated type and source (automated audit over all entries) | 0 violations (release-blocking) |
 | Provenance | Every entry shows source(s), date type and retrieval timestamp | 100% |
 | Duplicates | Same work from several providers (incl. arXiv + DOI versions) shows once | 0 duplicate entries; dedup precision ≥ 0.99 |
 | Recall | Share of expert-relevant papers (G-LATEST-RELEVANCE, label ≥ 2) present in the scan | ≥ 0.90 for arXiv-covered fields; reported per field otherwise |
-| Relevance | nDCG@10 of "Read first" ordering vs expert labels; Essential precision | ≥ 0.70; ≥ 0.85 |
-| Recency-not-priority | Shuffling dates within the window does not change "Read first" order (property test) | must pass |
+| Relevance | nDCG@10 of the default Latest Research order (action, then tier) vs expert labels; Essential precision | ≥ 0.70; ≥ 0.85 |
+| Recency-not-priority | Shuffling dates within the window does not change the default order or any action (property test) | must pass |
 | Contribution statements | Abstract-mode contribution/method/dataset statements whose quote verifies against the abstract; "not stated" used when absent (expert check) | 100% verified; ≥ 0.9 expert agreement |
 | Related-paper links | "cites" links are backed by citation records; "similar" links are labelled as similarity | 100% |
 | Overlap/challenge flags | Expert agreement on a sample of flags | ≥ 0.8 precision |
@@ -142,6 +156,11 @@ rate ≥ 0.95 of raw outputs.
 | Style compliance | The requested style is followed (rater check) | ≥ 0.9 |
 | Prerequisite detection | Expert agreement that listed prerequisites are needed and sufficient | ≥ 0.8 |
 | Latency | Time to first streamed token | p50 ≤ 3 s, p95 ≤ 8 s |
+| **Progressive teaching** | On G-TUTOR (h): steps appear in order; skipped steps give a valid reason; "simpler"/"deeper"/jump/interrupt-resume behave as scripted; expert rubric per step (correctness ≥ 4.5, level fit ≥ 4.0); check answer keys correct | 100% flow correctness; rubric targets; answer keys ≥ 0.98 correct |
+| **Long-context retention** | Long dialogues (f): questions depending on turns 1–10 answered correctly after summarisation | ≥ 0.9 |
+| **Evidence preservation** | After summarisation, every source cited in summarised turns is still resolvable (same quote, page, section), and answers re-citing it point to the original passage | 100% |
+| **Summary never evidence** | Citations pointing to a conversation summary or an earlier assistant message are rejected (adversarial suite) | 0 accepted |
+| **Project memory after summarisation** | Objective, notes, saved explanations, concept progress and learning path are present in context and unchanged after summarisation and after conversation deletion | 100% |
 
 ### 3.10 UX
 - Beginner task completion without help (R1 journey steps 1–8): ≥ 4 of 5

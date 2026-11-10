@@ -16,11 +16,14 @@ where possible, a page or section).
 Two recurring tools sit across the journey:
 
 - **Latest Research:** a dedicated page showing what was released in your
-  area in the last 7 days (adjustable). Every paper has a verified date and
-  a release type, and is ranked by relevance to your objective.
+  area in the last 7 days (adjustable). Sources include arXiv, bioRxiv/medRxiv,
+  Semantic Scholar, OpenAlex and Crossref. Every paper has a provenance-tracked
+  date and a release type. Each relevant paper gets an eight-question brief
+  ending in read now / save for later / deprioritise, never ranked by recency.
 - **Ask & Learn:** a research tutor that knows your project and the paper you
-  are reading. It explains at your level and in your preferred style, and
-  cites passages or labels background knowledge.
+  are reading. It explains at your level and in your preferred style, teaches
+  concepts step by step with short understanding checks, tracks learning
+  progress per project, and cites passages or labels background knowledge.
 
 **Status:** planning. No application code has been written yet. The plan is
 awaiting approval.

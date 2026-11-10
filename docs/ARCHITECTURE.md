@@ -58,20 +58,21 @@ researchpilot/
   db/            SQLAlchemy models, Alembic migrations, repositories
   integrations/  base SourceClient (rate limit, retry, cache, circuit breaker,
                  provenance) + arxiv, semantic_scholar, openalex, crossref,
-                 unpaywall, huggingface, github
+                 unpaywall, biorxiv (bioRxiv + medRxiv), huggingface, github
   processing/    pdf resolver, downloader, grobid client, arXiv LaTeX source,
                  sectioning, chunking, embeddings
   intelligence/  ← Research Intelligence Engine
                  signals/ (plugins per item type and dimension)
                  scoring.py, tiers.py, profiles.py, overrides.py,
                  feedback.py, cards.py, staleness.py
-  services/      dedup, enrichment, field_map, glossary, learning_path,
+  services/      dedup + version matcher, enrichment, field_map, glossary, learning_path,
                  comparison tables, conflict detection, report builder,
                  quote_verifier, claim_validator, citation_validator,
                  dates/ (date resolver, release-type classifier),
                  latest/ (scan planner, related-paper linker, digest assembly),
                  retrieval/ (evidence retriever: hybrid pgvector + full-text),
-                 tutor/ (context builder, scope router, conversation memory)
+                 tutor/ (context builder, scope router, conversation memory,
+                 teaching plans, learning progress, retention)
   llm/           LLMGateway, Anthropic implementation, fake gateway,
                  prompt registry (versioned files)
   agents/        LLM-backed agents (see AGENT_DESIGN)
@@ -135,7 +136,8 @@ retries):
 | `override.created` | decision log, feedback pattern detection |
 | `gap.updated` / `idea.status_changed` | novelty-dimension recompute, impact watch list |
 | `latest_scan.completed` | "new since last visit" counters; (R5) notifications and impact alerts |
-| `paper.dates_updated` | release-type reclassification for affected scan entries |
+| `paper.dates_updated` / `paper.match_decided` | release-type reclassification for affected scan entries |
+| `concept_progress.updated` | learning-path progress, Journey Guide next step |
 
 ### 4.5 Journey registry
 Nine stages (`discover … propose`), each with a readiness function over
@@ -156,7 +158,7 @@ project counts, recommended goals, primary action and pages.
 filtering. A per-run event stream for the UI. LLM usage and cost per project
 are recorded in `llm_usage`.
 
-### 4.8 Date provenance and release-type classification
+### 4.8 Date provenance, release types and time zones
 
 Recent-research correctness depends on dates, and sources disagree about
 them. OpenAlex's own documentation warns that publication dates are
@@ -164,96 +166,166 @@ unreliable for finding recent records. The `DateResolver` service therefore
 stores **every date claim separately**, then derives a first public date and
 a release type with explicit confidence.
 
-**1. Collect date claims** (`paper_dates`, one row per claim) with: date type,
-value, precision (day/month/year), source, source record, and retrieval time.
+**1. Collect date claims** (`paper_dates`, one row per claim, never
+overwritten). Each claim records: date type, value, precision
+(timestamp/day/month/year), the **manifestation** it belongs to (preprint or
+published version) and its identifier, source, source record, and retrieval
+time.
 
-| Source | Field | Stored as date type | Used as publication date? |
+| Source | Field | Stored as date type | Role |
 |---|---|---|---|
-| arXiv | `published` (v1 submission timestamp) | `preprint_v1_submitted` | ✅ first public preprint date |
-| arXiv | per-version submission dates (from the abstract page/OAI metadata) | `version_submitted` (with version number) | ✅ for that version only |
-| arXiv | `updated` | `latest_version_submitted` | ❌ (version event, not first release) |
-| Crossref | `published-online`, `published-print`, `issued` | `published_online`, `published_print`, `issued` | ✅ (precision checked) |
-| Crossref | `created`, `deposited`, `indexed` | `metadata_created`, `metadata_deposited`, `metadata_indexed` | ❌ never |
-| OpenAlex | `publication_date` | `openalex_publication_date` | ⚠️ supporting only |
-| OpenAlex | `created_date` | `index_created` | ❌ (used only to detect "newly indexed") |
+| arXiv | `published` (v1 submission timestamp, UTC) | `preprint_v1_submitted` | **authoritative** first preprint date |
+| arXiv | per-version submission dates | `version_submitted` (+ version) | authoritative for that version |
+| arXiv | `updated` | `latest_version_submitted` | version event only |
+| bioRxiv / medRxiv | `date` of version 1 (from `/details`) | `preprint_v1_posted` | **authoritative** first preprint date (day precision) |
+| bioRxiv / medRxiv | `date` of later versions | `version_posted` (+ version) | authoritative for that version |
+| bioRxiv / medRxiv | `/pubs` published date | `published_online` (published manifestation) | supporting; confirmed via Crossref when possible |
+| Crossref | `published-online`, `published-print`, `issued` | `published_online`, `published_print`, `issued` | **authoritative** (precision checked) |
+| Crossref | `posted` (posted-content, e.g. preprints with DOIs) | `preprint_posted` | authoritative for that preprint |
+| Crossref | `created`, `deposited`, `indexed` | `metadata_created`, `metadata_deposited`, `metadata_indexed` | ❌ never a publication date |
+| OpenAlex | `publication_date` | `openalex_publication_date` | **secondary** |
+| OpenAlex | `created_date` | `index_created` | "newly indexed" detection only |
 | OpenAlex | `updated_date` | `metadata_updated` | ❌ never |
-| Semantic Scholar | `publicationDate` | `s2_publication_date` | ⚠️ supporting only (often missing or year-only) |
-| ResearchPilot | first time we saw the paper | `first_seen_by_researchpilot` | ❌ (fallback for "newly indexed" detection) |
+| Semantic Scholar | `publicationDate` | `s2_publication_date` | **secondary** (often missing or year-only) |
+| ResearchPilot | first time we saw the paper | `first_seen_by_researchpilot` | "newly indexed" fallback only |
 
-**2. Derive** `first_public_date` = the earliest **authoritative** claim
-(arXiv v1, or Crossref online/print/issued) at day precision.
-`date_confidence` is:
-- `verified` — authoritative claim at day precision, and no conflicting
-  authoritative claim;
-- `single_source` — only a supporting claim (OpenAlex/S2) at day precision;
-- `conflicting` — authoritative claims disagree by more than 2 days;
-- `uncertain` — only month/year precision, or no claim at all.
+**2. Derive the first public date and its confidence** (decision **D28**):
 
-**3. Classify the release type** relative to the scan window
-`[start, end)`:
+| `date_confidence` | Rule | Allowed in *New research*? |
+|---|---|---|
+| `verified` | Earliest authoritative claim at day (or timestamp) precision, with no authoritative claim disagreeing by more than 2 days | ✅ |
+| `corroborated` | No authoritative claim, but **two independent secondary sources** (OpenAlex and Semantic Scholar) agree within ±1 day at day precision | ✅ with the badge "Date from secondary sources (corroborated)" |
+| `single_secondary` | Only one secondary source gives a day-precision date | ❌ → **Date uncertain** (default) |
+| `conflicting` | Authoritative claims disagree by more than 2 days, or two secondary sources disagree by more than 1 day with no authoritative claim | ❌ → Date uncertain (all claims shown) |
+| `uncertain` | Only month/year precision, a future date, or no claim | ❌ → Date uncertain |
+
+Before settling on `single_secondary`, the resolver tries to corroborate: a
+Crossref lookup when a DOI is known, an arXiv lookup when an arXiv ID is
+known, and a bioRxiv/medRxiv lookup for their DOIs. A secondary claim that
+disagrees with an authoritative claim is kept and flagged, but it doesn't
+create a conflict: the authoritative claim wins.
+
+**3. Classify the release type** relative to the window `[start, end)`
+(decision **D25**):
 
 | Release type | Rule |
 |---|---|
-| New preprint | arXiv v1 submitted in window |
-| New publication | Crossref online/print/issued in window **and** no earlier version known |
-| Published version of an earlier preprint | Crossref date in window **and** an earlier linked preprint exists (shown with the preprint date) |
-| Revised version of an older paper | a new version submitted in window **and** first public date before the window |
-| Older paper newly indexed | first public date before the window **and** first indexed (OpenAlex `created_date`, where available, or our first-seen date) in window |
-| Date uncertain | candidate found in window, but confidence is `uncertain` or `conflicting` on the date that would place it there |
+| New preprint | First preprint version (arXiv v1, or bioRxiv/medRxiv v1) in window, `verified` or `corroborated` |
+| New publication | Published-version date in window **and** no earlier linked version |
+| Published version of an earlier preprint | Published-version date in window **and** a matched earlier preprint (D29); shown with the preprint date |
+| Revised version of an older paper | A new version (v2+) in window **and** first public date before the window |
+| Older paper newly indexed | First public date before the window **and** first indexed in window (OpenAlex `created_date` when that capability is enabled, otherwise our first-seen date, labelled) |
+| Date uncertain | The date that would place it in the window is `single_secondary`, `conflicting` or `uncertain` |
 
 Rules that always apply:
 - A metadata-change date never makes a paper "new".
-- Month- or year-precision dates never fall "inside" a 7-day window. Such
-  papers go to Date uncertain.
-- Future dates (beyond the retrieval time plus 1 day) are flagged and treated
-  as uncertain.
-- A paper whose only day-precision date comes from a supporting source
-  (OpenAlex or Semantic Scholar; confidence `single_source`) may appear in
-  *New research*, but with a visible "Date from one secondary source" badge.
-  If it has a DOI, a Crossref lookup is attempted first, and Crossref's date
-  takes precedence when present.
-- Release type is recomputed when new date claims arrive
-  (`paper.dates_updated`). A changed type is shown, never silently swapped.
+- Month- or year-precision dates never fall inside a window of 31 days or
+  less.
+- Future dates (beyond retrieval time + 1 day) are flagged and treated as
+  uncertain.
+- Release types are recomputed when new date claims or matches arrive
+  (`paper.dates_updated`, `paper.match_decided`). A changed type is shown
+  with "Reclassified", never silently swapped.
+- arXiv's v1 timestamp is the submission time, and announcement can lag 1–3
+  days. Dates are labelled "v1 submitted", and scans fetch 3 extra days
+  before the window start so late announcements aren't missed. Inclusion is
+  still decided by the submission time.
 
-**Known caveat:** arXiv's v1 timestamp is the submission time. Public
-announcement can lag by one to a few days (weekends and holidays). The page
-labels the date "v1 submitted", and scans overlap the window start by 3 days
-so papers announced late aren't missed. Inclusion is still decided by the
-submission date.
+**4. Time zones** (decision **D23**):
+- **Storage and computation in UTC.** Timestamps are `timestamptz`. Rolling
+  windows are computed in UTC: `[now_utc − N×24 h, now_utc)`, start
+  inclusive and end exclusive.
+- **Date-only claims** (Crossref day dates, bioRxiv dates) are stored as
+  calendar dates with `precision = day` and are **never shifted across time
+  zones**. A date-only claim *D* is treated as the UTC day `[D 00:00, D+1
+  00:00)`. It is in the window if that day overlaps the window. If the day
+  is only partly inside (the boundary day), the entry is flagged
+  `boundary_day` and the provenance popover says so.
+- **Display in the user's local time zone.** IANA zone from the browser,
+  overridable in Settings and stored on the user. Timestamps (e.g. arXiv
+  submission) are converted for display ("Submitted Nov 9, 00:30 CET").
+  Date-only values are shown as the date itself, without conversion. Window
+  bounds are shown in local time ("Nov 3, 14:00 – Nov 10, 14:00 CET"). DST
+  transitions are handled by the zone database, never by fixed offsets.
+
+### 4.8a Preprint ↔ publication matching (decision D29)
+
+The `Deduplicator` includes a **Version Matcher** that decides whether two
+records are the same work, versions of one work, or different works. It
+uses graded evidence and records every decision. **It never merges on title
+similarity alone.**
+
+**Evidence features** (each stored in `paper_match_decisions.features`):
+
+| Strength | Feature |
+|---|---|
+| Decisive | Same DOI; same arXiv ID (any version); an explicit version link from an authoritative source: Crossref `relation` (`is-preprint-of` / `has-preprint`), bioRxiv/medRxiv `/pubs` (preprint DOI → published DOI), or the arXiv `doi` / `journal_ref` field supplied by authors |
+| Strong | Both identifiers listed on one Semantic Scholar record (`externalIds`); OpenAlex lists both as locations of one work (strong, not decisive, because OpenAlex sometimes conflates versions) |
+| Supporting | Title similarity (normalised token-sort ratio); author similarity (overlap of normalised surname + initials, first-author match); abstract similarity (embeddings); plausible date order and gap (published version after preprint, within ~4 years); consistent venue/type metadata |
+| Contradicting | Disjoint author lists; different first author with no identifier link; "Part I/II", "Comment on", "Reply to", "Erratum", "Corrigendum", "Retraction" markers on one side only; thesis vs article type; abstracts clearly different |
+
+**Decision rules** (thresholds versioned and calibrated on G-MATCH):
+
+| Outcome | Rule |
+|---|---|
+| **Auto-match (same work)** | Any decisive feature with no contradicting feature; **or** strong feature + title ≥ 0.92 + author overlap ≥ 0.6 including the first author; **or**, without any identifier link: title ≥ 0.95 **and** author overlap ≥ 0.8 including the first author **and** abstract similarity ≥ 0.90 **and** plausible date order, with no contradicting feature |
+| **Possible match** | Title ≥ 0.90 and author overlap ≥ 0.5, but the auto-match rules aren't met. The records are **linked, not merged**; the UI asks the user to confirm ("Possibly the published version of …") |
+| **Related, not same** | Explicit "extended version", erratum, comment or reply relations, or conference ↔ extended journal versions with different DOIs and materially different abstracts. These stay separate papers, linked by relation |
+| **No match** | Everything else, including any pair whose only support is title similarity |
+
+**Preservation:**
+- A match never deletes anything. Identifiers, `source_records` and
+  `paper_dates` keep their source and manifestation, so the preprint's v1
+  date and the journal's publication date both survive in one work.
+- Merges are logged in `paper_merge_events` with the match decision that
+  caused them, and can be split again, which restores each record's
+  identifiers and date claims by source record.
+- User confirmations and rejections are stored as decisions and are never
+  overridden by automatic re-matching.
 
 ### 4.9 Latest Research scans
 
-A scan is a parameterised run of the discovery workflow (AGENT_DESIGN W8),
-with no new pipeline.
+A scan is a parameterised run of the discovery workflow (AGENT_DESIGN W8).
+There is no separate pipeline.
 
 1. **Plan** queries from the current objective version: the core question,
    each sub-question (subtopic), focus concepts and field-map direction
-   labels. Map the objective to arXiv categories (Planner proposal, user
-   editable).
+   labels. Map the objective to arXiv categories and, for life-science
+   objectives, to bioRxiv/medRxiv subject categories (Planner proposal, user
+   editable; decision **D22**).
 2. **Fetch** using date-bounded queries per source:
-   - arXiv: `cat:<category> AND submittedDate:[start TO end]` category sweep
-     (high recall), plus topic queries with the same date range;
-   - Semantic Scholar: topic search with a publication-date range (supporting
-     dates only);
-   - OpenAlex (if enabled): topic search with a publication-date filter. The
-     `from_created_date` filter used for "newly indexed" detection needs a
-     paid OpenAlex plan, so it is used only when available, and otherwise our
-     own first-seen date is the fallback;
-   - Crossref: `query.bibliographic` with `from-pub-date`/`until-pub-date`
-     for journal articles, plus DOI lookups to confirm publication dates for
-     candidates from other sources.
-3. **Deduplicate** across sources and against the project (same
-   `Deduplicator`).
+   - **arXiv:** `cat:<category> AND submittedDate:[start TO end]` category
+     sweep (high recall), plus topic queries with the same date range.
+   - **bioRxiv / medRxiv** (when the objective is life-science, or the user
+     enables them): `/details/{server}/{start}/{end}` for the window, then
+     filtered by mapped subject categories and Stage A text match, because
+     the API has no full-text search. `/pubs/{server}/{start}/{end}`
+     supplies preprint → published links for matching. No official rate
+     limit is published, so the client is conservative (1 req/s, cached).
+     medRxiv entries carry a "Preprint — not peer-reviewed" label.
+   - **Semantic Scholar:** topic search with a publication-date/year range;
+     its dates are secondary.
+   - **OpenAlex:** topic search with a publication-date filter; its dates
+     are secondary. **Capability-based access (D24):** the client reads
+     `OPENALEX_CAPABILITIES` (default: `basic`). Only when `premium_filters`
+     is enabled does it use `from_created_date`/`from_updated_date` for
+     "newly indexed" detection. Otherwise it falls back to our first-seen
+     date. Both paths share one interface and are tested, so paid access can
+     be switched on by configuration alone.
+   - **Crossref:** `query.bibliographic` with `from-pub-date`/`until-pub-date`
+     for journal articles, and DOI lookups to confirm or corroborate dates
+     for candidates from other sources.
+3. **Deduplicate and match versions** across sources and against the project
+   (`Deduplicator` + Version Matcher, §4.8a).
 4. **Resolve dates** and classify release types (§4.8).
 5. **Assess** with the RIE: Stage A for all candidates, Stage B for the top-K
-   by prescore (default 60) plus opened items. The objective profile is the
-   project's own; the recency window is a filter, not a score.
-6. **Enrich the top-K:** abstract-level contribution/method/dataset
-   extraction (Extractor, abstract mode, with quotes verified against the
-   abstract); related saved papers (citations where known; otherwise
-   similarity, labelled); overlap/challenge check against the project's
-   direction.
-7. **Store** the scan, its entries, coverage and failures, and emit
+   by prescore (default 60) plus any item the user opens. The date window
+   filters candidates; it never adds to priority.
+6. **Brief the top-K:** build the eight-question **Latest brief** (RIE §10.2):
+   the Extractor in abstract mode, Relevance Judge `relation_to_project`, the
+   Related Item Linker and the Card Writer. Every statement passes the
+   ClaimValidator.
+7. **Store** the scan, its entries, briefs, coverage and failures, and emit
    `latest_scan.completed`.
 
 Scans run on demand, and automatically when the page opens if the last scan
@@ -266,67 +338,134 @@ Ask & Learn is the conversational front end of the existing Tutor. It is
 on-demand, streamed and persisted.
 
 ```
-User question + view context (item / section / page / selection / card)
+User message + view context (item / section / page / selection / card)
       │
       ▼
-ContextBuilder ── project context: objective, level, glossary, saved items, notes (short)
-      │        ── view context: what the user is looking at
-      │        ── conversation memory: last 12 turns verbatim + rolling summary of older turns
+ContextBuilder ── PROJECT MEMORY (independent of conversations): objective, level,
+      │            glossary, saved items, notes, saved explanations, concept progress,
+      │            learning path
+      │        ── VIEW CONTEXT: what the user is looking at
+      │        ── CONVERSATION MEMORY: last 12 turns verbatim + structured summary of
+      │            older turns + carried references (re-resolved to original passages)
       ▼
 ScopeRouter ──── about_this_paper | about_project | general   (user can override; shown as a chip)
       │
       ▼
 EvidenceRetriever ── hybrid search (pgvector + Postgres full-text), scoped:
-      │              this paper's sections/equations/extractions → project papers → none
+      │              this paper's sections/equations/extractions → project papers → none;
+      │              plus carried references from earlier turns
       ▼
-Tutor (LLM) ── structured answer: blocks with claim kinds, evidence handles E1…En,
-      │        style, level, missing prerequisites, "not found in sources" flags
+Tutor (LLM) ── answer mode or teaching mode (progressive lesson step);
+      │        blocks with claim kinds, evidence handles E1…En only
       ▼
 ClaimValidator ── grounded blocks must cite retrieved evidence; quotes verified;
       │           paper equations must match extracted equations; background
-      │           blocks may not mention papers/results/numbers not in the project
+      │           blocks may not mention papers/results/numbers not in the project;
+      │           summaries and earlier AI answers are not valid evidence
       ▼
-Stream to UI → persist tutor_messages (+ claims) → optional save as note
+Stream to UI → persist tutor_messages (+ evidence links, claims)
+             → update concept_progress (teaching mode) → optional save as saved_explanation
 ```
 
-- **Grounding order:** for a question about the current paper, the answer
-  first states what the paper says, with sources, then background if useful,
-  labelled as such. If retrieval finds nothing, the answer says so and offers
-  background.
-- **Caching:** "canonical asks" (an explain action on a fixed subject with a
-  given level and style, and no prior turns) are served from or written to
-  the `explanations` cache. Follow-ups are conversation-specific and not
-  shared-cached. Prompt caching covers the stable prefix (system prompt +
-  project context).
-- **Equations:** taken from `equations` (arXiv LaTeX) or a user selection.
-  When a paper's equation isn't available, the tutor says so and may explain
-  the general concept, labelled as background.
-- **Prerequisites:** the Tutor returns missing prerequisite concepts. These
-  are matched to glossary/concept items, and "Build a learning sequence"
-  calls the existing Curriculum Builder.
-- **Saving:** "Save to project" creates a `notes` row linked to the message
-  and, where relevant, the item. Claims and sources are kept.
-- **Conversation context** is project-scoped. It never crosses projects, and
-  conversations can be deleted.
+#### 4.10.1 Conversation memory and evidence preservation (D26)
+- The **last 12 turns** go to the model verbatim. Older turns are folded
+  into a **structured summary** (`conversation_summaries`) that has two
+  parts:
+  - `summary_text`: an AI-written recap, `kind = ai_summary`. It is
+    context only.
+  - `carried_refs`: the IDs of every evidence span, chunk, equation, item
+    and saved explanation cited in the summarised turns, plus open questions
+    and the concepts covered.
+- **The summary is never evidence.** On each turn, the ContextBuilder
+  re-resolves `carried_refs` to the original stored passages (quote, page,
+  section) and passes those as evidence handles. The validator rejects any
+  citation that points to a summary or to a previous assistant message.
+- Summarising never deletes messages. Messages are kept until the retention
+  policy or the user deletes them. Summaries only control what goes into the
+  prompt.
+- **Project memory is separate.** Objective, notes, decisions, saved
+  explanations, concept progress and the learning path live in project
+  tables, are loaded independently, and are unaffected by summarisation or
+  conversation deletion.
+
+#### 4.10.2 Retention and deletion
+- Per-project policy: **keep until deleted** (default), **delete after N
+  days** (30/90/365), or **don't keep history**. With "don't keep history",
+  messages exist only for the open session and are purged when it ends.
+  Saved explanations and learning progress are still kept.
+- **Delete a conversation:** hard-deletes its messages, message-evidence
+  links, summaries and the claims that originated only in it. Its teaching
+  sessions lose their conversation link, but concept progress and
+  understanding-check results remain as project learning progress. Saved
+  explanations are independent copies and survive. Canonical cache entries
+  (`explanations`) hold no conversation content and are unaffected.
+  `llm_usage` rows lose their message references but keep their totals.
+- **Delete all conversations** for a project, and separately **reset
+  learning progress**. Both actions are explicit and ask for confirmation.
+- A daily retention job (worker periodic task) enforces "delete after N
+  days" and is idempotent.
+
+#### 4.10.3 Progressive teaching
+When the user asks about a concept, or chooses "Teach me", the Tutor builds
+a **teaching plan** with these steps, in order:
+
+| Step | Style | Notes |
+|---|---|---|
+| 1. Intuition | intuitive | |
+| 2. Simple example | practical_example | |
+| 3. Technical explanation | technical | |
+| 4. Mathematical formulation | mathematical | Omitted, with a stated reason, if the concept has no standard formulation. Paper equations only from extracted equations or user selection |
+| 5. Algorithmic steps | step_by_step | Pseudocode, labelled "not run" |
+| 6. Connection to the current paper | grounded, about_this_paper | Only when a paper is in context, and only from retrieved passages; otherwise "No paper in view" |
+| 7. Practical implementation | code | Labelled AI-generated, "not run" |
+| 8. Understanding check | check | 1–3 short questions; multiple choice graded deterministically, short answers graded by the Tutor and labelled "AI-graded" |
+
+- The plan is adapted to the level: beginners start at step 1; experts start
+  at step 3 by default and can jump anywhere. Steps are generated **lazily**,
+  one at a time.
+- **User controls at every step:** Next · Simpler · Go deeper / skip to
+  advanced · jump to any step · ask a follow-up (interrupts the lesson; a
+  "Resume lesson" chip returns to the same step) · stop.
+- Non-anchored steps are cached in `explanations` by (concept, level,
+  style), so a lesson repeated in another conversation costs nothing.
+- **Learning progress is project-level** (`concept_progress`): steps seen,
+  highest level reached, check results, and a status (not started, in
+  progress, understood (self-reported), check passed, needs review). It
+  feeds the learning path and Journey Guide and survives conversation
+  deletion.
+- Understanding checks are formative and never block the user.
 
 ### 4.11 API additions for these features
 
 | Method | Path | Purpose |
 |---|---|---|
-| GET | `/projects/{id}/latest` | entries for a window: `from`, `to` (default rolling 7 d), `release_type`, `subtopic`, `method`, `source`, `tier`, `oa`, `status`; includes coverage and the last scan |
+| GET | `/projects/{id}/latest` | entries for a window: `from`, `to` (default rolling 7 d, UTC), `release_type`, `subtopic`, `method`, `source`, `tier`, `action`, `oa`, `status`; includes coverage, the last scan and the display time zone |
 | POST | `/projects/{id}/latest/scans` | start a scan for a window → `202 {run_id, scan_id}` |
 | GET | `/latest/scans/{scan_id}` | scan status, coverage, failures, counts by release type |
 | GET | `/projects/{id}/latest/digest?scan_id=` | "What's new" digest (grounded, cached per scan and level) |
+| GET | `/projects/{id}/latest/{paper_id}/brief` | the eight-question Latest brief |
 | PATCH | `/projects/{id}/items/{item_id}` | save, dismiss (+ reason), read later, tags (shared with other pages) |
-| GET | `/papers/{id}/dates` | all date claims with sources, the derived first public date, confidence and release-type history |
+| GET | `/papers/{id}/dates` | all date claims with sources and manifestations, the derived first public date, confidence and release-type history |
+| GET | `/papers/{id}/matches` | match decisions (auto, possible, related, rejected) with evidence features |
+| POST | `/match-decisions/{id}/confirm` · `/reject` | user confirms or rejects a possible match (merge / keep separate) |
+| POST | `/papers/{id}/split` | undo a merge |
 | POST | `/tutor/conversations` | `{project_id, anchor?: {item_id, section_id, equation_id, selection}}` |
 | GET | `/projects/{id}/tutor/conversations` | list, resume |
-| DELETE | `/tutor/conversations/{id}` | delete a conversation |
+| DELETE | `/tutor/conversations/{id}` | delete a conversation (§4.10.2) |
+| DELETE | `/projects/{id}/tutor/conversations` | delete all conversations in the project |
+| GET / PUT | `/projects/{id}/tutor/retention` | retention policy |
 | POST | `/tutor/conversations/{id}/messages` | `{text, level?, style?, intent?, scope?, view_context}` → streamed answer |
+| POST | `/tutor/conversations/{id}/lessons` | `{concept or selection, level}` → teaching plan + first step |
+| POST | `/lessons/{id}/steps` | `{action: next \| simpler \| deeper \| jump, step?}` → next step (streamed) |
+| POST | `/lessons/{id}/checks/{check_id}/answer` | submit an understanding-check answer |
+| GET | `/projects/{id}/learning-progress` | concept progress across the project |
+| DELETE | `/projects/{id}/learning-progress` | reset learning progress (confirmation required) |
 | GET | `/tutor/messages/{id}/sources` | evidence used, with sections, pages and quotes |
-| POST | `/tutor/messages/{id}/save` | save as a note (optionally linked to an item) |
+| POST | `/tutor/messages/{id}/save` | create a saved explanation (independent copy with claims and evidence) |
+| GET / DELETE | `/projects/{id}/saved-explanations` · `/saved-explanations/{id}` | list, view, delete |
 | POST | `/tutor/messages/{id}/feedback` | helpful / unclear / wrong |
 | POST | `/tutor/messages/{id}/learning-sequence` | build a prerequisite sequence and optionally add it to the learning path |
+| GET / PUT | `/me/preferences` | time zone (browser or manual), default level |
 
 ## 5. Weaknesses of the previous plan and how this version addresses them
 
@@ -349,9 +488,10 @@ Stream to UI → persist tutor_messages (+ claims) → optional save as note
 |---|---|---|---|---|
 | arXiv API | preprint search, metadata, PDFs, LaTeX source; date-range (`submittedDate`) and category queries for Latest Research | no key | free | about 1 request / 3 s, single connection; no citations; metadata quality varies; v1 date is submission time, not announcement time |
 | Semantic Scholar Graph API | search, citations, references, recommendations, OA PDF links, citation intents | free API key (apply) | free | introductory 1 req/s with key; shared unauthenticated pool throttles; some abstracts withheld |
-| OpenAlex | broad metadata, references, OA locations, field-normalised citation context | API key required since Feb 2026 | free daily allowance, then metered; full-text files charged per file; `from_created_date` / `from_updated_date` filters need a paid plan | search precision; costs at scale; version conflation; publication dates unreliable for recency (OpenAlex's own guidance) |
+| OpenAlex | broad metadata, references, OA locations, field-normalised citation context | API key required since Feb 2026 | free daily allowance, then metered; full-text files charged per file; `from_created_date` / `from_updated_date` filters need a paid plan (not required: enabled later via `OPENALEX_CAPABILITIES`) | search precision; costs at scale; version conflation; publication dates unreliable for recency (OpenAlex's own guidance) |
 | Crossref | DOI validation, publisher metadata, authoritative publication dates for DOIs, journal-article date-range search | email (polite pool) | free | rare abstracts; topic search precision is low; dates may be month-only or future-dated |
 | Unpaywall | OA PDF locations by DOI | email | free | DOI-only; some links are landing pages |
+| bioRxiv / medRxiv API (`api.biorxiv.org`) | life-science preprints by date range (`/details`), preprint → published links (`/pubs`) | no key | free | no full-text search (category + local text filtering); no published rate limit (client uses 1 req/s); medRxiv preprints are not peer-reviewed |
 | GROBID | PDF → structured TEI | self-hosted | compute only | weak on tables and formulae; no OCR |
 | Hugging Face Hub | models, datasets, paper links | optional token | free | links depend on authors tagging arXiv IDs |
 | GitHub REST | repository metadata and search | token | free | 5,000 req/h; search about 30 req/min |
@@ -379,6 +519,7 @@ lower.
 | Recommendation cards viewed (~60; 3k / 0.8k each) | 180k / 48k | ~$1.70 | ~$0.85 | ~$0.04 |
 | Primer + glossary + learning path | ~60k / 20k | ~$0.65 | ~$0.32 | ~$0.02 |
 | Ask & Learn session (~30 turns; ~8k in incl. context and evidence / 0.8k out per turn; before prompt-caching savings) | 240k / 24k | ~$1.45 | ~$0.72 | ~$0.04 |
+| Progressive lesson on one concept (8 steps, ~6k in / 0.8k out each; cached steps are free on reuse) | 48k / 6.4k | ~$0.32 | ~$0.16 | <$0.01 |
 | **R1 MVP project total (setup + one tutor session)** | | **~$6** | ~$3 | ~$0.15 |
 | Latest Research weekly scan (Stage B for 60, abstract extraction for 60, ~20 cards viewed, digest) | ~350k / 85k | ~$3.10 | ~$1.55 | ~$0.08 |
 | Full-text extraction, 50 papers (~20k in / 3k out each; batch could halve this) | 1M / 150k | ~$7 | ~$3.50 | ~$0.18 |
@@ -410,7 +551,8 @@ budget, and the product works with OpenAlex disabled.
 | Glossary | ⚠️ term list with "appears in" links, no definitions | ✅ definitions by level |
 | Full text, sectioning, reading UI | ✅ | ✅ |
 | Latest Research: date-verified recent papers, release types, dedup, Stage A tiers, related saved papers (citations/similarity), filters, save/dismiss/notes | ✅ | ✅ + relevance reasons, contributions, overlap checks, digest |
-| Ask & Learn: evidence search over the user's papers ("show me where this term appears") | ⚠️ passages only, no answers | ✅ full tutor |
+| Ask & Learn: evidence search over the user's papers ("show me where this term appears"); saved explanations and progress views | ⚠️ passages only, no answers or lessons | ✅ full tutor + progressive lessons |
+| Version matching (decisive identifier links, bioRxiv `/pubs`, Crossref relations) | ✅ | ✅ |
 | Explanations, equations, exercises, extraction, gaps, ideas, proposals | ❌ | ✅ |
 
 A local open-weight model can be plugged into the gateway for zero API cost.
@@ -430,13 +572,19 @@ evaluation gates first.
 
 - Full text only for legally accessible PDFs and user uploads.
 - Very recent papers often lack citation data and Semantic Scholar/OpenAlex
-  records for several days; Latest Research relies on arXiv and Crossref
-  dates and on content signals for them.
-- Fields with little arXiv coverage (e.g. biology, medicine) have weaker
-  preprint recall unless additional preprint servers are added (decision
-  D22).
+  records for several days; Latest Research relies on arXiv, bioRxiv/medRxiv
+  and Crossref dates and on content signals for them.
+- bioRxiv and medRxiv cover life-science preprints (D22). Other fields with
+  little preprint culture (e.g. parts of chemistry, the social sciences and
+  the humanities) rely on Crossref and have weaker recall for recent work.
 - Publisher dates can be month-precision or revised after the fact. Such
   papers appear as "Date uncertain" rather than in the default view.
+- Papers dated only by one secondary source go to "Date uncertain" (D28).
+  This lowers recall for venues absent from arXiv, bioRxiv/medRxiv and
+  Crossref, by design.
+- Version matching without identifier links is conservative. Some true
+  preprint/journal pairs remain "possible matches" until the user confirms
+  them.
 - Table and formula extraction from PDFs is imperfect. Equations are exact
   only via arXiv LaTeX source.
 - Citation intents and contexts are limited to what Semantic Scholar

@@ -350,7 +350,8 @@ table):
   quote that must verify, and IDs that must exist in the project.
 - **High-stakes judgements are cross-checked:** "not relevant" for an item the
   prescore ranked highly, "already addressed" for a gap, "closest prior work"
-  for an idea, and any Essential tier from abstract-only evidence. A second
+  for an idea, any Essential tier from abstract-only evidence, and any
+  `challenges` relation on a Latest brief. A second
   judgement runs with a differently phrased prompt and the evidence in a
   different order. Disagreement gives the label "uncertain", lowers
   confidence and shows both views.
@@ -429,7 +430,7 @@ without special-casing the scoring:
   remaining dimensions (§5.2). Content signals (e.g. "introduces a method
   that addresses SQ2") still count.
 - **Recency is never a priority signal** on the Latest Research page. The
-  date window is a filter, and "Read first" ordering uses the same objective
+  date window is a filter, and the default order (action, then tier) uses the same objective
   profile as everywhere else (anti-proxy rules §5.4 unchanged).
 - **Novelty implications from R1:** before gaps and ideas exist (R3), this
   dimension is assessed against the project's **current direction**: the
@@ -439,26 +440,49 @@ without special-casing the scoring:
   verified quote from the new paper's abstract. From R3, the same signal is
   also computed against open gaps and accepted ideas.
 
-### 10.2 Card additions for recent items
+### 10.2 The Latest brief (eight questions) and card additions
+
 `RecommendationCard` gains two optional fields, used on the Latest Research
 page and anywhere a recent item appears:
 
 ```python
-    whats_new: list[Statement] | None        # what changes compared with existing approaches,
-                                             # relative to named project items (grounded, abstract-level
-                                             # unless full text is available)
+    whats_new: list[Statement] | None        # what changes compared with earlier work
     relation_to_project: list[ProjectRelation] | None
                                              # {relation, project_item_id, evidence, kind}
 ```
 
+For every relevant new paper (Stage B top-K, or any entry the user opens),
+the engine assembles a **Latest brief** from the same evidence pipeline. The
+brief adds no new judgement machinery. Each question maps to an existing
+mechanism:
+
+| # | Question | Source of the answer | Claim kind | If no evidence |
+|---|---|---|---|---|
+| 1 | What is the paper about? | Card Writer from the abstract (and full text if parsed) | `ai_interpretation` (grounded, quotes the abstract) | — (an abstract is required; without one: "No abstract available") |
+| 2 | What is new compared with earlier work? | (a) the paper's own comparative statements ("outperforms X", "unlike prior work…") from Extractor abstract mode; (b) comparison with named project items via `relation_to_project` | (a) `reported_finding` with quote; (b) `ai_interpretation` grounded in both items | "Can't tell from the abstract" |
+| 3 | What method, dataset or benchmark does it introduce? | Extractor abstract mode (full text in R2) | `reported_finding` with quote | "Not stated in the abstract" + missing info "Full text needed" |
+| 4 | How does it relate to the research objective? | Relevance Judge per sub-question + tier | `ai_interpretation` (grounded) + `extracted_observation` (tier, sub-questions) | "Insufficient information" tier |
+| 5 | Does it overlap with saved papers? | Related Item Linker (`cites` from citation data; `similar` from text similarity) + `relation_to_project = overlaps_with` | `extracted_observation` (links) + `ai_interpretation` (overlap judgement, quotes both) | "No overlap found with your saved papers" (stating what was compared) |
+| 6 | Does it challenge existing assumptions or the user's proposals? | `relation_to_project = challenges`, against saved/Essential items and the objective (R1); against open gaps, accepted ideas and extracted assumptions (R2–R3). **High-stakes, so cross-checked** | `ai_interpretation` quoting the new paper **and** the challenged item | "No challenge detected" (with scope of the check) |
+| 7 | Does it suggest a research opportunity? | Only from an author-stated limitation, open problem or future work in the paper's text, or (R3) a match with an open project gap | `unverified_hypothesis`, citing the source sentence | Omitted ("None stated") — never invented |
+| 8 | Read now, save for later, or deprioritise? | Deterministic action rule (below) | `extracted_observation` with reasons | "Check manually" when the tier is Insufficient information |
+
+**Action rule** (deterministic, versioned, overridable):
+
+| Action | Condition |
+|---|---|
+| **Read now** | Tier Essential, **or** a cross-checked `challenges` relation to an Essential/saved item or an accepted idea, **or** tier Recommended with direct relevance to a sub-question the user marked as priority |
+| **Save for later** | Tier Recommended (otherwise), or Optional with a `cites`/`overlaps_with` link to saved items |
+| **Deprioritise** | Tier Optional without links, or Not useful for this objective (reason shown) |
+| **Check manually** | Tier Insufficient information (missing information listed) |
+
+The action never uses the date, the date's confidence or the citation
+count. A property test asserts that changing only dates leaves every action
+unchanged. The user can change the action, and that is stored as an
+override (§8) and logged.
+
 "What you could learn from it" is expressed through `use_for` with the
 `learn_background` and `adopt_method` uses, tied to sub-questions.
-
-Contribution, method, dataset and benchmark statements on recent cards come
-from the Extractor's **abstract mode**. Each is a `reported_finding` with a
-quote verified against the abstract. When the abstract doesn't state them,
-the card says "Not stated in the abstract" and adds a missing-information
-entry ("Full text needed to confirm datasets used").
 
 ### 10.3 Signals added
 | Item | Dimension | Signal | Method | Rel. |
@@ -467,6 +491,7 @@ entry ("Full text needed to confirm datasets used").
 | Paper | Direct relevance | Sub-question match from scan query provenance (which subtopic's query found it) | deterministic | R1 |
 | Paper | Direct relevance | Similarity to the user's saved/Essential items | deterministic | R1 |
 | Paper | — (display only) | `cites_saved_items` (count and IDs) | deterministic (citations when available) | R1 |
+| Paper | Novelty implications | Author-stated limitation / open problem / future work in the abstract (feeds brief question 7) | Extractor abstract mode, quote-verified | R1 |
 
 ### 10.4 Support for Ask & Learn
 - When the tutor suggests further reading or prerequisites, it picks

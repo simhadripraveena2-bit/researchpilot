@@ -189,22 +189,26 @@ can be added later without redesign.
 |---|---|
 | LAT-1 | A dedicated **Latest Research** page per project, in the main navigation |
 | LAT-2 | Discover recent papers from the project topic, objective sub-questions (subtopics), focus concepts and field-map directions, using the **current objective version** |
-| LAT-3 | Default window: rolling **7 days** ending now (UTC, shown in the user's timezone); user-selectable ranges (presets 24 h, 7 d, 14 d, 30 d, and a custom range) |
-| LAT-4 | Sources: arXiv (date-range and category search), Semantic Scholar, OpenAlex (when enabled), Crossref (journal articles with DOIs, and as the authority on DOI publication dates); optional further preprint servers by decision |
+| LAT-3 | Default window: rolling **7 days** ending now. Storage and window calculation in **UTC**; all dates and window bounds **displayed in the user's local time zone** (browser zone, overridable); date-only values are shown as dates and never shifted across zones (D23). Presets: 24 h, 7 d, 14 d, 30 d, and a custom range |
+| LAT-4 | Sources: arXiv (date-range and category search); **bioRxiv and medRxiv** for life-science objectives or when the user enables them (D22); Semantic Scholar; OpenAlex (basic access by default; paid capabilities can be enabled by configuration later, D24); Crossref (journal articles, authoritative DOI dates and preprint↔publication relations) |
 | LAT-5 | Deduplicate across sources and against the existing project record; a recent paper already in the project is shown once with its existing state |
-| LAT-6 | Each entry shows: title, authors, first-publication or first-preprint date (with its source), source(s), abstract, paper URL, open-access full-text availability, relevant subtopic(s), relevance to the objective (tier + reason), main contribution, and method, dataset or benchmark introduced **when verifiable** (otherwise "not stated in the abstract") |
-| LAT-7 | Explain why each paper is relevant and what the user could learn from it (recommendation card with a "What's new" field) |
+| LAT-6 | Each entry shows: title, authors, first-publication or first-preprint date (with source, date type and confidence), source(s), abstract, paper URL, open-access full-text availability, relevant subtopic(s), relevance to the objective (tier + reason), main contribution, and method, dataset or benchmark introduced **when verifiable** (otherwise "not stated in the abstract"); medRxiv entries are labelled "Preprint — not peer-reviewed" |
+| LAT-7 | Each relevant entry has a **Latest brief** answering eight questions (LAT-19) and a recommendation card on demand |
 | LAT-8 | Link to related papers already in the project, distinguishing **"cites your saved paper"** (from citation data) and **"similar to your saved paper"** (from text similarity) |
 | LAT-9 | Actions: save, dismiss (optional reason), add note, mark "read later", open in Ask & Learn |
 | LAT-10 | Filters: date range, release type, subtopic, methodology, source, relevance tier, open-access availability, status (new since last visit, saved, dismissed) |
-| LAT-11 | Classify each entry as exactly one release type: **New preprint**, **New publication**, **Published version of an earlier preprint**, **Revised version of an older paper**, **Older paper newly indexed**, or **Date uncertain**. The default view shows only New preprints and New publications; the others are separate, clearly labelled tabs |
+| LAT-11 | Classify each entry as exactly one release type: **New preprint**, **New publication**, **Published version of an earlier preprint** (separate type, D25), **Revised version of an older paper**, **Older paper newly indexed**, or **Date uncertain**. The default view shows New preprints and New publications; the others are separate, clearly labelled tabs |
 | LAT-12 | Never treat a paper as new because its metadata changed. Metadata dates (indexed, deposited, updated, created-in-index) are never used as publication dates |
-| LAT-13 | Every date shown keeps its source, date type, precision and retrieval timestamp. If the first public date can't be verified to day precision inside the window, mark it **Date uncertain** rather than inventing or rounding a date |
+| LAT-13 | Every date shown keeps its source, date type, manifestation (preprint/published), precision and retrieval timestamp. A first public date supported only by an **uncorroborated secondary source** (OpenAlex or Semantic Scholar alone) is classified **Date uncertain** by default, never as a confirmed new release (D28). Conflicting dates also go to Date uncertain, with all claims shown. Dates are never invented or rounded |
 | LAT-14 | Summary for the window: how many new relevant papers, how many Essential, which overlap with or challenge the project's direction, and a short "What's new this week" digest that cites papers (AI explanation, grounded) |
 | LAT-15 | Flag papers that **overlap with** or **challenge** the project's current direction (objective, saved core papers, and from R3 open gaps and accepted ideas), with the passage that shows it |
-| LAT-16 | "Read first" ordering by RIE priority for the objective. Recency is a filter, not a priority signal |
+| LAT-16 | Default ordering by the Latest brief action (Read now → Save for later → Deprioritise), then RIE priority for the objective. Recency is a filter, not a priority signal |
 | LAT-17 | Each scan is stored (window, sources, objective version, coverage, failures) so results are reproducible and "new since last visit" works; scans are refreshed on demand and automatically when the page is opened if the last scan is over 24 h old |
 | LAT-18 | Source failures and coverage gaps are shown on the page (e.g. "Semantic Scholar unavailable — results may be incomplete") |
+| LAT-19 | **Latest brief** for each relevant new paper, answering: (1) what the paper is about; (2) what is new compared with earlier work; (3) what method, dataset or benchmark it introduces; (4) how it relates to the research objective; (5) whether it overlaps with saved papers; (6) whether it challenges existing research assumptions or the user's proposals; (7) whether it suggests a possible research opportunity; (8) whether to **read now, save for later or deprioritise**. Each answer is either evidence-backed or says "Can't tell from the available text" |
+| LAT-20 | Recency never implies importance: a new paper's tier and action come from the RIE objective profile only. The date window is a filter |
+| LAT-21 | "Possible research opportunity" is shown only when grounded in an author-stated limitation, open problem or future-work statement, or (from R3) a match with an open project gap. It is labelled **Hypothesis (unverified)** |
+| LAT-22 | **Preprint ↔ publication matching** is confidence-aware (DOI, arXiv ID, explicit version relations, title and author similarity, publication metadata). Title similarity alone never merges papers. Possible matches are linked, not merged, and the user can confirm or reject them. Original source records and date provenance are preserved after any match (D29) |
 
 ### 4.13 Ask & Learn (interactive research tutor)
 
@@ -215,7 +219,7 @@ validator.
 | ID | Requirement |
 |---|---|
 | ASK-1 | Ask about any concept, term, algorithm, equation, architecture, paper, methodology, dataset or research direction |
-| ASK-2 | Follow-up questions keep the relevant conversation context; conversations are saved per project and can be resumed or deleted |
+| ASK-2 | Follow-up questions keep the relevant conversation context: the last 12 turns verbatim plus a structured summary of older turns that carries their evidence references (D26). Conversations are saved per project and can be resumed or deleted |
 | ASK-3 | Level per answer: beginner, intermediate or expert (defaults to the project level) |
 | ASK-4 | Explanation styles: simple intuitive, step by step, technical, mathematical, practical example, code-oriented, comparison with related concepts |
 | ASK-5 | One-click follow-ups: Explain more simply · Give me an example · Explain step by step · Show the mathematics · Compare with… · How would I implement it? · What do I need to know first? |
@@ -227,9 +231,15 @@ validator.
 | ASK-11 | Content not drawn from the user's papers is labelled **"Background explanation — AI-generated, not from your sources"** |
 | ASK-12 | Never fabricate paper claims, equations, quotations or citations. If the paper's available text doesn't answer the question, say so ("Not found in the available text of this paper; this paper is available as abstract only") before giving any background explanation |
 | ASK-13 | Identify missing prerequisites and offer a learning sequence, which can be added to the project learning path |
-| ASK-14 | Save an answer or part of one to the project as a note, or pin it to an item; saved answers keep their sources and claim kinds |
+| ASK-14 | Save an answer, or part of one, as a **saved explanation** in the project: an independent copy that keeps its sources and claim kinds and survives conversation deletion; it can also be pinned to an item or noted |
 | ASK-15 | Available from paper reading, recommendation cards, literature review, comparison tables, the field map, Latest Research, the glossary and the learning path; selecting text and choosing "Ask" starts a question about that text |
 | ASK-16 | Feedback on any answer (helpful, unclear, wrong); "wrong" hides the statement pending review |
+| ASK-17 | **Progressive teaching:** "Teach me" (or a concept question) starts a lesson moving through intuition → simple example → technical explanation → mathematical formulation → algorithmic steps → connection to the current paper → practical implementation → short understanding check. Steps that don't apply are skipped with a reason |
+| ASK-18 | During a lesson the user can interrupt with a follow-up and resume, ask for a simpler explanation, go deeper, skip directly to advanced material, jump to any step, or stop |
+| ASK-19 | **Learning progress is tracked per project**, independently of conversation history: concepts studied, steps seen, level reached, check results, and status (in progress, understood, needs review). It feeds the learning path |
+| ASK-20 | **Retention controls:** delete a conversation, delete all conversations, and a project retention policy (keep until deleted, delete after 30/90/365 days, or don't keep history). Deleting conversations never deletes saved explanations or learning progress; resetting progress is a separate, confirmed action |
+| ASK-21 | Conversation summaries are AI-generated context, **never evidence**. Evidence references from summarised turns are preserved and re-resolved to the original passages |
+| ASK-22 | Unrelated, non-research requests get a short, polite redirect (D27) |
 
 ## 5. Evidence and reliability requirements
 
@@ -255,10 +265,15 @@ validator.
 - **Dates:** every displayed date comes from a stored source record and
   states its type (e.g. "arXiv v1 submitted", "published online (Crossref)").
   Metadata-change dates are never shown as publication dates. Unverifiable
-  dates are marked uncertain.
+  dates, including dates supported only by one uncorroborated secondary
+  source, are marked uncertain. Dates are stored and computed in UTC and
+  displayed in the user's local time zone.
 - **Tutor:** paper-specific statements must be grounded in retrieved,
   verified passages; everything else is labelled background. Equations
   attributed to a paper must come from its extracted text or source.
+  Conversation summaries and earlier AI answers are never evidence.
+- **Matching:** papers are never merged on title similarity alone; matches
+  keep every source record and date claim.
 
 ## 6. User experience requirements
 | ID | Requirement |

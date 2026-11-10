@@ -59,10 +59,10 @@ Rules:
 |---|---|---|---|---|
 | **Planner** | Draft the research objective (core question, sub-questions, tasks, focus concepts, exclusions) and the search plan, in plain language; for Latest Research, per-subtopic recent-search queries and an arXiv category mapping (user-editable) | topic, level, goal → `ResearchObjective` draft + `QueryPlan` (+ `LatestScanPlan`) | batch | R1 |
 | **Relevance Judge** (RIE) | Per sub-question relevance label with a verified quote; `relation_to_project` (extends / alternative to / challenges / overlaps with / unrelated, naming the project item, with a quote); second, independent judgement for high-stakes cases | objective + item text (+ saved/Essential project items) → `RelevanceJudgement[]` | batch (top-K) + on demand | R1 |
-| **Card Writer** (RIE) | Phrase the six-question recommendation card (plus "What's new" for recent items) at the user's level from the deterministic skeleton and evidence only; **digest mode** writes the Latest Research "What's new this week" digest from the scan's top verified statements | assessment + evidence + level → `RecommendationCard`; scan skeleton → `Digest` | on demand | R1 |
-| **Tutor** (powers **Ask & Learn**) | Conversational answers and one-shot explanations: primer, glossary definitions, sections, concepts, papers, methods, datasets, directions; seven styles; follow-up intents; missing prerequisites; rolling conversation summaries; enforces grounded/background labelling and "not found in sources" | question + view context + project context + retrieved evidence + conversation memory + level/style → `TutorAnswer` | on demand, streamed | R1 (concepts, papers, sections, follow-ups, styles) / R2 (paper equations via LaTeX, algorithm walkthroughs, exercises, multi-paper comparisons using extractions) |
+| **Card Writer** (RIE) | Phrase the six-question recommendation card at the user's level from the deterministic skeleton and evidence only; for recent items, the **Latest brief** (eight questions, RIE §10.2) and "What's new"; **digest mode** writes the Latest Research "What's new this week" digest from the scan's top verified statements | assessment + evidence + level → `RecommendationCard` / `LatestBrief`; scan skeleton → `Digest` | on demand + W8 | R1 |
+| **Tutor** (powers **Ask & Learn**) | **Answer mode:** conversational answers about concepts, papers, methods, datasets, directions; seven styles; follow-up intents; missing prerequisites. **Teaching mode:** builds a progressive lesson plan (intuition → example → technical → mathematical → algorithmic → paper connection → implementation → understanding check), generates one step at a time, adapts on "simpler"/"deeper"/jump, writes and grades short checks (short answers labelled AI-graded). **Summary task:** recaps older turns as context only. Enforces grounded/background labelling and "not found in sources" | question or lesson action + view context + project memory + retrieved evidence + conversation memory + level/style → `TutorAnswer` / `LessonStep` / `ConversationSummary` | on demand, streamed | R1 (concepts, papers, sections, follow-ups, styles, lessons, checks) / R2 (paper equations via LaTeX, algorithm walkthroughs grounded in extractions, exercises, multi-paper questions) |
 | **Curriculum Builder** | Propose prerequisite edges between concepts; order a learning path with rationales | concepts, glossary, RIE learning-resource tags, level → prerequisite edges + path | batch | R1 |
-| **Extractor** | **Abstract mode (R1):** main contribution and any method/dataset/benchmark *stated in the abstract*, quotes verified against the abstract. **Full-text mode (R2):** contributions, methods, datasets, metrics, results, limitations, assumptions, protocols, compute, method relations | abstract or section text → typed extractions with quotes | batch (Batches API eligible) | R1 (abstract) / R2 (full text) |
+| **Extractor** | **Abstract mode (R1):** main contribution; any method/dataset/benchmark *stated in the abstract*; the paper's own comparative statements ("outperforms…", "unlike prior work…"); author-stated limitations, open problems or future work. Quotes verified against the abstract. **Full-text mode (R2):** contributions, methods, datasets, metrics, results, limitations, assumptions, protocols, compute, method relations | abstract or section text → typed extractions with quotes | batch (Batches API eligible) | R1 (abstract) / R2 (full text) |
 | **Comparator** | Comparison table cell normalisation, improves-on/extends judgements, conflict comparability notes, evolution narrative | extractions + citation contexts → `paper_relations`, table, notes | batch + on demand | R2 |
 | **Gap Investigator** | Label limitation clusters; judge overlap and contradiction probe results; draft hypotheses with falsification criteria | gap signals + probe results → gap outcomes, ideas | batch | R3 |
 | **Red-Team Reviewer** | Adversarial critique of ideas with its own search budget; prior work, confounds, evaluation flaws, feasibility blockers, triviality | idea + evidence + novelty check → `RedTeamReview` | batch | R3 |
@@ -91,6 +91,14 @@ class TutorAnswer(BaseModel):
     missing_prerequisites: list[str]     # concept names → matched to glossary/concepts
     suggested_followups: list[FollowUpIntent]
 
+class LessonStep(BaseModel):
+    step: Literal["intuition", "simple_example", "technical", "mathematical",
+                  "algorithmic", "paper_connection", "implementation", "understanding_check"]
+    skipped_reason: str | None           # e.g. "No standard mathematical formulation"; "No paper in view"
+    answer: TutorAnswer | None           # the step content, same block/claim rules
+    checks: list[CheckQuestion] | None   # only for understanding_check
+    next_options: list[Literal["next", "simpler", "deeper", "jump", "ask", "stop"]]
+
 class AnswerBlock(BaseModel):
     kind: ClaimKind                      # reported_finding | extracted_observation | ai_interpretation
     grounding: Literal["grounded", "background"] | None
@@ -113,13 +121,16 @@ Validation (ClaimValidator):
   UI shows "Not found in the available text of this paper" first.
 - `background` blocks may not name papers, authors, results or numbers with
   units unless they resolve to project items.
+- Evidence handles may only point to evidence spans, chunks, equations or
+  items. Pointing to a conversation summary or an earlier assistant message
+  is rejected.
 
 ## 4. Deterministic services
 
 | Service | Responsibility | Rel. |
 |---|---|---|
 | Discovery | Execute query plans per source; normalise records | R1 |
-| Deduplicator | Identifier union-find + conservative fuzzy merge; possible duplicates | R1 |
+| Deduplicator + **Version Matcher** | Identifier union-find; confidence-aware preprint↔publication matching from decisive identifier links, strong source links and supporting/contradicting evidence; **never merges on title similarity alone**; possible matches linked, not merged; user decisions final; merges reversible (ARCHITECTURE §4.8a, D29) | R1 |
 | Enricher | Batch metadata/abstract completion across sources | R1 |
 | Citation Explorer | References, citations, recommendations within budgets | R1 |
 | Survey Detector | Publication type + title/abstract cues + citation patterns | R1 |
@@ -134,11 +145,14 @@ Validation (ClaimValidator):
 | Experiment Resource Resolver | HF/GitHub metadata, link confidence, licences | R4 |
 | Report Builder | Structured reports, exports (Markdown, BibTeX, CSV, LaTeX, PDF) | R1 / R4 |
 | Journey Guide | Stage readiness and next step | R1 |
-| Date Resolver | Store date claims per source; derive first public date and confidence; classify release type (ARCHITECTURE §4.8) | R1 |
-| Latest Scan Planner | Turn the objective + Planner's `LatestScanPlan` into date-bounded source queries (arXiv category sweep + topic queries; S2; OpenAlex; Crossref); window overlap handling | R1 |
+| Date Resolver | Store date claims per source and manifestation; corroboration lookups; derive first public date and confidence (verified / corroborated / single secondary / conflicting / uncertain, D28); classify release type; UTC computation, boundary-day flags (ARCHITECTURE §4.8) | R1 |
+| Latest Scan Planner | Turn the objective + Planner's `LatestScanPlan` into date-bounded source queries (arXiv category sweep + topic queries; bioRxiv/medRxiv `/details` + `/pubs` for life-science objectives; S2; OpenAlex per configured capabilities; Crossref); UTC window + overlap | R1 |
 | Related Item Linker | Link recent papers to project items: `cites` (citation data) vs `similar` (embedding similarity, labelled) | R1 |
 | Evidence Retriever | Hybrid retrieval (pgvector + Postgres full-text) over chunks, sections, equations and extractions, scoped to paper → project; returns numbered evidence handles | R1 |
-| Context Builder | Assemble project context, view context and conversation memory within a token budget | R1 |
+| Context Builder | Assemble project memory (objective, saved items, notes, saved explanations, concept progress, learning path), view context and conversation memory (last 12 turns + summary + carried references re-resolved to original passages) within a token budget | R1 |
+| Action Recommender (RIE) | Deterministic read now / save for later / deprioritise / check manually rule from tier, relations and links; never uses dates or citation counts | R1 |
+| Learning Progress Tracker | Update `concept_progress` from lesson steps and checks; emit `concept_progress.updated` | R1 |
+| Retention Enforcer | Daily job applying each project's tutor retention policy; deletion cascades as specified (ARCHITECTURE §4.10.2) | R1 |
 | Scope Router | Pick the default scope (anchored view → about_this_paper; project page → about_project; otherwise general); the user can override | R1 |
 
 ## 5. Shared workflow state
@@ -224,21 +238,34 @@ accepted ideas / running experiments (overlap judgement) → alerts + notificati
 
 ### W8 Latest Research scan (R1)
 ```
-load objective version → Latest Scan Planner (queries per subtopic, arXiv categories,
-window + 3-day overlap) → search_sources (fan-out, date-bounded) → dedupe (sources + project)
-→ Date Resolver (claims → first public date → release type) → Crossref DOI date confirmation
-→ assess Stage A (all) → Stage B top-K + relation_to_project → Extractor (abstract mode, top-K)
-→ Related Item Linker → store scan + entries → emit latest_scan.completed
+load objective version → Latest Scan Planner (queries per subtopic; arXiv categories;
+bioRxiv/medRxiv categories if enabled; window in UTC + 3-day overlap; OpenAlex capabilities)
+→ search_sources (fan-out, date-bounded) → Deduplicator + Version Matcher (sources + project)
+→ corroboration lookups (Crossref / arXiv / bioRxiv by identifier) → Date Resolver
+  (claims → confidence → first public date → release type)
+→ assess Stage A (all) → Stage B top-K + relation_to_project (challenges cross-checked)
+→ Extractor (abstract mode, top-K) → Related Item Linker → Action Recommender
+→ Card Writer (Latest brief: 8 answers) → ClaimValidator
+→ store scan + entries + briefs → emit latest_scan.completed
 ```
 No human checkpoint by default; the scan plan can be reviewed in the scan
 settings. Partial results are stored with per-source coverage.
 
 ### Ask & Learn request flow (on demand, not a workflow)
 ```
-message → Context Builder → Scope Router → Evidence Retriever
-→ explanation cache lookup (canonical asks only) → Tutor → ClaimValidator
-→ stream → persist message, evidence, claims → (every 12 turns) Tutor summary task
+message → Context Builder (project memory + view context + last 12 turns
+          + summary + carried refs re-resolved to original passages)
+→ Scope Router → Evidence Retriever
+→ explanation cache lookup (canonical asks and non-anchored lesson steps)
+→ Tutor (answer mode or lesson step) → ClaimValidator
+→ stream → persist message, evidence links, claims
+→ teaching mode: update teaching_sessions + concept_progress
+→ when turns beyond the last 12 accumulate: Tutor summary task → conversation_summaries
+  (summary_text + carried_refs extracted deterministically from the evidence links)
 ```
+`carried_refs` are collected **deterministically** from
+`tutor_message_evidence` and saved explanations, not from the summary text,
+so a summary can never add or lose an evidence reference.
 
 ## 7. Checkpoints
 
@@ -264,6 +291,12 @@ Any checkpoint can be set to auto-approve per project.
 - **Date Resolver:** table-driven tests for every release-type rule,
   window boundaries, precision, conflicts and future dates (EVALUATION_FRAMEWORK §3.8).
 - **Tutor:** scripted multi-turn dialogues with the fake gateway (context
-  retention, scope switching, not-found handling, equation-fabrication
-  rejection).
+  retention beyond 12 turns via summaries, scope switching, not-found
+  handling, equation-fabrication rejection, summary-as-evidence rejection),
+  lesson flows (next, simpler, deeper, jump, interrupt and resume, skipped
+  steps, checks).
+- **Version Matcher:** G-MATCH pairs, including adversarial similar-title
+  pairs; property test that title-only evidence never yields a match.
+- **Retention:** deletion and expiry cascades, and survival of saved
+  explanations and progress.
 - **Live evaluation:** EVALUATION_FRAMEWORK.
