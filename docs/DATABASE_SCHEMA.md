@@ -25,7 +25,7 @@ research_items (supertype: id, item_type)
    ├── papers ─┬─ paper_identifiers, paper_authors, citations, documents
    │           └─ document_sections ─ evidence_spans, equations
    ├── entities (method, architecture, algorithm, dataset, benchmark, metric,
-   │             model, task, concept, term) ─ *_details, paper_entity_mentions
+   │             model, task, concept, term) ─ *_details, entity_links
    ├── code_repositories
    ├── gaps
    └── ideas (hypotheses)
@@ -61,7 +61,7 @@ real referential integrity across item types.
 | `users` | `id, display_name, email null, auth_provider enum(local_none, oidc, password) , auth_subject null, password_hash null (argon2id), mfa_enabled bool, default_level, timezone (IANA, e.g. Europe/Berlin), timezone_source enum(browser, user), preferences jsonb, created_at, deleted_at` (a single `local_none` user for local development; auth fields required for hosted deployment, gate H) | R0 (auth fields: H) |
 | `project_members` | `project_id, user_id, role enum(owner, editor, viewer), added_at, PK(project_id, user_id)`; every project-scoped query checks membership; Postgres row-level security policies on project-scoped tables | R0 (single owner) / H |
 | `security_audit_log` | `id bigserial, user_id null, event enum(login, login_failed, permission_denied, export, deletion, retention_run, settings_change), project_id null, details jsonb (no content), ip_hash, created_at` | H |
-| `deletion_log` | `id, user_id, project_id null, scope enum(conversation, all_conversations, learning_progress, project, account, retention_expiry), object_counts jsonb, requested_at, completed_at` (no content) | R1 |
+| `deletion_log` | `id, subject_hash (one-way salted hash of the user/project ID; no raw IDs), scope enum(conversation, all_conversations, learning_progress, project, account, retention_expiry), object_counts jsonb, requested_at, completed_at` (aggregate audit only; no content, no raw IDs) | R1 |
 | `projects` | `id, user_id, title, topic, expertise_level enum, goal enum(learn_field, review_literature, find_gap, plan_experiment, write_proposal, track_field), settings jsonb (incl. enabled sources such as bioRxiv/medRxiv), tutor_retention_policy enum(keep_until_deleted, delete_after_days, do_not_store) default keep_until_deleted, tutor_retention_days int null, status` | R0 |
 | `research_objectives` | `id, project_id, version int, core_question, target_tasks text[], focus_concepts text[], exclusions text[], constraints jsonb, expertise_level, goal, source enum(planner, user_edit, feedback_suggestion), created_at, UNIQUE(project_id, version)` | R1 |
 | `objective_sub_questions` | `id, objective_id, key text (SQ1…), text, ordinal` | R1 |
@@ -146,7 +146,7 @@ real referential integrity across item types.
 | Table | Key columns | Rel. |
 |---|---|---|
 | `research_directions` | `id, project_id, run_id, label, label_method enum(keyword, llm), description, basis jsonb (algorithm, params, seed), stale bool` | R1 |
-| `direction_members` | `direction_id, paper_id, membership_score` | R1 |
+| *(folded)* | Direction membership is stored as `research_relations` rows: `RELATED_TO` with `basis = direction_membership` and `membership_score` in `properties` (single-source rule, ARCHITECTURE §12.4) | R1 |
 | `direction_relations` | `direction_a, direction_b, relation enum(cites, shares_methods, shares_datasets), weight, signal jsonb` | R1 (cites) / R2 (others) |
 | `taxonomy_nodes` | `id, project_id, parent_id, label, definition, entity_ids uuid[]` | R2 |
 
@@ -158,14 +158,14 @@ real referential integrity across item types.
 | `dataset_details` | `entity_id, modality, size_text, license, license_source, hf_dataset_id, homepage, access enum(open, registration, restricted, unknown), fetched_at` | R2 |
 | `model_details` | `entity_id, hf_model_id, parameters, license, license_source, base_model, fetched_at` | R4 |
 | `metric_details` | `entity_id, definition_text, higher_is_better, range, evidence_span_id` | R2 |
-| `paper_entity_mentions` | `id, paper_id, entity_id, role enum(proposes, uses, compares_against, evaluates_on, reports_metric, extends, defines), evidence_span_id NOT NULL, extraction_run_id, confidence` | R2 (terms: R1) |
-| `paper_contributions` | `id, paper_id, type, summary, evidence_span_id NOT NULL` | R2 |
+| `entity_links` | `id, subject_uid, subject_kind enum(paper, method, proposal, experiment), entity_id, role enum(introduces, uses_method, evaluates_on, compares_against, reports_metric), manifestation_id null, extraction_run_id` + common relationship columns, UNIQUE(subject_uid, entity_id, role, scope_project_id). Replaces `paper_entity_mentions`. Graph types: introduces → INTRODUCES, uses_method → USES_METHOD, evaluates_on → EVALUATES_ON; `compares_against` and `reports_metric` are RIE data and are not projected | R2 (term/concept mentions: R1) |
+| `paper_contributions` | `id, paper_id, type, summary, evidence_span_id NOT NULL` — node data for the Paper (not a relationship source) | R2 |
 | `reported_results` | `id, paper_id, method_id, dataset_id, metric_id, value, value_text, unit, split, setting, is_own_method, evidence_span_id NOT NULL` | R2 |
 | `limitations` | `id, paper_id, text, category, stated_by enum(authors, inferred), evidence_span_id NOT NULL` | R2 |
 | `assumptions` | `id, paper_id, text, evidence_span_id NOT NULL` | R2 |
 | `experimental_protocols` | `id, paper_id, dataset_id, split, baselines uuid[], hyperparameters jsonb, evidence_span_ids uuid[]` | R2 |
 | `compute_reports` | `id, paper_id, hardware, quantity, duration_text, evidence_span_id NOT NULL` | R2 |
-| `paper_relations` | `from_paper_id, to_paper_id, relation enum(improves_on, extends, contradicts, reproduces, compares_with), basis jsonb, evidence_span_ids uuid[]` | R2 |
+| *(folded)* | Paper-to-paper relations are `research_relations` rows: `EXTENDS` (`subtype` improves_on/extends), `CONTRADICTS`, or `RELATED_TO` (`basis` reproduces/compares_with) | R2 |
 
 ## 11. Implementations
 
@@ -178,14 +178,14 @@ real referential integrity across item types.
 
 | Table | Key columns | Rel. |
 |---|---|---|
-| `gaps` | `id FK research_items, project_id, kind enum(recurring_limitation, sparse_intersection, conflicting_results, missing_evaluation, user_defined), description, signal jsonb, status enum(candidate, probed, open, partially_addressed, addressed, rejected)` | R3 |
-| `gap_probes` | `id, gap_id, probe_kind enum(overlap, contradiction), query_ids uuid[], outcome enum(no_close_match, partial_overlap, already_addressed, contradicting_evidence, none_found), matches jsonb (item ids + quote span ids), probed_at` | R3 |
+| `gaps` | `id FK research_items, project_id, kind enum(recurring_limitation, sparse_intersection, conflicting_results, missing_evaluation, user_defined), description, signal jsonb (computed numbers only; links to limitations/papers are `DERIVED_FROM` rows in `research_relations`), status enum(candidate, probed, open, partially_addressed, addressed, rejected)` | R3 |
+| `gap_probes` | `id, gap_id, probe_kind enum(overlap, contradiction), query_ids uuid[], outcome enum(no_close_match, partial_overlap, already_addressed, contradicting_evidence, none_found), match_relation_uids uuid[] (the `ADDRESSES`/`CONTRADICTS` rows created in `research_relations`), probed_at` | R3 |
 | `limitation_clusters` | `id, project_id, label, limitation_ids uuid[], distinct_paper_count, distinct_group_count` | R3 |
-| `ideas` | `id FK research_items, project_id, gap_id, statement, rationale, expected_outcome, falsification_criteria, version, system_status enum(draft, under_review, survived, revised, rejected), user_status enum(proposed, shortlisted, accepted, rejected, parked), user_reason` | R3 |
+| `ideas` | `id FK research_items, project_id, statement, rationale, expected_outcome, falsification_criteria, version, system_status enum(draft, under_review, survived, revised, rejected), user_status enum(proposed, shortlisted, accepted, rejected, parked), user_reason` — the source gap is a `DERIVED_FROM` row in `research_relations` (exactly one active, enforced by trigger) | R3 |
 | `novelty_checks` | `id, idea_id, query_ids, sources, nearest jsonb, result enum(no_close_match_found, similar_work_found, inconclusive), checked_at` | R3 |
 | `red_team_reviews` | `id, idea_id, verdict enum(survives, needs_revision, reject), objections jsonb (type, argument, evidence ids, resolved bool), counter_evidence_ids uuid[]` | R3 |
-| `experiment_plans` | `id, idea_id, datasets uuid[], metrics uuid[], baselines uuid[], protocol jsonb, ablations jsonb, compute_estimate jsonb (with basis), risks jsonb` | R4 |
-| `experiments` | `id, project_id, idea_id null, plan_id null, title, status enum(planned, running, done, abandoned), notes, created_at` | R4 |
+| `experiment_plans` | `id, report_id (the proposal), protocol jsonb, ablations jsonb, compute_estimate jsonb (with basis), risks jsonb` — datasets, metrics and baselines are `entity_links` rows (subject = the proposal); the hypothesis link is `DERIVED_FROM` in `research_relations` | R4 |
+| `experiments` | `id, project_id, plan_id null (structural PART_OF the proposal), title, status enum(planned, running, done, abandoned), notes, created_at` — the hypothesis tested is an `ADDRESSES` row in `research_relations` | R4 |
 | `experiment_results` | `id, experiment_id, metric_id, dataset_id, value, setting, kind = 'user_reported'` | R4 |
 
 ## 13. Persistence, reports and events
@@ -205,7 +205,7 @@ real referential integrity across item types.
 | Table | Key columns | Rel. |
 |---|---|---|
 | `latest_scans` | `id, project_id, run_id, objective_id, window_start, window_end (UTC), fetch_start (window_start − 3 days overlap), display_timezone (for the digest text), sources text[] (incl. biorxiv, medrxiv when enabled), arxiv_categories text[], biorxiv_categories text[], openalex_capabilities text[] (basic \| premium_filters), status, coverage jsonb (per source: queried, returned, failed, budget_exhausted), counts jsonb (by release type, tier, action), created_at` | R1 |
-| `latest_scan_entries` | `scan_id, paper_id, release_type enum(new_preprint, new_publication, published_version_of_preprint, revised_version, newly_indexed_older, date_uncertain), release_event_date, release_event_claim_id FK paper_dates, date_confidence (snapshot), public_date_basis (snapshot, e.g. submission_only), manifestation_id (the manifestation whose event placed it in the window), peer_review_label (snapshot), boundary_day bool, sub_question_keys text[], direction_ids uuid[], matched_query_ids uuid[], related_item_ids jsonb ([{item_id, link: cites \| similar, score}]), relation_to_project jsonb, brief jsonb (eight answers, each referencing claim ids or a "can't tell" reason), action enum(read_now, save_for_later, deprioritise, check_manually), action_reason, first_seen_in_scan bool, PK(scan_id, paper_id)` | R1 |
+| `latest_scan_entries` | `scan_id, paper_id, release_type enum(new_preprint, new_publication, published_version_of_preprint, revised_version, newly_indexed_older, date_uncertain), release_event_date, release_event_claim_id FK paper_dates, date_confidence (snapshot), public_date_basis (snapshot, e.g. submission_only), manifestation_id (the manifestation whose event placed it in the window), peer_review_label (snapshot), boundary_day bool, sub_question_keys text[], direction_ids uuid[], matched_query_ids uuid[], related_item_ids jsonb (snapshot: [{item_id, link: cites \| similar, relation_uid}]), relation_to_project jsonb (snapshot referencing `research_relations` uids), brief jsonb (eight answers, each referencing claim ids or a "can't tell" reason), action enum(read_now, save_for_later, deprioritise, check_manually), action_reason, first_seen_in_scan bool, PK(scan_id, paper_id)` | R1 |
 | `latest_views` | `project_id, user_id, last_viewed_at` (for "new since last visit") | R1 |
 
 User actions on entries (save, dismiss, read later, notes, overrides) are
@@ -256,17 +256,22 @@ graph-ready from R0, so Neo4j can be added in R2 without changing models.
 
 ### 16.1 Conventions for all graph-projected tables
 - **Stable IDs:** UUIDv7 primary keys. The same UUID becomes the Neo4j
-  `uid`. Composite-key link tables (e.g. `citations`, `paper_authors`,
-  `direction_members`) also get a `relation_uid uuid` column holding a
+  `uid`. Composite-key link tables (e.g. `citations`, `paper_authors`)
+  also get a `relation_uid uuid` column holding a
   deterministic UUIDv5 of `(relation_type, table, from_uid, to_uid,
   qualifier)`.
 - **`row_version bigint not null default 1`**, incremented by trigger on
   every update. Used for idempotent, version-guarded sync.
-- **Common relationship columns** on every relationship-bearing table
-  (`citations`, `paper_authors`, `author_affiliations`,
-  `paper_entity_mentions`, `paper_contributions`, `paper_relations`,
-  `limitations`, `direction_members`, `gap_probes` (outcome links),
-  `item_code_links`, `research_relations`):
+- **Relationship tables** (the only sources of research relationships, one
+  per type; ARCHITECTURE §12.4): `citations` (CITES), `paper_authors`
+  (AUTHORED_BY), `author_affiliations` (AFFILIATED_WITH), `entity_links`
+  (INTRODUCES, USES_METHOD, EVALUATES_ON), `limitations`
+  (REPORTS_LIMITATION), `research_relations` (EXTENDS, CONTRADICTS,
+  RELATED_TO, ADDRESSES, DERIVED_FROM, VALIDATED_BY), and from R4
+  `item_code_links` (IMPLEMENTED_BY). Structural relationships come from
+  foreign keys and `project_items` (HAS_VERSION, PART_OF, IN_PROJECT,
+  RESULT_FOR) and carry `assertion = structural`.
+- **Common relationship columns** on every relationship table above:
   - `assertion enum(source_metadata, author_reported, extracted, computed, inferred, hypothesized, user_asserted, user_confirmed, rejected, structural)`
   - `confidence numeric null`
   - `evidence jsonb` (evidence span IDs with manifestation, source record IDs, signal IDs)
@@ -275,17 +280,31 @@ graph-ready from R0, so Neo4j can be added in R2 without changing models.
   - `status enum(active, retracted) default active`
   - `row_version`
 - Promotions of `assertion` (inferred → extracted after quote verification;
-  inferred → user_confirmed) are written to `relation_assertion_log`.
+  inferred → user_confirmed) and rejections are written to
+  `relation_assertion_log`.
+- **Evidence by assertion** (CHECK constraints + trigger): `source_metadata`
+  requires a source record ID; `author_reported` and `extracted` require
+  ≥ 1 verified evidence span; `computed` requires a signal/computation
+  reference; `inferred` requires confidence, ≥ 1 evidence reference and the
+  producing task/model; `hypothesized` requires the source gap/evidence;
+  user assertions require actor and time; `structural` requires none
+  (ARCHITECTURE §12.5).
+- **Single write path and sticky rejection:** all inserts and updates go
+  through `RelationWriter`. Each relationship table has a unique natural
+  key. A trigger forbids changing a row *from* `rejected` except by a
+  user action, and automatic writes that hit a rejected row become logged
+  no-ops. Fuzzy re-creation is blocked by `relation_suppressions`.
 
 ### 16.2 New tables
 
 | Table | Key columns | Rel. |
 |---|---|---|
-| `research_relations` | `id (uid), type enum(CITES, AUTHORED_BY, USES_METHOD, EVALUATES_ON, INTRODUCES, EXTENDS, CONTRADICTS, REPORTS_LIMITATION, RELATED_TO, ADDRESSES, DERIVED_FROM, VALIDATED_BY), from_uid, from_kind, to_uid, to_kind, properties jsonb (e.g. basis, outcome, metric ids), assertion, confidence, evidence, provenance, scope_project_id, status, row_version, created_at, updated_at, UNIQUE(type, from_uid, to_uid, (properties->>'qualifier'), scope_project_id)` — relationships that have no domain table of their own (e.g. ADDRESSES, DERIVED_FROM, VALIDATED_BY, inferred CONTRADICTS/RELATED_TO). Domain tables remain the source for relationships they already hold, so no relationship is stored twice | R1 |
+| `research_relations` | `id (uid), type enum(EXTENDS, CONTRADICTS, RELATED_TO, ADDRESSES, DERIVED_FROM, VALIDATED_BY)` (**only these six types**; CHECK constraint), `from_uid, from_kind, to_uid, to_kind, properties jsonb (e.g. subtype, basis, outcome, membership_score, qualifier), assertion, confidence, evidence, provenance, scope_project_id, status, row_version, created_at, updated_at, UNIQUE(type, from_uid, to_uid, (properties->>'qualifier'), scope_project_id)` — the single source for these six types (including direction membership, paper-to-paper relations, relevance-judge relations to project items, gap probe matches, hypothesis/proposal/experiment links) | R1 |
 | `relation_assertion_log` | `id, relation_table, relation_id, from_assertion, to_assertion, reason (quote_verified, user_confirmed, user_rejected, source_retracted), actor (service or user), created_at` | R1 |
+| `relation_suppressions` | `id, type, from_uid, to_uid null, fingerprint (hash of evidence span or normalised text; no content stored), scope_project_id, reason, created_by (user), created_at` — prevents rejected relationships from being re-created in a slightly different form | R1 |
 | `research_groups` | `id, display_name, ror_id null, openalex_institution_id null, country null, kind enum(institution, lab, consortium, unknown), source, source_record_id, row_version` | R1 |
 | `author_affiliations` | `id, author_id, group_id, paper_id null, raw_affiliation, period jsonb null` + common relationship columns (assertion usually `source_metadata`) | R1 |
-| `entity_tombstones` | `uid, kind (label or relationship type), deleted_at, reason enum(user_delete, retention, project_delete, merge_split, retracted), graph_removed_at null` — no content; kept until reconciliation confirms removal from Neo4j | R1 (written from R1; consumed from R2) |
+| `entity_tombstones` | `uid (opaque UUID or one-way UUIDv5), kind (label or relationship type), reason enum(user_delete, retention, project_delete, account_delete, merge_split, retracted, rejected), deleted_at, graph_removed_at null, verified_absent_at null, attempts, purge_after (= min(verified_absent_at, deleted_at + 30 days))` — **minimum metadata only**: no content, names, text, endpoint IDs, project IDs or user IDs; purged when verified absent from Neo4j or after 30 days (alert if unverified); see ARCHITECTURE §12.6a | R1 (written from R1; consumed from R2) |
 | `graph_sync_state` | `uid, kind, pg_version, synced_version, status enum(pending, synced, failed, ineligible), attempts, last_error, last_synced_at, PK(uid)` | R2 |
 | `graph_sync_runs` | `id, kind enum(incremental, reconciliation, rebuild), started_at, finished_at, graph_version, counts jsonb, mismatches jsonb, repaired jsonb, status` | R2 |
 | `graph_dead_letters` | `id, uid, kind, event_id, error, attempts, created_at, resolved_at` | R2 |
@@ -300,8 +319,10 @@ experiments, reported and user results, repositories and models. All are
 existing tables with UUIDv7 keys (ARCHITECTURE §12.3 maps them to labels).
 
 ### 16.4 Eligibility for sync (validated records only)
-A row is projected only when: its `status` is `active`; its `assertion` is
-not `rejected`; extracted relationships have verified evidence; matches are
+A row is projected only when: it comes from the registered single source
+for its type (snapshots are never sources); its `status` is `active`; its
+`assertion` is not `rejected` (rejected rows and suppressed fingerprints are
+never projected, so resync and rebuild cannot resurrect them); extracted relationships have verified evidence; matches are
 not `possible_match`; and claims are not hidden pending review. In R2 only
 established assertions are eligible (`source_metadata`, `author_reported`,
 `extracted`, `computed`, `user_asserted`, `user_confirmed`, `structural`).

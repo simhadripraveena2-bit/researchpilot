@@ -15,9 +15,10 @@ where possible, a page or section).
 
 A **research knowledge graph** connects papers, versions, authors, topics,
 methods, datasets, metrics, limitations, gaps, hypotheses, proposals,
-experiments and results. PostgreSQL is the source of truth; Neo4j joins in R2
-as the graph store. Every relationship records its evidence, confidence and
-whether it is established or AI-inferred.
+experiments and results. PostgreSQL is the source of truth. Neo4j is a
+required part of the architecture from R2 (the MVP serves basic graph views
+from PostgreSQL). Every relationship records its evidence, confidence and
+whether it is established, AI-inferred or structural.
 
 Two recurring tools sit across the journey:
 

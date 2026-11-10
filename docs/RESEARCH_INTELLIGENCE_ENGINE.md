@@ -437,7 +437,10 @@ without special-casing the scoring:
   objective plus the user's Essential/saved items. The Relevance Judge
   returns `relation_to_project ∈ {extends, alternative_to, challenges,
   overlaps_with, unrelated}` with the project item it relates to and a
-  verified quote from the new paper's abstract. From R3, the same signal is
+  verified quote from the new paper's abstract. Each non-`unrelated` value is
+  persisted once, through `RelationWriter`, as a project-scoped
+  `research_relations` row (extends → EXTENDS, challenges → CONTRADICTS,
+  overlaps_with / alternative_to → RELATED_TO), with `assertion = inferred`. From R3, the same signal is
   also computed against open gaps and accepted ideas.
 
 - **Journal versions of existing preprints are the same work.** When a

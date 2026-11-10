@@ -245,9 +245,17 @@ Opens as a right-hand panel from any page (and from text selection →
 
 ## 4d. Research Knowledge Graph
 
-`/projects/:id/graph`. In R1 this is the citation and related-paper graph,
-served by the PostgreSQL implementation. From R2 it is the full Neo4j
-knowledge graph. The UI is the same for both.
+`/projects/:id/graph`. The UI is the same in every release; capabilities
+grow:
+- **R1:** citation graph, paper versions, direct neighbours of any node and
+  basic related-paper exploration.
+- **R2 (Neo4j):** multi-hop paths ("How is A connected to B?") and rich
+  exploration across methods, datasets, metrics and evolution chains.
+- **R3:** graph-assisted gap, contradiction and novelty views.
+- **R4–R5:** provenance trails and the evolving graph.
+
+Features not yet available are shown as "Available from R2" rather than
+approximated.
 
 - **Node types** are filterable: papers (and their versions), authors and
   groups, topics, methods, datasets/benchmarks, metrics, limitations, gaps,
@@ -261,9 +269,11 @@ knowledge graph. The UI is the same for both.
 - **Clicking an edge** shows its type, assertion, confidence, evidence
   quotes (with page and paper version) and provenance. Inferred edges offer
   **Confirm** / **Reject**; both are logged, and rejected links are not
-  proposed again.
-- **Paths:** "How is A connected to B?" shows paths, each labelled with its
-  weakest assertion.
+  proposed again, even by later re-analysis.
+- Structural links (e.g. "version of", "part of project") are drawn in
+  grey and never presented as findings.
+- **Paths** (R2+): "How is A connected to B?" shows paths, each labelled
+  with its weakest assertion.
 - **Provenance trail** (R4): from a proposal or hypothesis back through gaps
   and limitations to papers and quoted evidence.
 - **Beginner view** shows topics, key papers and methods with plain labels.

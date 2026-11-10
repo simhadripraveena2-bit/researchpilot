@@ -46,7 +46,7 @@ PostgreSQL   GROBID       File storage          External APIs
 ```
 
 **Five containers in the MVP:** `postgres` (with pgvector), `grobid`, `api`,
-`worker`, `frontend`. **Neo4j joins in R2** as the research knowledge graph
+`worker`, `frontend`. **Neo4j joins in R2 as a required service**: the research knowledge graph
 (§12). Deferring it is a sequencing decision: R0–R1 build the graph-ready
 model and run graph queries through the PostgreSQL implementation of
 `GraphService`. Redis and Qdrant are optional scaling adapters (§9).
@@ -589,8 +589,8 @@ Rules:
 | POST | `/tutor/messages/{id}/learning-sequence` | build a prerequisite sequence and optionally add it to the learning path |
 | GET / PUT | `/me/preferences` | time zone (browser or manual), default level |
 | GET | `/projects/{id}/graph` | backend-neutral `GraphView` subgraph: `labels`, `rel_types`, `assertion_policy` (default `established_only`), `include_inferred`, filters. Served by `GraphService` (PostgreSQL in R1, Neo4j from R2), with the same schema either way |
-| GET | `/graph/nodes/{uid}/neighbors` | neighbours with relationship assertion, confidence and evidence |
-| GET | `/graph/paths?from=&to=&max_hops=&assertion_policy=` | paths, each labelled with its weakest assertion |
+| GET | `/graph/nodes/{uid}/neighbors` | 1-hop neighbours with relationship assertion, confidence and evidence (R1+) |
+| GET | `/graph/paths?from=&to=&max_hops=&assertion_policy=` | multi-hop paths, each labelled with its weakest assertion (**R2+**; earlier or in degraded mode: `graph-capability-unavailable`) |
 | GET | `/graph/nodes/{uid}/provenance-trail` | proposal/hypothesis → gaps → limitations → papers → evidence (R4) |
 | POST | `/relations/{uid}/confirm` · `/reject` | user confirms or rejects an inferred relationship (logged; never automatic) |
 
@@ -800,7 +800,8 @@ requires no changes to agents, APIs or database models.
 | `Method` (`kind`: method, algorithm, architecture) | `entities` | global |
 | `Dataset`, `Benchmark` | `entities` (+ `dataset_details`) | global |
 | `Metric` | `entities` (+ `metric_details`) | global |
-| `Limitation` | `limitations`, `limitation_clusters` | global (paper-stated) / project (clusters) |
+| `Limitation` | `limitations` | global (paper-stated) |
+| `LimitationCluster` | `limitation_clusters` | project |
 | `Gap` | `gaps` | project |
 | `Hypothesis` | `ideas` | project |
 | `Proposal` | `reports` (type proposal), `experiment_plans` | project |
@@ -808,62 +809,125 @@ requires no changes to agents, APIs or database models.
 | `Result` (`kind`: paper_reported, user_reported) | `reported_results`, `experiment_results` | global (paper-reported) / project (user-reported) |
 | `Repository`, `Model` (R4) | `code_repositories`, `entities` (+ `model_details`) | global |
 
-### 12.4 Relationship types
+### 12.4 Relationship types and their single source of truth
 
-The twelve planned relationship types, plus four **structural** ones needed
-to connect the planned entities (marked *structural*; they carry no research
-claim).
+Relationships fall into two classes:
 
-| Type | Typical endpoints | PostgreSQL source | Usual assertion |
-|---|---|---|---|
-| `CITES` | Paper → Paper | `citations` | `source_metadata` |
-| `AUTHORED_BY` | Paper → Author | `paper_authors` | `source_metadata` |
-| `USES_METHOD` | Paper/Experiment → Method | `paper_entity_mentions` (role uses), `experiment_plans` | `extracted` / `user_asserted` |
-| `EVALUATES_ON` | Paper/Method/Experiment → Dataset/Benchmark (property: metric ids) | `paper_entity_mentions` (evaluates_on), `reported_results`, `experiment_plans` | `extracted` / `author_reported` |
-| `INTRODUCES` | Paper → Method/Dataset/Benchmark/Metric | `paper_entity_mentions` (proposes/defines), `paper_contributions` | `author_reported` (quote-verified) |
-| `EXTENDS` | Paper → Paper, Method → Method | `paper_relations` (improves_on, extends) | `author_reported` / `extracted` / `inferred` |
-| `CONTRADICTS` | Paper → Paper, Result → Result, Paper → Hypothesis | `paper_relations` (contradicts), conflict detection, `research_relations` (challenges, red-team counter-evidence) | `computed` (result conflicts) / `inferred` |
-| `REPORTS_LIMITATION` | Paper → Limitation | `limitations` | `author_reported` / `extracted` / `inferred` |
-| `RELATED_TO` (property `basis`: similarity, co-citation, direction_membership, sub_question_match, topic) | any → any | `direction_members`, related-item links, `research_relations` | `computed` / `inferred` |
-| `ADDRESSES` | Paper → Gap/Topic, Hypothesis → Gap, Proposal → Hypothesis, Experiment → Hypothesis | `gap_probes` outcomes, `research_relations` | `inferred` / `user_asserted` / `user_confirmed` |
-| `DERIVED_FROM` | Gap → Limitation/Paper, Hypothesis → Gap, Proposal → Hypothesis, Result → Experiment | `gaps.signal`, `ideas.gap_id`, `research_relations` | `computed` / `hypothesized` / `user_asserted` |
-| `VALIDATED_BY` (property `outcome`: supports, refutes, inconclusive) | Hypothesis → Result/Experiment | `research_relations` | `user_asserted` (user-reported results) / `computed` |
-| `HAS_VERSION` *(structural)* | Paper → PaperVersion | `paper_manifestations` | `source_metadata` |
-| `AFFILIATED_WITH` *(structural)* | Author → ResearchGroup (property: paper uid, period) | `author_affiliations` | `source_metadata` |
-| `PART_OF` *(structural)* | Objective → Project, Topic → Objective/Topic, Gap/Hypothesis/Experiment → Project | foreign keys | `structural` |
-| `IN_PROJECT` *(structural)* | Paper → Project (property: inclusion, tier) | `project_items`, `assessments` | `structural` / `user_*` |
+- **Research relationships** make a claim about the research world, such
+  as "A cites B" or "P introduces method M". They always carry an
+  assertion, provenance and the evidence required for that assertion
+  (§12.5).
+- **Structural relationships** only express how ResearchPilot's own records
+  are organised, such as "this version belongs to this work" or "this gap
+  belongs to this project". Their assertion is `structural`. They carry no
+  research claim, need no evidence, and are never shown or counted as
+  findings. They can't be "rejected": a wrong structure is corrected by
+  fixing the record.
 
-New relationship types are added through the **relation registry** (§12.6)
-without changing existing code.
+**Every relationship type has exactly one PostgreSQL source.** A test
+(R1-65) fails if the relation registry maps a type to more than one source,
+or if any other table stores the same kind of link.
 
-### 12.5 Provenance, confidence and evidence (on every relationship)
+| Type | Class | Endpoints | Single PostgreSQL source | Typical assertions |
+|---|---|---|---|---|
+| `CITES` | research | Paper → Paper | `citations` | `source_metadata` |
+| `AUTHORED_BY` | research | Paper → Author | `paper_authors` | `source_metadata` |
+| `AFFILIATED_WITH` | research | Author → ResearchGroup (property: paper uid, period) | `author_affiliations` | `source_metadata` |
+| `INTRODUCES` | research | Paper → Method/Dataset/Benchmark/Metric | `entity_links` (role `introduces`) | `author_reported`, `extracted` |
+| `USES_METHOD` | research | Paper/Proposal/Experiment → Method | `entity_links` (role `uses_method`) | `extracted`, `user_asserted` |
+| `EVALUATES_ON` | research | Paper/Method/Proposal/Experiment → Dataset/Benchmark | `entity_links` (role `evaluates_on`) | `extracted`, `author_reported`, `user_asserted` |
+| `REPORTS_LIMITATION` | research | Paper → Limitation | `limitations` (one row = the Limitation node and its edge) | `author_reported`, `extracted`, `inferred` |
+| `EXTENDS` | research | Paper → Paper, Method → Method (property `subtype`: improves_on, extends) | `research_relations` | `author_reported`, `extracted`, `inferred` |
+| `CONTRADICTS` | research | Paper ↔ Paper, Result ↔ Result, Paper → Hypothesis/Paper in project (challenges) | `research_relations` | `computed` (result conflicts), `extracted`, `inferred` |
+| `RELATED_TO` | research | any → any (property `basis`: similarity, co_citation, direction_membership, overlap, alternative, reproduces, compares_with, topic) | `research_relations` | `computed`, `inferred` |
+| `ADDRESSES` | research | Paper → Gap/Topic, Proposal → Hypothesis, Experiment → Hypothesis | `research_relations` | `inferred`, `user_asserted`, `user_confirmed` |
+| `DERIVED_FROM` | research | Gap → Limitation/Paper, Hypothesis → Gap, Proposal → Hypothesis | `research_relations` | `computed`, `hypothesized`, `user_asserted` |
+| `VALIDATED_BY` | research | Hypothesis → Result/Experiment (property `outcome`) | `research_relations` | `user_asserted`, `computed` |
+| `IMPLEMENTED_BY` (R4 registry extension) | research | Paper/Method/Model → Repository (properties: link_source, is_official) | `item_code_links` | `extracted` (URL in paper text), `source_metadata` (HF paper page), `inferred` (name search: "possible") |
+| `HAS_VERSION` | structural | Paper → PaperVersion | `paper_manifestations.paper_id` | `structural` |
+| `PART_OF` | structural | Objective → Project; Topic → Objective/Topic; Gap/Hypothesis/Proposal/Experiment → Project; Result(user) → Experiment; Experiment → Proposal; Limitation → LimitationCluster | the child row's foreign key (one FK per label pair, listed in the registry) | `structural` |
+| `IN_PROJECT` | structural | Paper → Project (properties: inclusion, reading status) | `project_items` | `structural` |
+| `RESULT_FOR` | structural | Result → Method/Dataset/Metric (property `role`) | the result row's FK columns (`reported_results`, `experiment_results`) | `structural` (the claim and its evidence belong to the Result node) |
 
-Every relationship, in PostgreSQL and in Neo4j, carries:
+Consequences of the single-source rule:
+- `entity_links` replaces `paper_entity_mentions`, with a generic subject
+  (paper, method, proposal, experiment). Roles that have no graph type
+  (`compares_against`, `reports_metric`) stay in `entity_links` for RIE use
+  and are not projected.
+- `paper_relations` and `direction_members` are folded into
+  `research_relations` (EXTENDS/CONTRADICTS/RELATED_TO with properties).
+  Hypothesis → gap, proposal → hypothesis and experiment → hypothesis links
+  live only in `research_relations`, not as foreign-key columns.
+- **Snapshots are never graph sources.** Latest Research entries, briefs,
+  cards, reports and conversation content may reference relationship
+  `uid`s, but they never store links of their own.
+- `paper_contributions` is node data (a contribution summary on the Paper),
+  not a relationship source.
+
+New relationship types are added through the **relation registry** (§12.6),
+which must keep the single-source rule.
+
+### 12.5 Provenance, confidence and evidence
+
+Every **research** relationship, in PostgreSQL and in Neo4j, carries:
 
 | Property | Meaning |
 |---|---|
-| `assertion` | `source_metadata` (reported by an external index, e.g. citations, authorship) · `author_reported` (stated in the paper; quote-verified) · `extracted` (extracted by ResearchPilot from text; evidence verified) · `computed` (deterministic statistic, e.g. co-citation, result conflict) · `inferred` (model judgement, not proven by a quote) · `hypothesized` (AI-generated hypothesis link) · `user_asserted` · `user_confirmed` · `rejected` · `structural` (foreign-key links that carry no research claim, e.g. `PART_OF`) |
-| `confidence` | 0–1 where meaningful (null for `source_metadata` and user assertions) |
+| `assertion` | `source_metadata` (reported by an external index, e.g. citations, authorship) · `author_reported` (stated in the paper; quote-verified) · `extracted` (extracted by ResearchPilot from text; evidence verified) · `computed` (deterministic statistic, e.g. co-citation, result conflict) · `inferred` (model judgement, not proven by a quote) · `hypothesized` (AI-generated hypothesis link) · `user_asserted` · `user_confirmed` · `rejected`. Structural relationships use `structural` (§12.4) |
+| `confidence` | 0–1 where meaningful (null for `source_metadata`, `structural` and user assertions) |
 | `evidence` | evidence span IDs (with manifestation), source record IDs, signal IDs |
 | `provenance` | producing service/agent and version, prompt version, task/provider/model (if any), source API, created and updated time, `pg_table`, `pg_id`, `pg_version` |
 | `scope` | `global` or a `project_id` |
-| `status` | `active` · `retracted` (source withdrew it, superseded or rejected) |
+| `status` | `active` · `retracted` (source withdrew it or it was superseded) |
+
+**Evidence is required by assertion** (database constraint plus the single
+write path below):
+
+| Assertion | Required |
+|---|---|
+| `source_metadata` | `source_record_id` of the API response that reported it |
+| `author_reported` | ≥ 1 evidence span with `verification ∈ (exact, fuzzy)` |
+| `extracted` | ≥ 1 verified evidence span |
+| `computed` | signal or computation reference (inputs and method version); no quote needed |
+| `inferred` | confidence + at least one evidence reference (span or signal) supporting the judgement + producing task/model |
+| `hypothesized` | the gap/evidence it was derived from + producing task/model |
+| `user_asserted` / `user_confirmed` | acting user and time; evidence optional |
+| `rejected` | acting user (or verification job) and reason |
+| `structural` | none |
 
 **Inferred is never treated as established:**
 - `inferred` and `hypothesized` relationships are excluded from traversals
   by default. Every `GraphService` query takes an explicit `AssertionPolicy`
-  (default: `established_only` = source_metadata, author_reported,
-  extracted, computed, user_confirmed). Including inferred edges requires
-  `include_inferred = true`, and every result path then reports the weakest
-  assertion on it.
-- Results derived from paths that contain inferred edges are labelled `ai_interpretation`
-  or `unverified_hypothesis` (claim kinds), never `reported_finding`.
+  (default `established_only`: source_metadata, author_reported, extracted,
+  computed, user_asserted, user_confirmed, structural). Including inferred
+  edges requires `include_inferred = true`, and every path then reports its
+  weakest assertion.
+- Results derived from paths that contain inferred edges are labelled
+  `ai_interpretation` or `unverified_hypothesis`, never `reported_finding`.
 - An inferred relationship is promoted only by verification (a verified
-  quote turns it into `extracted`) or by a user (`user_confirmed`). Both
-  promotions are logged. Nothing is promoted automatically by repetition or
-  by agreement between models.
-- `rejected` relationships stay in PostgreSQL, so the system doesn't
-  re-propose them, but they are never traversed.
+  quote turns it into `extracted`) or by a user (`user_confirmed`). Both are
+  logged. Nothing is promoted by repetition or by agreement between models.
+
+**Rejected relationships cannot silently reappear:**
+- **One write path.** All relationship writes go through the
+  `RelationWriter` service, including writes by extractors, judges,
+  matchers, sync of source metadata, and users. No other code inserts into
+  relationship tables (enforced by repository design and a lint rule).
+- **Natural keys.** Each relationship table has a unique natural key (e.g.
+  `research_relations(type, from_uid, to_uid, qualifier, scope)`,
+  `entity_links(subject_uid, entity_id, role, scope)`). A re-extraction
+  therefore finds the existing rejected row instead of creating a new one.
+- **Rejection is sticky.** A trigger blocks any change *from* `rejected`
+  unless it is made by a user action. `RelationWriter` turns an automatic
+  write that hits a rejected row into a no-op and logs it as "suppressed".
+- **Fuzzy duplicates.** For relationships without a stable natural key
+  (e.g. limitations whose wording varies, similarity links), rejection
+  writes a `relation_suppressions` fingerprint (type, endpoints, and a hash
+  of the evidence span or normalised text). `RelationWriter` refuses new
+  rows matching it.
+- **Sync and rebuild.** Rejected rows are ineligible for projection, so
+  they are removed from Neo4j and never re-created by resync, reconciliation
+  or a full rebuild.
 
 ### 12.6 Synchronisation (asynchronous, idempotent)
 
@@ -897,14 +961,55 @@ PostgreSQL write ─(same transaction)─▶ domain_events (outbox; includes del
   `graph_dead_letters`, an alert is raised, and reconciliation retries it
   later. Neo4j being unavailable never blocks PostgreSQL writes.
 - **Deletion propagation:** deletes (user deletions, retention expiry,
-  project deletion, merge splits) emit tombstone events with the `uid`s. The
-  worker removes the nodes (`DETACH DELETE`) or edges.
-  `entity_tombstones` keeps the uid and kind (no content) until
-  reconciliation confirms removal, so deletions survive worker downtime.
+  project and account deletion, merge splits) and rejections emit tombstone
+  events with the `uid`s. The worker removes the nodes (`DETACH DELETE`) or
+  edges. Deletion markers (§12.6a) make deletions survive worker downtime.
   Retention enforcement (S7, gate H) includes the graph.
 - **Merges and splits:** when versions are matched (D29), the `PaperVersion`
   nodes stay distinct and are connected to the surviving `Paper`. A split
   re-projects both works from PostgreSQL.
+
+### 12.6a Deletion markers (`entity_tombstones`)
+
+Deletion markers exist only so that deletions reach the graph reliably, even
+while Neo4j is down or before it exists (R1). They are not an archive.
+
+- **Minimum metadata only:** `uid` (an opaque UUID, or for composite links
+  the one-way UUIDv5 hash; neither reveals content), `kind` (node label or
+  relationship type), `reason` (user_delete, retention, project_delete,
+  account_delete, merge_split, retracted, rejected), `deleted_at`,
+  `graph_removed_at`, `verified_absent_at`, `attempts`, `purge_after`.
+  **No** titles, text, names, emails, notes, conversation content, endpoint
+  IDs, project IDs or user IDs.
+- **Retention period:** a marker is purged when it has been verified absent
+  from Neo4j by a reconciliation run, and in any case **30 days** after
+  `deleted_at` (hard cap). If a marker reaches the cap unverified, an alert
+  is raised before purging. The reconciliation orphan sweep, which deletes
+  every graph element whose `uid` has no eligible PostgreSQL row, still
+  guarantees removal afterwards.
+- **Use in reconciliation:** reconciliation first applies pending markers,
+  then confirms absence (`verified_absent_at`), then runs the orphan sweep.
+  Markers make deletion fast and auditable; the orphan sweep makes it
+  complete.
+- **Use in rebuilds:** a full rebuild projects only rows that currently
+  exist and are eligible in PostgreSQL, so deleted data can't come back.
+  Pending markers are applied to the new database before the switch-over,
+  covering deletions made during the rebuild.
+- **Compliance with deletion and retention policies:**
+  - Conversation deletion and retention expiry write markers for affected
+    project-scoped graph elements (e.g. inferred relationships created in
+    that conversation, if any).
+  - Project deletion writes markers for every project-scoped node and edge.
+  - Account deletion writes markers for all of the user's projects.
+  - Global knowledge (public papers, authors) is not deleted when a user
+    leaves, because it isn't personal content.
+  - The marker never keeps the deleted content. After purge, only the
+    aggregate `deletion_log` remains (counts by scope, timestamps, and a
+    one-way hash instead of user/project IDs).
+- **Backups:** PostgreSQL backups follow the S7 retention period. Markers
+  are not used to re-apply deletions after a backup restore; that is
+  covered by the documented restore procedure (S7). Neo4j has no backups of
+  its own: it is rebuilt.
 
 ### 12.7 Reconciliation and rebuild
 - **Scheduled reconciliation** (daily, plus on demand) compares PostgreSQL
@@ -914,7 +1019,8 @@ PostgreSQL write ─(same transaction)─▶ domain_events (outbox; includes del
   `graph_sync_runs`.
 - **Full rebuild:** a command that recreates the graph from PostgreSQL into
   a fresh database and switches the service over when it completes, using a
-  blue/green database name. Neo4j can therefore always be discarded.
+  blue/green database name. The Neo4j *data* can therefore always be
+  discarded and regenerated. The Neo4j *service* is required from R2.
 - Every sync batch increments a `graph_version` stored in Neo4j. Results that
   depend on the graph (R3 signals) record the `graph_version` and query
   template used, for reproducibility.
@@ -937,8 +1043,9 @@ class GraphService(Protocol):
     in-memory `networkx` for small project graphs.
   - `Neo4jGraphService` (R2+): parameterised Cypher templates (and optionally
     the Graph Data Science library for analytics).
-  - A configuration flag selects the backend. A **parity test suite** runs
-    the same fixtures against both and must agree on supported queries.
+  - A configuration flag selects the backend (PostgreSQL in R0–R1; Neo4j
+    from R2, with PostgreSQL only as the degraded fallback). A **parity test
+    suite** runs the R1 capability set against both.
 - **No direct Neo4j dependency:** only `graph/adapters/neo4j/` imports the
   Neo4j driver (lint rule). Agents, services and API routers use
   `GraphService`. API responses use a backend-neutral `GraphView` schema
@@ -952,16 +1059,42 @@ class GraphService(Protocol):
   project. This holds even though Neo4j Community Edition has no per-user
   database security, because isolation is enforced in the service (gate H,
   H3). Cross-project queries see only the global layer.
-- **Degradation:** if Neo4j is unavailable, `GraphService` falls back to the
-  PostgreSQL implementation for supported queries. Graph-only analytics show
-  "Graph analysis temporarily unavailable". Source data is never affected.
+**Capabilities by release and backend.** The API contract (`GraphView`
+nodes/edges with assertion, confidence and evidence; named patterns;
+assertion policy; scope) is the same for both backends. The PostgreSQL
+implementation is **not** required to reproduce every Neo4j capability.
+
+| Capability | R1 (PostgreSQL `GraphService`) | R2 (Neo4j, required) | R3 (Neo4j) |
+|---|---|---|---|
+| Citation graph of a project (papers and `CITES` among them, plus 1-hop external references/citations) | ✅ | ✅ | ✅ |
+| Paper versions (`HAS_VERSION`) and work ↔ version navigation | ✅ | ✅ | ✅ |
+| Direct neighbours (1 hop) of any node, filtered by type and assertion policy | ✅ | ✅ | ✅ |
+| Basic related-paper exploration (co-citation, bibliographic coupling, similarity, direction membership: computed `RELATED_TO`) | ✅ | ✅ | ✅ |
+| General multi-hop traversal and path finding (`paths`, up to N hops, mixed types) | ❌ (returns `capability_unavailable`) | ✅ | ✅ |
+| Rich knowledge-graph exploration (multi-label subgraphs, method/dataset/metric neighbourhoods, `EXTENDS` evolution chains) | ❌ | ✅ | ✅ |
+| Graph-assisted gap discovery (named patterns: structural holes, limitation propagation) | ❌ | ❌ | ✅ |
+| Contradiction analysis (`CONTRADICTS` paths, conflicting results neighbourhoods) | ❌ | ❌ | ✅ |
+| Novelty investigation (hypothesis neighbourhood before external search) | ❌ | ❌ | ✅ |
+| Provenance trails (R4), evolving-graph history and impact traversal (R5) | ❌ | ❌ | ❌ (R4/R5) |
+
+- `GraphService.capabilities()` reports what the active backend supports.
+  Unsupported calls return a typed `capability_unavailable` result, and the
+  API returns RFC 7807 `graph-capability-unavailable` with the release in
+  which it becomes available. Callers never fake a capability.
+- The **parity suite** (R2-15) covers the R1 capability set only.
+- From R2, **Neo4j is a required service**. A deployment without it is in a
+  *degraded* state: the health endpoint reports `graph: degraded`, only the
+  R1 capabilities remain (served by the PostgreSQL implementation), and
+  graph-only features show "Graph analysis temporarily unavailable". It is
+  not a supported configuration. The backend switch exists for R0–R1,
+  tests and degraded operation, not as a way to run without Neo4j.
 
 ### 12.9 How graph intelligence grows by release
 
 | Release | Graph capability |
 |---|---|
 | R0–R1 | Graph-compatible model: stable UUIDs, `row_version`, assertion/confidence/evidence/provenance on every relationship table, `research_relations`, relation registry, tombstones, `GraphService` with the PostgreSQL implementation (citation graph, field map, related items). **No Neo4j deployment required** |
-| R2 | Neo4j deployed (`neo4j` container), projector + sync worker + reconciliation + rebuild; synchronises **validated** records (established assertions); parity tests; the citation graph, field map and evolution views move to `Neo4jGraphService` where they benefit |
+| R2 | **Neo4j deployed as a required service** (`neo4j` container), projector + sync worker + reconciliation + rebuild; synchronises **validated** records (established assertions); parity tests; the citation graph, field map and evolution views move to `Neo4jGraphService` where they benefit |
 | R3 | Graph traversal for **gap discovery** (e.g. method × dataset structural holes, limitations propagated along `EXTENDS` chains, under-connected communities), **related-work analysis** (multi-hop `CITES`/`EXTENDS`/`USES_METHOD` with assertion policies), and **novelty investigation** (the neighbourhood of a hypothesis's methods, datasets and limitations, and contradiction paths) before and alongside external searches. Inferred and hypothesised relationships are synced, labelled |
 | R4 | `Proposal`, `Experiment` and `Result` connected through `DERIVED_FROM`, `ADDRESSES`, `VALIDATED_BY`, `USES_METHOD` and `EVALUATES_ON`; **provenance trails** from a proposal back to gaps, limitations, papers and quoted evidence; repository and model nodes |
 | R5 | **Continuously evolving graph:** monitors add nodes and edges incrementally; temporal properties (`first_seen`, `valid_from`, `retracted_at`) and `graph_version` history; impact alerts computed by traversal (new paper → `ADDRESSES`/`CONTRADICTS` → accepted hypothesis); cross-project discovery on the global layer only |

@@ -137,6 +137,10 @@ adjudicator (if any), the approver and the guideline version.
   (UI, API, exports, graph-derived statements): 0 (from R2).
 - **Data deleted in PostgreSQL still present in the knowledge graph** after
   reconciliation: 0 (from R2).
+- **Rejected relationships re-created or re-activated** by automatic
+  extraction, judgement, sync or rebuild: 0.
+- **Deletion markers containing content, names, endpoint, project or user
+  identifiers**: 0.
 
 ### 3.4 Explanations
 Human rubric (1–5) per explanation, rated by an annotator at the target level
