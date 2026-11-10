@@ -46,7 +46,7 @@ other documents in `docs/`; this file records how R0 implements it and where it 
 
 | Test | Where | Status |
 |---|---|---|
-| R0-1 `make up` from a clean clone, all services healthy | `make up`, `.github/workflows/stack.yml` | pass locally and on GitHub (see CI results) |
+| R0-1 `make up` from a clean clone, all services healthy | `make up`, `.github/workflows/stack.yml` | pass locally and on GitHub (see CI results); the CI smoke test covers readiness and project creation, the full system-check run was verified locally |
 | R0-2 readiness 200 / problem+json 503 | `tests/integration/test_api.py` | pass |
 | R0-3 SSE streaming, checkpoint pause, worker restart, resume | `tests/integration/test_runs_e2e.py` | pass (incl. crash mid-step) |
 | R0-3 cancellation and retry limit (review fixes) | `tests/integration/test_run_lifecycle.py` | pass |
@@ -92,7 +92,20 @@ other documents in `docs/`; this file records how R0 implements it and where it 
 
 ## CI results
 
-Pending: the workflow runs for this commit are still in progress.
+All three workflows pass on commit `b220319` (2026-11-10):
+
+| Workflow | Result | Run |
+|---|---|---|
+| backend (ruff, format, mypy --strict, 81 tests against PostgreSQL) | pass | [42922233594](https://github.com/simhadripraveena2-bit/researchpilot/actions/runs/42922233594) |
+| frontend (pnpm 10.28.0 from `package.json`, typecheck, 4 tests, production build) | pass | [42922233601](https://github.com/simhadripraveena2-bit/researchpilot/actions/runs/42922233601) |
+| stack (clean `docker compose up --build --wait`: all services healthy; smoke test through nginx: readiness, create project) | pass | [42922233803](https://github.com/simhadripraveena2-bit/researchpilot/actions/runs/42922233803) |
+
+The first stack runs on GitHub exposed two Compose problems that did not show locally, both
+fixed: the default empty build CA pointed at `/dev/null`, which the Compose builder refuses to
+read without `--allow` (now `docker/no-extra-ca.crt`, an empty file in the project); and the
+GROBID image's JDK crashed reading the runner's cgroup v2 layout (now
+`JAVA_TOOL_OPTIONS=-XX:-UseContainerSupport`). Failed runs, for the record:
+[42921168576](https://github.com/simhadripraveena2-bit/researchpilot/actions/runs/42921168576), [42921374192](https://github.com/simhadripraveena2-bit/researchpilot/actions/runs/42921374192).
 
 ## Remaining limitations
 
