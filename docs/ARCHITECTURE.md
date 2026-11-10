@@ -775,8 +775,11 @@ requires no changes to agents, APIs or database models.
   constraint on `uid` for each label. `research_items.id` already covers
   papers, entities, gaps and ideas. All other node sources (projects,
   objectives, manifestations, authors, research groups, sub-questions,
-  directions, limitations, proposals, experiments, results) have UUIDv7 keys
-  too.
+  directions, limitations and clusters, proposals, experiments, results)
+  have UUIDv7 keys too. Every node is registered in **`graph_nodes`** `(uid,
+  kind, scope_project_id)`, written in the same transaction as its source
+  row. This gives polymorphic relationship tables real foreign keys
+  (§12.4.2).
 - **Edge identity:** every relationship carries `uid` = the UUID of its
   PostgreSQL row. Edges that come from link tables with composite keys
   (e.g. `citations`) get a **deterministic UUIDv5** of
@@ -804,7 +807,7 @@ requires no changes to agents, APIs or database models.
 | `LimitationCluster` | `limitation_clusters` | project |
 | `Gap` | `gaps` | project |
 | `Hypothesis` | `ideas` | project |
-| `Proposal` | `reports` (type proposal), `experiment_plans` | project |
+| `Proposal` | `reports` (type proposal); its `experiment_plans` row is node data | project |
 | `Experiment` | `experiments` | project |
 | `Result` (`kind`: paper_reported, user_reported) | `reported_results`, `experiment_results` | global (paper-reported) / project (user-reported) |
 | `Repository`, `Model` (R4) | `code_repositories`, `entities` (+ `model_details`) | global |
@@ -818,17 +821,20 @@ Relationships fall into two classes:
   assertion, provenance and the evidence required for that assertion
   (§12.5).
 - **Structural relationships** only express how ResearchPilot's own records
-  are organised, such as "this version belongs to this work" or "this gap
-  belongs to this project". Their assertion is `structural`. They carry no
-  research claim, need no evidence, and are never shown or counted as
-  findings. They can't be "rejected": a wrong structure is corrected by
+  are composed, such as "this version belongs to this work" or "this result
+  was measured on this dataset". Their assertion is `structural`. They
+  carry no research claim, need no evidence, and are never shown or counted
+  as findings. They can't be "rejected": a wrong structure is corrected by
   fixing the record.
 
-**Every relationship type has exactly one PostgreSQL source.** A test
-(R1-65) fails if the relation registry maps a type to more than one source,
-or if any other table stores the same kind of link.
+**The rule:** every relationship type has exactly **one** PostgreSQL source
+(one table, or one column of one table). No other table, column or snapshot
+stores the same kind of link. The **relation registry** (`relation_registry`
+table + code, §12.4.3) records this, and R1-65 tests it.
 
-| Type | Class | Endpoints | Single PostgreSQL source | Typical assertions |
+#### 12.4.1 Registry
+
+| Type | Class | Endpoints (validated, §12.4.2) | Single PostgreSQL source | Typical assertions |
 |---|---|---|---|---|
 | `CITES` | research | Paper → Paper | `citations` | `source_metadata` |
 | `AUTHORED_BY` | research | Paper → Author | `paper_authors` | `source_metadata` |
@@ -836,36 +842,96 @@ or if any other table stores the same kind of link.
 | `INTRODUCES` | research | Paper → Method/Dataset/Benchmark/Metric | `entity_links` (role `introduces`) | `author_reported`, `extracted` |
 | `USES_METHOD` | research | Paper/Proposal/Experiment → Method | `entity_links` (role `uses_method`) | `extracted`, `user_asserted` |
 | `EVALUATES_ON` | research | Paper/Method/Proposal/Experiment → Dataset/Benchmark | `entity_links` (role `evaluates_on`) | `extracted`, `author_reported`, `user_asserted` |
-| `REPORTS_LIMITATION` | research | Paper → Limitation | `limitations` (one row = the Limitation node and its edge) | `author_reported`, `extracted`, `inferred` |
+| `REPORTS_LIMITATION` | research | Paper → Limitation | `limitations.paper_id` (one row = the Limitation node and its edge) | `author_reported`, `extracted`, `inferred` |
 | `EXTENDS` | research | Paper → Paper, Method → Method (property `subtype`: improves_on, extends) | `research_relations` | `author_reported`, `extracted`, `inferred` |
-| `CONTRADICTS` | research | Paper ↔ Paper, Result ↔ Result, Paper → Hypothesis/Paper in project (challenges) | `research_relations` | `computed` (result conflicts), `extracted`, `inferred` |
-| `RELATED_TO` | research | any → any (property `basis`: similarity, co_citation, direction_membership, overlap, alternative, reproduces, compares_with, topic) | `research_relations` | `computed`, `inferred` |
+| `CONTRADICTS` | research | Paper ↔ Paper, Result ↔ Result, Paper → Paper/Hypothesis in project (challenges) | `research_relations` | `computed` (result conflicts), `extracted`, `inferred` |
+| `RELATED_TO` | research | any → any (property `basis`: similarity, co_citation, direction_membership, cluster_membership, overlap, alternative, reproduces, compares_with, topic) | `research_relations` | `computed`, `inferred` |
 | `ADDRESSES` | research | Paper → Gap/Topic, Proposal → Hypothesis, Experiment → Hypothesis | `research_relations` | `inferred`, `user_asserted`, `user_confirmed` |
-| `DERIVED_FROM` | research | Gap → Limitation/Paper, Hypothesis → Gap, Proposal → Hypothesis | `research_relations` | `computed`, `hypothesized`, `user_asserted` |
+| `DERIVED_FROM` | research | Gap → Limitation/LimitationCluster/Paper, Hypothesis → Gap, Proposal → Hypothesis | `research_relations` | `computed`, `hypothesized`, `user_asserted` |
 | `VALIDATED_BY` | research | Hypothesis → Result/Experiment (property `outcome`) | `research_relations` | `user_asserted`, `computed` |
-| `IMPLEMENTED_BY` (R4 registry extension) | research | Paper/Method/Model → Repository (properties: link_source, is_official) | `item_code_links` | `extracted` (URL in paper text), `source_metadata` (HF paper page), `inferred` (name search: "possible") |
+| `IMPLEMENTED_BY` (R4) | research | Paper/Method/Model → Repository (properties: link_source, is_official) | `item_code_links` | `extracted` (URL in paper text), `source_metadata` (HF paper page), `inferred` (name search: "possible") |
 | `HAS_VERSION` | structural | Paper → PaperVersion | `paper_manifestations.paper_id` | `structural` |
-| `PART_OF` | structural | Objective → Project; Topic → Objective/Topic; Gap/Hypothesis/Proposal/Experiment → Project; Result(user) → Experiment; Experiment → Proposal; Limitation → LimitationCluster | the child row's foreign key (one FK per label pair, listed in the registry) | `structural` |
 | `IN_PROJECT` | structural | Paper → Project (properties: inclusion, reading status) | `project_items` | `structural` |
-| `RESULT_FOR` | structural | Result → Method/Dataset/Metric (property `role`) | the result row's FK columns (`reported_results`, `experiment_results`) | `structural` (the claim and its evidence belong to the Result node) |
+| `PART_OF` | structural | Topic(sub_question) → Objective; Experiment → Proposal; Result(user_reported) → Experiment | **`structural_relations`** | `structural` |
+| `RESULT_FOR` | structural | Result → Paper (role `reported_in`), Result → Method/Dataset/Benchmark/Metric (role `method`/`dataset`/`benchmark`/`metric`) | **`structural_relations`** | `structural` (the claim and its evidence belong to the Result node) |
 
-Consequences of the single-source rule:
-- `entity_links` replaces `paper_entity_mentions`, with a generic subject
-  (paper, method, proposal, experiment). Roles that have no graph type
-  (`compares_against`, `reports_metric`) stay in `entity_links` for RIE use
-  and are not projected.
-- `paper_relations` and `direction_members` are folded into
-  `research_relations` (EXTENDS/CONTRADICTS/RELATED_TO with properties).
-  Hypothesis → gap, proposal → hypothesis and experiment → hypothesis links
-  live only in `research_relations`, not as foreign-key columns.
-- **Snapshots are never graph sources.** Latest Research entries, briefs,
-  cards, reports and conversation content may reference relationship
-  `uid`s, but they never store links of their own.
-- `paper_contributions` is node data (a contribution summary on the Paper),
-  not a relationship source.
+`research_relations` accepts only its six types, and `structural_relations`
+only `PART_OF` and `RESULT_FOR`. Both are enforced by CHECK constraints and
+the registry.
 
-New relationship types are added through the **relation registry** (§12.6),
-which must keep the single-source rule.
+#### 12.4.2 Endpoint validation and referential integrity
+- **`graph_nodes`** is the node identity registry: `(uid, kind,
+  scope_project_id)`. Every row in a node-source table (§12.3) creates its
+  `graph_nodes` row in the same transaction, and deleting the source row
+  deletes it.
+- Relationship tables with polymorphic endpoints (`research_relations`,
+  `structural_relations`) reference `graph_nodes(uid, kind)` with
+  **composite foreign keys** on both endpoints. A link to a non-existent
+  node, or to a node of the wrong kind, is rejected by the database.
+- **`relation_endpoint_rules`** lists the allowed `(type, from_kind,
+  to_kind, role)` combinations. A trigger rejects any other combination.
+- **Cardinality rules** (deferred constraint triggers, checked at commit):
+  each sub-question has exactly one `PART_OF` → Objective; each
+  user-reported result exactly one `PART_OF` → Experiment; each
+  paper-reported result exactly one `RESULT_FOR reported_in` → Paper, one
+  `metric` and at least one `dataset`/`benchmark`.
+- **Deletion semantics** per rule (`on_parent_delete`): composition links
+  cascade (deleting an objective deletes its sub-questions; deleting an
+  experiment deletes its user results). Association links are detached
+  (deleting a proposal leaves its experiments). Every deleted node and link
+  writes a deletion marker (§12.6a).
+- Single-table sources (`citations`, `paper_authors`, `entity_links`,
+  `limitations`, …) use ordinary foreign keys to their endpoint tables.
+
+#### 12.4.3 What is *not* a relationship source
+To prevent hidden second sources, the registry also lists FK columns and
+tables that link node-source rows but are **not** graph relationships. A
+schema test (R1-65) fails if a reference column between node-source tables
+is neither a registered source nor declared here.
+
+**General rule for tables that aren't node sources** (node data, evidence,
+logs): they may reference their **owning** node, and may reference
+relationship rows by `uid`. They may **not** store a link between two other
+nodes. For example, `experimental_protocols` references its paper and the
+paper's `entity_links` rows, not datasets or baselines directly. The only
+exceptions are the declared categories below (snapshots, project memory,
+learning data, derived analytics), which are never projected.
+
+| Column / table | Declared role | Why it is not a graph relationship |
+|---|---|---|
+| `project_id` / `scope_project_id` on project-scoped rows | **Access-control scope** | Projected as the `scope` property of nodes and edges, never as an edge. There is no `PART_OF → Project` |
+| `papers.first_public_manifestation_id`, `papers.abstract_manifestation_id` | **Derived pointer** | Cached choice among the work's versions; `HAS_VERSION` is the only version link |
+| `experiment_plans.report_id` | **Node data** | An experiment plan is part of the Proposal node's data, not a node |
+| `paper_contributions`, `assumptions`, `compute_reports`, `experimental_protocols`, `equations`, `*_details` | **Node data** | Attributes of their owning node; links to other nodes, if any, go through registered relationship rows |
+| `direction_relations` | **Derived analytics** | Statistics between directions (shared citations, methods, datasets), recomputed from the record for the field map. Never projected; in R2+ the same view is computed by graph traversal |
+| `concept_prerequisites`, `learning_path_items` | **Learning data** | Tutor and learning-path structure, project-scoped; not part of the research knowledge graph |
+| `taxonomy_nodes` (R2) | **Derived view** | Methodology taxonomy for the comparison UI. Not projected unless a future registry entry adds it, and then only through `structural_relations` |
+| `paper_match_decisions`, `paper_merge_events` | **Decision log** | Their outcomes are expressed through `HAS_VERSION` (manifestations of one work) |
+| Snapshots: `latest_scan_entries`, briefs, recommendation cards, reports, tutor messages | **Snapshot** | May reference relationship `uid`s; never store links |
+| `assessments`, `assessment_signals`, `relevance_judgements`, `overrides`, `feedback`, `notes`, `decisions` | **Project memory / assessment data** | Attributes of a project's view of an item; projected at most as properties (e.g. tier on `IN_PROJECT`). When a judgement establishes a graph link (e.g. a paper `ADDRESSES` a sub-question topic), that link is written once to `research_relations` and the judgement stores its `uid` |
+
+#### 12.4.4 Schema consequences
+- `structural_relations` is the only owner of `PART_OF` and `RESULT_FOR`.
+  The duplicate link columns are removed:
+  - `objective_sub_questions.objective_id`;
+  - `experiments.plan_id`;
+  - `reported_results.paper_id`, `method_id`, `dataset_id`, `metric_id`;
+  - `experiment_results.experiment_id`, `metric_id`, `dataset_id`.
+
+  Result values, units, splits, settings and evidence stay in the result
+  tables. Benchmark tables and other read paths use the SQL view
+  `result_dimensions_v` (derived, not a source).
+- Limitation-cluster membership moves from `limitation_clusters.limitation_ids`
+  to `research_relations` (`RELATED_TO`, `basis = cluster_membership`). This
+  matches how direction membership is stored.
+- From the earlier pass: `entity_links` replaces `paper_entity_mentions`;
+  `paper_relations` and `direction_members` are folded into
+  `research_relations`; hypothesis, proposal and experiment links to
+  gaps/hypotheses live only in `research_relations`; `paper_contributions`
+  is node data.
+
+New relationship types are added only through the registry, which must
+keep the single-source rule and the endpoint rules.
 
 ### 12.5 Provenance, confidence and evidence
 
@@ -911,10 +977,13 @@ write path below):
 **Rejected relationships cannot silently reappear:**
 - **One write path.** All relationship writes go through the
   `RelationWriter` service, including writes by extractors, judges,
-  matchers, sync of source metadata, and users. No other code inserts into
-  relationship tables (enforced by repository design and a lint rule).
+  matchers, sync of source metadata, users, and structural writes (e.g.
+  creating a result writes its `RESULT_FOR` rows in the same transaction).
+  No other code inserts into relationship tables, which is enforced by
+  repository design and a lint rule.
 - **Natural keys.** Each relationship table has a unique natural key (e.g.
   `research_relations(type, from_uid, to_uid, qualifier, scope)`,
+  `structural_relations(type, child_uid, parent_uid, role)`,
   `entity_links(subject_uid, entity_id, role, scope)`). A re-extraction
   therefore finds the existing rejected row instead of creating a new one.
 - **Rejection is sticky.** A trigger blocks any change *from* `rejected`
@@ -1059,6 +1128,7 @@ class GraphService(Protocol):
   project. This holds even though Neo4j Community Edition has no per-user
   database security, because isolation is enforced in the service (gate H,
   H3). Cross-project queries see only the global layer.
+
 **Capabilities by release and backend.** The API contract (`GraphView`
 nodes/edges with assertion, confidence and evidence; named patterns;
 assertion policy; scope) is the same for both backends. The PostgreSQL
@@ -1093,8 +1163,8 @@ implementation is **not** required to reproduce every Neo4j capability.
 
 | Release | Graph capability |
 |---|---|
-| R0–R1 | Graph-compatible model: stable UUIDs, `row_version`, assertion/confidence/evidence/provenance on every relationship table, `research_relations`, relation registry, tombstones, `GraphService` with the PostgreSQL implementation (citation graph, field map, related items). **No Neo4j deployment required** |
+| R0–R1 | Graph-compatible model: stable UUIDs, `graph_nodes` registry, `row_version`, assertion/confidence/evidence/provenance on every research relationship table, `research_relations`, `structural_relations`, relation registry with endpoint rules, tombstones, `GraphService` with the PostgreSQL implementation (citation graph, field map, related items). **No Neo4j deployment required** |
 | R2 | **Neo4j deployed as a required service** (`neo4j` container), projector + sync worker + reconciliation + rebuild; synchronises **validated** records (established assertions); parity tests; the citation graph, field map and evolution views move to `Neo4jGraphService` where they benefit |
 | R3 | Graph traversal for **gap discovery** (e.g. method × dataset structural holes, limitations propagated along `EXTENDS` chains, under-connected communities), **related-work analysis** (multi-hop `CITES`/`EXTENDS`/`USES_METHOD` with assertion policies), and **novelty investigation** (the neighbourhood of a hypothesis's methods, datasets and limitations, and contradiction paths) before and alongside external searches. Inferred and hypothesised relationships are synced, labelled |
-| R4 | `Proposal`, `Experiment` and `Result` connected through `DERIVED_FROM`, `ADDRESSES`, `VALIDATED_BY`, `USES_METHOD` and `EVALUATES_ON`; **provenance trails** from a proposal back to gaps, limitations, papers and quoted evidence; repository and model nodes |
+| R4 | `Proposal`, `Experiment` and `Result` connected through `DERIVED_FROM`, `ADDRESSES`, `VALIDATED_BY`, `USES_METHOD`, `EVALUATES_ON` and the structural `PART_OF`/`RESULT_FOR`; **provenance trails** from a proposal back to gaps, limitations, papers and quoted evidence; repository and model nodes |
 | R5 | **Continuously evolving graph:** monitors add nodes and edges incrementally; temporal properties (`first_seen`, `valid_from`, `retracted_at`) and `graph_version` history; impact alerts computed by traversal (new paper → `ADDRESSES`/`CONTRADICTS` → accepted hypothesis); cross-project discovery on the global layer only |
