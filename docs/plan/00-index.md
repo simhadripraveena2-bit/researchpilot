@@ -1,5 +1,7 @@
 # 0. Plan index, principles and open decisions
 
+> **Historical.** The canonical documentation now lives in [`docs/`](../) (see the README). These files are kept as the record of earlier planning rounds.
+
 > **v2 update (product vision):** docs 10–14 extend this plan with the
 > "From Research Beginner to Research Creator" vision. Where they conflict
 > with docs 01–09, docs 10–14 win. Start with
