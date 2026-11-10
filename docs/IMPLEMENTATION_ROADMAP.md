@@ -2,7 +2,7 @@
 
 **Status:** canonical. It supersedes `docs/plan/09` and `docs/plan/14`.
 
-## 1. Repository audit (as of 2026-11-10, re-checked for the Latest Research / Ask & Learn update)
+## 1. Repository audit (as of 2026-11-10, re-checked at the final architecture review)
 
 ### 1.1 What exists
 | Area | Status |
@@ -72,7 +72,12 @@ graph TD
   DATE[Date Resolver: date claims, confidence, release types, UTC windows]
   LAT[Latest Research scans + page]
   RET[Evidence Retriever + Context Builder]
-  ASK[Ask & Learn conversations + summaries with carried evidence]
+  ASK[Ask & Learn conversations + summaries with carried evidence + access-level boundaries]
+  GW[LLM gateway: provider-independent, task config]
+  SECS[Security scaffolding: project scope, localhost bind]
+  MAN[Manifestations: preprint vs published]
+  ANN[arXiv announcement capture job]
+  GATEH[Gate H: hosted-deployment security]
   LES[Progressive lessons + project learning progress]
   RETN[Retention + deletion controls]
 
@@ -96,7 +101,11 @@ graph TD
   RIG --> EXPP --> PROP
   CMP --> PROP
   D1 --> DATE
-  D2 --> VM --> DATE --> LAT
+  D2 --> MAN --> VM --> DATE --> LAT
+  ANN --> DATE
+  F0 --> GW --> OBJ
+  F0 --> SECS --> GATEH
+  RETN --> GATEH
   RB --> LAT
   CARD --> LAT
   PDF --> RET --> ASK
@@ -111,7 +120,9 @@ graph TD
 ```
 
 The critical path to the MVP is
-F0 → D1 → D2 → OBJ/RA → RB → CARD → LAT, then (FM, PDF → RET → EXPL/ASK) → LP.
+F0 (+ GW, SECS) → D1 → D2 → MAN → VM → DATE (+ ANN) → OBJ/RA → RB → CARD → LAT,
+then (FM, PDF → RET → EXPL/ASK) → LES → LP. Gate H (security) is off the MVP
+critical path but blocks any hosted deployment.
 Latest Research depends on the Date Resolver and RIE, but not on full text.
 Ask & Learn depends on the PDF pipeline and retrieval; it gains equations
 (EQ) and multi-paper comparisons (EXT) in R2 without redesign.
@@ -148,12 +159,13 @@ R1 ships in four internal milestones so value appears early:
 **M1a Discover** → **M1b Filter** → **M1c Latest Research** → **M1d Learn & Ask**.
 
 ### Implementation order (after approval)
-1. **R0 Foundation:** two PRs (scaffold + DB/migrations; API/worker/SSE/frontend shell/compose).
-2. **M1a Discover:** identifiers → SourceClient → clients (arXiv, S2, OpenAlex basic, Crossref, bioRxiv/medRxiv) → paper tables + Version Matcher + G-MATCH → Date Resolver (D28) + UTC/time-zone handling + G-LATEST-DATES → objective + Planner → discovery workflow.
+1. **R0 Foundation:** two PRs (scaffold + DB/migrations + LLM gateway skeleton; API/worker/SSE/frontend shell/compose + security scaffolding). In parallel: assign evaluation roles (D19) and build B0.
+2. **M1a Discover:** identifiers → SourceClient → clients (arXiv API + announcement feeds, S2, OpenAlex basic, Crossref, bioRxiv/medRxiv) → paper tables with manifestations + Version Matcher + G-MATCH → date events + provenance + Date Resolver (D28 revised) + announcement capture job + preprint labels + UTC/time-zone handling + G-LATEST-DATES → objective + Planner → discovery workflow.
 3. **M1b Filter:** signals → scoring/tiers/anti-proxy → Stage B + cross-checks → cards + validator → overrides/feedback → triage UI.
 4. **M1c Latest Research:** scan planner + W8 → abstract-mode extraction, relation_to_project, linker, Action Recommender → Latest brief + digest → page.
 5. **M1d Learn & Ask:** field map → PDF pipeline → retrieval + context builder → Tutor answer mode + conversations + summaries → progressive teaching + progress → saved explanations → retention → glossary + learning path → read-with-me.
-6. Evaluation sets in parallel from M1a. Usability round. R1 release gates (EVALUATION_FRAMEWORK §6).
+6. Evaluation: B0 from R0; B1 calibration splits during M1a–M1d; B3 held-out built by the custodian before the R1 release. Usability round. R1 release blockers (§8.1).
+7. **Gate H** (security, §8.2) before any hosted deployment; independent of R2.
 
 Within each milestone, the parts that work without an LLM are built and
 tested before the LLM layer that enriches them.
@@ -172,7 +184,9 @@ EVALUATION_FRAMEWORK.
 5. Event outbox writer and dispatcher (idempotent consumers).
 6. Journey registry with the nine stages (readiness stubs) and `GET /projects/{id}/journey`.
 7. Frontend shell: layout, journey bar, dashboard, new-project form (topic, level, goal), run progress view.
-8. Docker Compose (postgres, grobid, api, worker, frontend); CI (lint, types, tests, build).
+8. Docker Compose (postgres, grobid, api, worker, frontend); CI (lint, types, tests, build, secret scanning).
+9. **LLM gateway skeleton:** provider-neutral interface, task → {provider, model} configuration file marked provisional (D1), fake gateway, first provider adapter behind `llm/adapters/`, lint rule forbidding provider SDK imports elsewhere.
+10. **Security scaffolding for later hosting** (cheap now, costly later): `project_members` with a single local owner, a `ProjectScope` dependency on every project route, repository methods that require a scope, localhost-only bind unless `AUTH_MODE` is set, private file storage served through the API.
 
 **Acceptance tests**
 - R0-1 `make up` from a clean clone starts all services with healthy checks.
@@ -182,15 +196,17 @@ EVALUATION_FRAMEWORK.
 - R0-5 Logs never contain configured secret values (test).
 - R0-6 Migrations upgrade from empty and downgrade cleanly.
 - R0-7 Journey endpoint returns nine stages with deterministic states for a fixture project.
+- R0-8 **Provider independence:** swapping the task configuration to the fake provider runs the dummy workflow unchanged; the lint rule fails the build if a provider SDK is imported outside `llm/adapters/`; run manifests record provider, model and `provisional = true`.
+- R0-9 Every project-scoped route rejects requests without a resolved project scope (route-inventory test); the server refuses to bind to a non-local address with authentication disabled.
 
 ### R1 — MVP: Discover, Filter & Learn (+ Latest Research, Ask & Learn)
 
 **M1a Discover — tasks**
 1. Identifier parsing/normalisation (DOI, arXiv old/new, S2, OpenAlex) with property tests.
 2. `SourceClient` base: rate limits, retries, circuit breaker, HTTP cache, source records, usage budgets.
-3. Clients: arXiv, Semantic Scholar, OpenAlex (basic access, budgeted; `OPENALEX_CAPABILITIES` switch with both paths tested, D24), Crossref (incl. `relation` and `posted` fields), bioRxiv/medRxiv (`/details`, `/pubs`; D22); integration docs with verified-on dates.
-4. Paper tables, dedup (identifier union-find), **Version Matcher** with `paper_match_decisions` (decisive / strong / supporting / contradicting evidence; possible matches linked, not merged; reversible merges; D29), enrichment, citations, survey detection. G-MATCH (first 300 pairs, incl. 100 adversarial) before tuning thresholds.
-4a. Date provenance: `paper_dates` (role, manifestation, identifier), `paper_versions`, Date Resolver (claims, corroboration lookups, confidence incl. `corroborated`/`single_secondary` (D28), first public date, release-type rules), UTC storage and window computation with boundary-day flags (D23); user time zone preference and the `LocalTime` display component; table-driven tests from G-LATEST-DATES. Built here because every discovered paper stores its dates.
+3. Clients: arXiv (API + daily announcement feeds), Semantic Scholar, OpenAlex (basic access, budgeted; `OPENALEX_CAPABILITIES` switch with both paths tested, D24), Crossref (incl. `relation`, `posted`, `accepted` fields), bioRxiv/medRxiv (`/details`, `/pubs`; D22); each client records reporting source and any exposed upstream provenance; integration docs with verified-on dates (including the arXiv feed field semantics).
+4. Paper tables with **manifestations** (`paper_manifestations`; identifiers, dates, documents and evidence per manifestation), dedup (identifier union-find), **Version Matcher** with `paper_match_decisions` (decisive / strong / supporting / contradicting evidence; possible matches linked, not merged; reversible; D29), enrichment, citations, survey detection. G-MATCH B0 + B1 splits before tuning thresholds.
+4a. Date provenance: `paper_dates` as separate **events** (submitted, announced/posted, revised, accepted, published online, issue, issued, reported, indexed, metadata) with reporting source and upstream provenance; Date Resolver (system-of-record lookups; confidence verified / corroborated / source agreement / single source / conflicting / uncertain — D28 revised; first public appearance + basis incl. `submission_only`; release-type rules incl. "journal version is not new research"); **arXiv Announcement Capture** daily job and `arxiv_announcement_log`; preprint labelling; UTC storage and windows with boundary-day flags (D23); user time zone and `LocalTime` display; table-driven tests from G-LATEST-DATES (B0, B1 splits).
 5. Research objective model + Planner (LLM) + rule-based fallback; objective editor UI.
 6. Discovery workflow W1 with plain-language checkpoints; search log; manual add by identifier.
 
@@ -232,7 +248,7 @@ EVALUATION_FRAMEWORK.
 - R1-5 With no LLM key: discovery, Stage A tiers (capped at Recommended), card skeletons, field map with keyword labels, glossary term list and reading UI all work; LLM-only features show a clear "not available" message.
 - R1-6 **Anti-proxy:** property test — items with only citation and date signals never reach Essential or Recommended; changing content signals with fixed citations changes ranking.
 - R1-7 **Beat-the-proxy (E §3.2):** RIE nDCG@20 exceeds citation-only, recency-only and similarity-only rankings on every held-out topic.
-- R1-8 Essential precision ≥ 0.85 and Not-useful precision ≥ 0.90 on held-out topics (E).
+- R1-8 Essential precision ≥ 0.85 and Not-useful precision ≥ 0.90 on the B3 held-out benchmark (E §2a).
 - R1-9 Every card has all six fields (or an explicit "none found" plus a missing-info entry); every Reported/Extracted statement verifies; every grounded AI statement references valid evidence.
 - R1-10 High-stakes judgements are cross-checked; a disagreement produces an "uncertain" label and lower confidence (fixture test).
 - R1-11 Overrides persist across recomputes; a later system change produces a non-blocking notice; overrides appear in the decision log and exports.
@@ -272,21 +288,30 @@ EVALUATION_FRAMEWORK.
 - R1-41 Canonical asks (same subject, level, style, no prior turns) are served from cache with no LLM call.
 
 *Final-review additions (dates, matching, teaching, memory)*
-- R1-42 **Secondary-source-only dates:** a paper whose only day-precision date is from OpenAlex (or only from Semantic Scholar) is classified *Date uncertain*, shows the date as "unconfirmed", and never appears in *New research*. When Crossref/arXiv/bioRxiv corroboration is found later, it is reclassified with a "Reclassified" badge. Two agreeing secondary sources → *New research* with the corroborated badge.
-- R1-43 **Conflicting publication dates:** authoritative claims more than 2 days apart → *Date uncertain* with all claims and sources listed; a secondary claim disagreeing with an authoritative claim is flagged in provenance but the authoritative date stands.
+- R1-42 **Secondary-source-only dates:** a paper whose only day-precision date is from OpenAlex (or only Semantic Scholar) is `single_source` → *Date uncertain*, shown as "unconfirmed", never in *New research*; when the system of record later supplies a date it is reclassified with a "Reclassified" badge.
+- R1-43 **Conflicting publication dates:** primary events more than 2 days apart → *Date uncertain* with all events and sources listed; a secondary claim disagreeing with a primary event is flagged in provenance, and the primary date stands.
 - R1-44 **Preprint-to-journal matching:** arXiv and bioRxiv/medRxiv preprints with Crossref `relation`, bioRxiv `/pubs` or arXiv `doi` links are auto-matched; the journal version is classified "Published version of an earlier preprint" with the preprint date shown; G-MATCH precision/recall targets met (E §3.1).
 - R1-45 **Similar-title false matches:** none of the G-MATCH adversarial pairs (different authors, Part I/II, comment/reply/erratum, conference vs extended version, thesis vs article) is merged; a property test confirms title similarity alone never produces a match; possible matches are linked, not merged, until the user confirms.
 - R1-46 **Match preservation:** after a merge, every original source record, identifier and date claim (with manifestation) is still present; splitting restores both papers exactly; user confirm/reject decisions survive re-matching.
 - R1-47 **Local time-zone display:** with the user zone set to Europe/Berlin, America/Los_Angeles, Asia/Kolkata and Pacific/Kiritimati, timestamps and window bounds display correctly (incl. DST transitions); date-only values display the same calendar date in every zone; changing the zone never changes which papers are in the window.
 - R1-48 **Seven-day window boundaries:** with a fixed clock, a timestamp exactly at `now − 168 h` is included, one second earlier is excluded, `now` itself is excluded; date-only values on the start or end day are included and flagged `boundary_day`; month-precision values are never included.
 - R1-49 **Latest brief:** every relevant entry has all eight answers, each evidence-backed or an explicit "can't tell / not stated / none stated"; opportunities cite an author-stated sentence; `challenges` relations are cross-checked; changing only dates or citation counts never changes the action (property test).
-- R1-50 **bioRxiv/medRxiv:** enabled automatically for life-science objectives and toggleable per project; v1 posting dates classify New preprints; later versions classify as Revised; medRxiv entries show "Preprint — not peer-reviewed".
+- R1-50 **bioRxiv/medRxiv:** enabled automatically for life-science objectives and toggleable per project; v1 posting dates classify New preprints; later versions classify as Revised; bioRxiv and medRxiv entries show "Preprint — not peer-reviewed" unless a matched journal manifestation is displayed.
 - R1-51 **OpenAlex capabilities:** with the default `basic` capability, no premium filter is ever requested (asserted on the HTTP mock); with `premium_filters` enabled, created-date detection is used; both paths produce the documented "newly indexed" behaviour.
 - R1-52 **Progressive teaching:** a lesson presents steps in order; a beginner starts at Intuition, an expert at Technical; "Simpler", "Go deeper", "Skip to" and "Stop" work; a mid-lesson question is answered and "Resume lesson" returns to the same step; inapplicable steps are skipped with a reason; check results update `concept_progress`; rubric targets met on G-TUTOR (h).
 - R1-53 **Multi-turn tutor context:** in 25-turn scripted dialogues, questions that depend on turns 1–10 are answered correctly after summarisation (≥ 0.9), and pronoun and anchor references resolve.
 - R1-54 **Project memory after summarisation:** after older turns are summarised, the objective, notes, saved explanations, concept progress and learning path are still loaded into context and unchanged; the summary is never cited as a source.
 - R1-55 **Conversation deletion and retention:** deleting a conversation removes its messages, evidence links, summaries and conversation-only claims, and keeps saved explanations, concept progress and check results; "delete all" does the same project-wide; "delete after N days" expires conversations via the daily job (fixed clock); "don't keep history" stores no messages after the session; "reset learning progress" is separate and requires confirmation.
 - R1-56 **Evidence preservation:** after summarisation and after the user saves an explanation, every evidence reference (span, chunk, equation, item) from the original turns still resolves to the same quote, page and section; the validator rejects citations of summaries or earlier assistant messages (adversarial suite).
+
+*Architecture-review additions (provenance, manifestations, provider, tutor boundaries, evaluation)*
+- R1-57 **Source agreement vs corroboration:** OpenAlex and Semantic Scholar agreeing on a date with unknown upstream provenance → `source_agreement` → *Date uncertain*, with "may share upstream data"; a fixture with recorded, disjoint upstream provenance → `corroborated`; the database trigger rejects `corroborated` without that evidence.
+- R1-58 **Date events kept separately:** a fixture work with arXiv v1 submission, arXiv announcement, v2 revision, journal acceptance, online publication, issue publication and metadata updates stores and displays eight distinct events with their manifestations; the first public appearance is the announcement; metadata events never qualify.
+- R1-59 **Submission-only arXiv dates:** without a captured announcement, the UI says "Submitted to arXiv … — public announcement date not verified"; with a captured announcement, the basis upgrades to `announced` and the wording changes; the 3-day fetch overlap never changes an entry's date or basis (test with the overlap disabled and enabled).
+- R1-60 **Journal version of an existing preprint:** appears only under *Updates* with the preprint's first public date; it is excluded from "new research" counts and the digest's new-work section; its assessment is the existing work's (no novelty credit); a saved preprint's state carries over.
+- R1-61 **Preprint labels and manifestations:** bioRxiv, medRxiv and arXiv manifestations show "Preprint — not peer-reviewed"; a matched journal manifestation is shown as a distinct "Journal version" line; evidence quotes state which manifestation they come from; splitting a match restores both manifestations intact.
+- R1-62 **Tutor capability boundaries:** for fixtures at each access level, abstract-only papers produce "Based on the abstract only" and "Not available in the extracted text" for beyond-abstract questions; full-text answers cite sections/pages only when the text was processed; paper-equation explanations occur only for equation text that is available (verified selection in R1); garbled selections produce "can't read this equation reliably"; general concept questions are answered and labelled background.
+- R1-63 **Evaluation data separation:** an automated check confirms no item hash appears in more than one of B0/B1/B3 or in prompt examples; B3 runs are executed by the custodian; the R1 evaluation report states CI intervals and the approver.
 
 ### R2 — Understand & Compare
 **Tasks:** Ask & Learn gains paper equations (from arXiv LaTeX) with step-by-step maths, algorithm/architecture walkthroughs with pseudocode, and multi-paper questions grounded in extractions; Latest Research cards gain full-text-verified contributions/datasets for open-access recent papers; Extractor (contributions, methods, datasets, metrics, results, limitations, assumptions, protocols, compute) with quote verification and Batches API option; typed entity normalisation + detail tables; arXiv LaTeX source + equation explainer; algorithm explainer; exercises (not run); Comparator (tables, `paper_relations`, evolution, conflicts with comparability); field map v2 (methods/datasets per direction, taxonomy); RIE signals for papers using full text, plus RIE for methods, datasets, benchmarks and metrics; resources UI; G-EXTRACT and G-RESOURCES evaluation.
@@ -325,7 +350,7 @@ EVALUATION_FRAMEWORK.
 - R4-6 LaTeX export compiles in CI; references include DOI / arXiv ID / URL where known.
 
 ### R5 — Persist & Monitor
-**Tasks:** scheduled Latest Research scans per project (reusing W8) with notifications (in-app first, email optional); scheduled monitors; impact detection against open gaps, accepted ideas and running experiments; incremental re-assessment; authentication and multi-user; optional sandboxed exercise execution; optional Qdrant/Neo4j adapters; backups and runbook.
+**Tasks:** scheduled Latest Research scans per project (reusing W8) with notifications (in-app first, email optional); scheduled monitors; impact detection against open gaps, accepted ideas and running experiments; incremental re-assessment; multi-user collaboration features beyond gate H (shared projects, comments); optional sandboxed exercise execution; optional Qdrant/Neo4j adapters; backups and runbook.
 
 **Acceptance tests**
 - R5-1 Monitors are idempotent and notify only on new canonical papers.
@@ -377,6 +402,11 @@ before the LLM layer that enriches it.
 | T19 | Lesson or check content wrong at beginner level (most trusting users) | Medium | High | Expert rubric per step, answer-key validation, background labelling, "wrong" feedback hides content |
 | T20 | Retention bugs (data kept after deletion, or progress lost) | Low | High (trust/privacy) | Cascade rules tested with fixed clocks; deletion audit test; separate confirmed reset for progress |
 | T21 | Summaries drift and lose context in long conversations | Medium | Medium | Carried references collected deterministically, not from summary text; long-dialogue test set |
+| T22 | Hidden provider lock-in (prompts, schemas or logic tuned to one model) | Medium | Medium | Provider-neutral prompts and schemas; SDK imports confined to adapters; fake-provider swap test (R0-8); per-task evaluation before any model change |
+| T23 | Security shortcuts in local mode leak into a hosted deployment | Medium | High | Security scaffolding in R0; non-local bind refused without auth; gate H blockers with tests |
+| T24 | Evaluation leakage (the same items used for prompts, calibration and release) inflates results | Medium | High | B0–B3 separation by topic/week/work, hash checks, custodian-run B3, retirement of exposed items |
+| T25 | arXiv announcement feed semantics differ from expectations, or capture misses days | Medium | Medium | Verify fields at implementation; record only what the feed shows; fall back to labelled `submission_only`; monitor job success |
+| T26 | Too few "verified" dates outside arXiv/bioRxiv/Crossref, so useful papers sit in *Date uncertain* | Medium | Medium | Visible, filterable *Date uncertain* tab with explanations; system-of-record lookups; recall measured per field |
 
 ## 7. Decisions
 
@@ -384,31 +414,64 @@ before the LLM layer that enriches it.
 | # | Decision | Approved approach |
 |---|---|---|
 | D21 | Latest Research and Ask & Learn in the MVP | **Approved.** Both in R1, as milestones M1c and M1d |
-| D22 | bioRxiv and medRxiv | **Approved** for life-science objectives (auto-enabled when the objective maps to life-science categories; toggleable per project) |
+| D22 | bioRxiv and medRxiv | **Approved** for life-science objectives (auto-enabled when the objective maps to life-science categories; toggleable per project); records labelled "Preprint — not peer-reviewed" |
 | D23 | Time | **Approved.** UTC for storage and rolling-window calculation (`[now − N×24 h, now)`); display in the user's local time zone; date-only values never shifted across zones |
 | D24 | OpenAlex | **Approved.** No paid plan required initially; capability-based client (`OPENALEX_CAPABILITIES=basic` by default, `premium_filters` can be enabled later by configuration) |
-| D25 | Release types | **Approved.** "Published version of an earlier preprint" is a separate type (six types including Date uncertain) |
-| D26 | Tutor memory and retention | **Approved.** Last 12 turns verbatim + structured summary of older turns with carried evidence references; project memory independent of conversations; deletion and retention controls (§4.10.1–4.10.2 in ARCHITECTURE) |
+| D25 | Release types | **Approved.** "Published version of an earlier preprint" is a separate type and is never presented as new research |
+| D26 | Tutor memory and retention | **Approved.** Last 12 turns verbatim + structured summary of older turns with carried evidence references; project memory independent of conversations; deletion and retention controls (ARCHITECTURE §4.10.1–4.10.2) |
 | D27 | Tutor scope | **Approved.** General research questions allowed; unrelated requests politely redirected |
-| D28 | Unverified dates | **Approved (new).** A first public date supported only by one uncorroborated secondary source is *Date uncertain* by default; never a confirmed new release |
-| D29 | Preprint/publication matching | **Approved (new).** Confidence-aware matching using DOI, arXiv ID, explicit version relations, title and author similarity, publication metadata; never on title alone; possible matches linked, not merged; source records and date provenance always preserved |
+| D28 | Unverified dates (**revised** in the architecture review) | **Approved.** Confidence levels verified / corroborated / source agreement / single source / conflicting / uncertain. Only verified (primary, system of record) and corroborated (independent upstream provenance *established*) dates place a paper in a release-type tab; source agreement without established independence, single-source, conflicting and uncertain dates → *Date uncertain* |
+| D29 | Preprint/publication matching | **Approved.** Confidence-aware matching (DOI, arXiv ID, explicit version relations, title and author similarity, publication metadata); never on title alone; possible matches linked, not merged; manifestations, source records and date provenance always preserved |
+| — | Date events, preprint labels, tutor boundaries, security gate, staged evaluation | **Required by the architecture review** and reflected in all documents (ARCHITECTURE §4.8, §4.8.7, §4.10.4, §11; EVALUATION_FRAMEWORK §2a–2b) |
 
 ### 7.2 Recommended defaults, not yet explicitly approved
 | # | Decision | Recommendation |
 |---|---|---|
-| D1 | LLM provider and models | Anthropic via a provider-agnostic gateway; `claude-opus-5-5` default for all tasks; per-task overrides only after evaluation shows quality holds |
+| D1 | LLM provider and models | **Open.** The gateway is provider-independent with task-based model configuration. The initial configuration (Anthropic `claude-opus-5-5` for every task) is **provisional** and labelled as such until approved. Per-task changes only after evaluation |
 | D2 | PDF text library | GROBID + pypdfium2 (avoid AGPL PyMuPDF) |
-| D3 | Job queue | Postgres-backed queue (also runs the daily retention job); no Redis in the MVP |
+| D3 | Job queue | Postgres-backed queue (also runs the daily retention and arXiv announcement jobs); no Redis in the MVP |
 | D4 | Embeddings | Local open model (no API cost); version recorded |
-| D5 | Auth | Single user until R5; `user_id` columns from day one |
+| D5 | Auth | **Revised:** not required for local development (localhost only). Required for any hosted deployment (gate H, §8); security scaffolding is built in R0 |
 | D11 | OpenAlex budget | Daily usage budget; free core works with OpenAlex disabled |
 | D12 | Vector store | pgvector behind an interface |
 | D13 | Graph store | Postgres + networkx; Neo4j deferred |
 | D18 | MVP scope | R1 = Discover, Filter (papers), Latest Research, Learn & Ask, in milestones M1a–M1d |
-| D20 | RIE default weights and thresholds | Start with the profiles in RIE §5.2; calibrate on G-RELEVANCE before release |
-| D30 | Matching and date thresholds | Start with the thresholds in ARCHITECTURE §4.8–4.8a; calibrate on G-MATCH and G-LATEST-DATES before release |
+| D20 | RIE default weights and thresholds | Start with the profiles in RIE §5.2; calibrate on B1 before release |
+| D30 | Matching and date thresholds | Start with the thresholds in ARCHITECTURE §4.8–4.8a; calibrate on the B1 splits of G-MATCH and G-LATEST-DATES |
+| D31 | arXiv announcement capture | Run the daily feed job from R1 for every mapped category; accept `submission_only` dates for papers announced before capture began |
+| D32 | Preprint label for arXiv | Apply "Preprint — not peer-reviewed" to arXiv as well as bioRxiv/medRxiv (accurate; consistent) |
 
 ### 7.3 Still open
 | # | Decision | Needed by |
 |---|---|---|
-| D19 | Who annotates the gold sets (5 initial topics; G-MATCH and G-LATEST-DATES can be built by the team; G-RELEVANCE, G-LATEST-RELEVANCE and G-TUTOR need domain experts) | Before M1b tuning (G-RELEVANCE) and M1c/M1d release |
+| D19 | Named people for the evaluation roles (EVALUATION_FRAMEWORK §2b): evaluation lead (approves gold answers), annotators per topic, adjudicators, benchmark custodian (B3). The team can build B0 and the date/match sets; B1–B3 relevance, Latest relevance and tutor sets need domain experts and educators | Evaluation lead and custodian before M1a ends; annotators before M1b calibration |
+| D33 | Hosting target and identity provider for gate H (e.g. which OIDC provider, where it runs) | Before any hosted deployment |
+
+## 8. Release blockers
+
+### 8.1 Every release (local or hosted)
+1. All honesty gates pass with zero tolerance (EVALUATION_FRAMEWORK §3.3), including: no fabricated citations, quotes, dates or equations; no merges on title alone; no corroboration claimed without recorded provenance; no secondary-only or source-agreement dates shown as confirmed; no journal version of an existing preprint presented as new research; no summaries cited as evidence; no full-text or equation claims beyond a paper's access level.
+2. The release's acceptance tests pass (R0-*, R1-*).
+3. Metric targets are met on the **B3 held-out benchmark** (R1 interval rule, EVALUATION_FRAMEWORK §2a), or an exception is approved by the evaluation lead; the evaluation report names the approver.
+4. Data separation check passes (R1-63).
+5. Anti-proxy property tests pass (no tier or action from dates/citations alone).
+6. Provider independence check passes (R0-8); the model configuration is labelled provisional unless D1 is approved.
+7. Usability round passes (R1, and any release that changes the main flow).
+
+### 8.2 Gate H — hosted deployment (any networked access beyond localhost)
+Nothing may be deployed where other people or the internet can reach it
+until each of these is implemented and tested (ARCHITECTURE §11):
+
+| # | Blocker | Acceptance test |
+|---|---|---|
+| H1 | Authentication (S1) | Unauthenticated requests to every non-public route return 401 (route inventory); login throttling and lockout work; session cookies are HttpOnly, Secure, SameSite; CSRF tokens enforced |
+| H2 | Project-level authorization (S2) | For every route, a member of project A cannot read or change project B (automated horizontal-access suite); viewer cannot edit; row-level security blocks direct SQL across projects |
+| H3 | User data isolation (S3) | Caches, embeddings, uploads and exports never leak across projects (cross-tenant tests); logs contain no user content |
+| H4 | Secrets and API keys (S4) | Secret scanning passes; no secret in DB, logs, prompts, error responses (fuzzed error test); rotation procedure documented and rehearsed |
+| H5 | Rate limiting and abuse protection (S5) | Per-user/IP limits and LLM/API budgets enforced under load test; uploads and requests above limits rejected; outbound calls stay within provider limits |
+| H6 | Secure file access (S6) | Files unreachable without authorization; signed links expire; SSRF tests (private IPs, redirects, non-http schemes) blocked; malformed/oversized PDFs rejected safely |
+| H7 | Retention and deletion enforcement (S7) | Deletion and expiry remove data from DB, project caches, embeddings and files (audit test); retention job monitored with alerting; backup retention documented; account deletion removes all user data |
+| H8 | Transport and platform (S8) | TLS only; security headers present; dependency and container scans have no unresolved critical findings |
+
+Gate H can be completed any time after R1. It is required before hosting,
+not before local use.

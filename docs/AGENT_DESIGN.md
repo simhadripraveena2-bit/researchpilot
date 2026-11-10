@@ -42,6 +42,10 @@ class AgentResult(BaseModel, Generic[OutT]):
 ```
 
 Rules:
+0. Agents request a **task** from the LLM gateway (e.g. `relevance_judge`),
+   never a provider or model. Provider and model come from the task
+   configuration, which is provisional until D1 is approved (ARCHITECTURE
+   §4.2).
 1. Agents never write to the database; workflow nodes persist results
    through repositories.
 2. Every output schema is Pydantic. Semantic validators check that item IDs
@@ -83,6 +87,7 @@ deterministic context and retrieval services.
 
 ```python
 class TutorAnswer(BaseModel):
+    paper_access_levels: dict[str, AccessLevel]   # per paper handle, from the Context Builder (not model-chosen)
     scope_used: Literal["about_this_paper", "about_project", "general"]
     answer_status: Literal["grounded", "partially_grounded", "background_only",
                            "not_found_in_sources", "out_of_scope"]
@@ -116,6 +121,10 @@ Validation (ClaimValidator):
 - Equations attributed to a paper must match an `equations` row or the user
   selection exactly (after LaTeX normalisation). Otherwise the block is
   rejected.
+- Paper-attributed blocks must be consistent with the paper's **access
+  level**: no full-text claims when only the abstract is accessible; no
+  equation explanation unless that equation's text is available. The
+  `access_level` used is stored on the message and shown in the UI.
 - If `scope_used = about_this_paper` and no block is grounded, then
   `answer_status` must be `not_found_in_sources` or `background_only`, and the
   UI shows "Not found in the available text of this paper" first.
@@ -130,7 +139,7 @@ Validation (ClaimValidator):
 | Service | Responsibility | Rel. |
 |---|---|---|
 | Discovery | Execute query plans per source; normalise records | R1 |
-| Deduplicator + **Version Matcher** | Identifier union-find; confidence-aware preprint↔publication matching from decisive identifier links, strong source links and supporting/contradicting evidence; **never merges on title similarity alone**; possible matches linked, not merged; user decisions final; merges reversible (ARCHITECTURE §4.8a, D29) | R1 |
+| Deduplicator + **Version Matcher** | Identifier union-find; confidence-aware preprint↔publication matching from decisive identifier links, strong source links and supporting/contradicting evidence; **never merges on title similarity alone**; matched manifestations are attached to one work but stay distinct (identifiers, dates, documents, evidence keep their manifestation); possible matches linked, not merged; user decisions final; reversible (ARCHITECTURE §4.8a, D29) | R1 |
 | Enricher | Batch metadata/abstract completion across sources | R1 |
 | Citation Explorer | References, citations, recommendations within budgets | R1 |
 | Survey Detector | Publication type + title/abstract cues + citation patterns | R1 |
@@ -145,11 +154,12 @@ Validation (ClaimValidator):
 | Experiment Resource Resolver | HF/GitHub metadata, link confidence, licences | R4 |
 | Report Builder | Structured reports, exports (Markdown, BibTeX, CSV, LaTeX, PDF) | R1 / R4 |
 | Journey Guide | Stage readiness and next step | R1 |
-| Date Resolver | Store date claims per source and manifestation; corroboration lookups; derive first public date and confidence (verified / corroborated / single secondary / conflicting / uncertain, D28); classify release type; UTC computation, boundary-day flags (ARCHITECTURE §4.8) | R1 |
+| Date Resolver | Store each date **event** per manifestation with reporting source and upstream provenance (never guessed); look up the system of record; derive first public appearance and its basis (announced / posted / published online / issue / issued / submission_only); confidence verified / corroborated (independent provenance established) / source agreement / single source / conflicting / uncertain (D28 revised); classify release type; UTC computation, boundary-day flags (ARCHITECTURE §4.8) | R1 |
+| arXiv Announcement Capture | Daily job reading arXiv announcement feeds for mapped categories; writes `arxiv_announcement_log` and `preprint_announced`/`version_announced` events; upgrades `submission_only` bases (ARCHITECTURE §4.8.5) | R1 |
 | Latest Scan Planner | Turn the objective + Planner's `LatestScanPlan` into date-bounded source queries (arXiv category sweep + topic queries; bioRxiv/medRxiv `/details` + `/pubs` for life-science objectives; S2; OpenAlex per configured capabilities; Crossref); UTC window + overlap | R1 |
 | Related Item Linker | Link recent papers to project items: `cites` (citation data) vs `similar` (embedding similarity, labelled) | R1 |
 | Evidence Retriever | Hybrid retrieval (pgvector + Postgres full-text) over chunks, sections, equations and extractions, scoped to paper → project; returns numbered evidence handles | R1 |
-| Context Builder | Assemble project memory (objective, saved items, notes, saved explanations, concept progress, learning path), view context and conversation memory (last 12 turns + summary + carried references re-resolved to original passages) within a token budget | R1 |
+| Context Builder | Assemble project memory (objective, saved items, notes, saved explanations, concept progress, learning path), view context and conversation memory (last 12 turns + summary + carried references re-resolved to original passages) within a token budget; computes each paper's **access level** (metadata only / abstract only / full text processed / full text failed / equations available) that bounds what the Tutor may claim (ARCHITECTURE §4.10.4) | R1 |
 | Action Recommender (RIE) | Deterministic read now / save for later / deprioritise / check manually rule from tier, relations and links; never uses dates or citation counts | R1 |
 | Learning Progress Tracker | Update `concept_progress` from lesson steps and checks; emit `concept_progress.updated` | R1 |
 | Retention Enforcer | Daily job applying each project's tutor retention policy; deletion cascades as specified (ARCHITECTURE §4.10.2) | R1 |
@@ -241,8 +251,8 @@ accepted ideas / running experiments (overlap judgement) → alerts + notificati
 load objective version → Latest Scan Planner (queries per subtopic; arXiv categories;
 bioRxiv/medRxiv categories if enabled; window in UTC + 3-day overlap; OpenAlex capabilities)
 → search_sources (fan-out, date-bounded) → Deduplicator + Version Matcher (sources + project)
-→ corroboration lookups (Crossref / arXiv / bioRxiv by identifier) → Date Resolver
-  (claims → confidence → first public date → release type)
+→ system-of-record lookups (Crossref / arXiv / bioRxiv by identifier) → Date Resolver
+  (events → provenance → confidence → first public appearance → release type)
 → assess Stage A (all) → Stage B top-K + relation_to_project (challenges cross-checked)
 → Extractor (abstract mode, top-K) → Related Item Linker → Action Recommender
 → Card Writer (Latest brief: 8 answers) → ClaimValidator
@@ -295,6 +305,11 @@ Any checkpoint can be set to auto-approve per project.
   handling, equation-fabrication rejection, summary-as-evidence rejection),
   lesson flows (next, simpler, deeper, jump, interrupt and resume, skipped
   steps, checks).
+- **Date Resolver:** G-LATEST-DATES cases for source agreement vs
+  independent corroboration, submission-only arXiv dates, announcement
+  capture, journal versions of existing preprints, and every event type.
+- **Tutor access levels:** fixtures at each access level; assertions that
+  no full-text or equation claims appear below the required level.
 - **Version Matcher:** G-MATCH pairs, including adversarial similar-title
   pairs; property test that title-only evidence never yields a match.
 - **Retention:** deletion and expiry cascades, and survival of saved

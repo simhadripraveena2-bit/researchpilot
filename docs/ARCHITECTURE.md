@@ -24,7 +24,7 @@ Browser ──▶ frontend (React SPA via nginx)
                │  /api/v1  REST + SSE (+ streamed explanation responses)
                ▼
             api (FastAPI)
-              ├─ routers / auth (later)
+              ├─ routers / auth (disabled for local use; required for hosting, §11)
               ├─ Journey service (stage registry)
               ├─ Explanation service (on-demand, cached)
               ├─ Intelligence read service (cards, tiers, overrides, feedback)
@@ -99,20 +99,49 @@ One `SourceClient` base on `httpx.AsyncClient` provides:
 - storage of every raw entity payload in `source_records`;
 - usage budgets for metered APIs (OpenAlex, LLM).
 
-### 4.2 LLM gateway
-- `generate_structured(task, prompt_ref, inputs, schema, level=None)` returns
-  a validated Pydantic object plus usage metadata.
-- The default implementation uses the Anthropic SDK structured outputs with
-  `claude-opus-5-5`, overridable per task through environment variables.
-  `refusal` and `max_tokens` stop reasons are surfaced as errors, never as
-  empty results.
-- Semantic validation runs after schema validation: IDs must exist, quotes
-  must verify, numbers must match the evidence. One repair attempt is made,
-  then the error is recorded.
-- Bulk extraction can use the Message Batches API. Stable system prompts use
-  prompt caching.
+### 4.2 LLM gateway (provider-independent)
+
+**Business logic never depends on a specific provider or model.** Agents,
+services and workflows call one interface:
+
+```python
+class LLMGateway(Protocol):
+    async def generate_structured(self, task: TaskName, prompt: PromptRef,
+                                  inputs: dict, schema: type[T]) -> LLMResult[T]: ...
+    async def stream_structured(self, task: TaskName, prompt: PromptRef,
+                                inputs: dict, schema: type[T]) -> AsyncIterator[LLMChunk[T]]: ...
+    def capabilities(self, task: TaskName) -> LLMCapabilities   # structured output, streaming,
+                                                                 # batch, prompt caching, max context
+```
+
+- **Task-based model selection:** a configuration file (overridable by env)
+  maps each task (`planner`, `relevance_judge`, `relevance_cross_check`,
+  `card_writer`, `tutor_answer`, `tutor_lesson`, `tutor_summary`,
+  `extractor_abstract`, `extractor_fulltext`, …) to `{provider, model,
+  parameters}`. Changing a model is a configuration change plus an
+  evaluation run (EVALUATION_FRAMEWORK §4), never a code change.
+- **Provider adapters** (first: Anthropic; others can be added) translate
+  provider-neutral prompts and Pydantic schemas into each provider's API, and
+  map provider errors and stop reasons (refusals, truncation, rate limits)
+  to neutral types. Provider SDKs are imported **only** inside
+  `llm/adapters/`; a lint rule enforces this.
+- **Capability-aware callers:** code asks `capabilities()` instead of
+  checking provider names. For example, bulk extraction uses a batch API if
+  available and otherwise runs sequentially; prompt caching is used where
+  supported.
+- **Provisional initial configuration (pending D1):** every task is
+  configured to Anthropic `claude-opus-5-5`. It is marked **provisional** in
+  the configuration file, in `docs/`, and in run manifests until D1 is
+  approved. Cost figures in §7 use it only as an example.
+- Validation is provider-independent: schema validation, then semantic
+  validation (IDs exist, quotes verify, numbers match evidence), one repair
+  attempt, then a recorded error. Refusals and truncation are surfaced as
+  errors, never as empty results.
+- Prompts are versioned, provider-neutral files. Each output records task,
+  provider, model, prompt version and parameters in `llm_usage` and the run
+  manifest, so results can be attributed and reproduced.
 - A `FakeLLMGateway` serves recorded outputs in tests. A local-model adapter
-  is optional for free operation (lower quality; see §8).
+  is optional for free operation (§8).
 
 ### 4.3 Execution modes
 | Mode | Used for | Durability | Latency |
@@ -137,6 +166,7 @@ retries):
 | `gap.updated` / `idea.status_changed` | novelty-dimension recompute, impact watch list |
 | `latest_scan.completed` | "new since last visit" counters; (R5) notifications and impact alerts |
 | `paper.dates_updated` / `paper.match_decided` | release-type reclassification for affected scan entries |
+| `arxiv.announcements_captured` (daily job) | add `preprint_announced` events; upgrade `submission_only` bases; reclassify entries |
 | `concept_progress.updated` | learning-path progress, Journey Guide next step |
 
 ### 4.5 Journey registry
@@ -162,91 +192,149 @@ are recorded in `llm_usage`.
 
 Recent-research correctness depends on dates, and sources disagree about
 them. OpenAlex's own documentation warns that publication dates are
-unreliable for finding recent records. The `DateResolver` service therefore
-stores **every date claim separately**, then derives a first public date and
-a release type with explicit confidence.
+unreliable for finding recent records. The `DateResolver` therefore stores
+**every date event separately**, per manifestation, with its provenance. It
+then derives a first public appearance and a release type, with an
+explicit confidence that never overstates what is known.
 
-**1. Collect date claims** (`paper_dates`, one row per claim, never
-overwritten). Each claim records: date type, value, precision
-(timestamp/day/month/year), the **manifestation** it belongs to (preprint or
-published version) and its identifier, source, source record, and retrieval
-time.
+#### 4.8.1 Manifestations
+A **work** (`papers`) can have several **manifestations**
+(`paper_manifestations`): an arXiv preprint, a bioRxiv/medRxiv preprint, a
+journal or proceedings version, and occasionally others. Identifiers, date
+events, documents (PDFs) and evidence spans belong to a manifestation, so
+preprint and published versions stay distinct even after they are matched
+to one work (§4.8a). Every evidence span therefore says which version its
+text came from ("arXiv v2", "journal version").
 
-| Source | Field | Stored as date type | Role |
+#### 4.8.2 Date events (kept separately, never merged)
+
+| Event | Meaning | Typical source | Counts as public availability? |
 |---|---|---|---|
-| arXiv | `published` (v1 submission timestamp, UTC) | `preprint_v1_submitted` | **authoritative** first preprint date |
-| arXiv | per-version submission dates | `version_submitted` (+ version) | authoritative for that version |
-| arXiv | `updated` | `latest_version_submitted` | version event only |
-| bioRxiv / medRxiv | `date` of version 1 (from `/details`) | `preprint_v1_posted` | **authoritative** first preprint date (day precision) |
-| bioRxiv / medRxiv | `date` of later versions | `version_posted` (+ version) | authoritative for that version |
-| bioRxiv / medRxiv | `/pubs` published date | `published_online` (published manifestation) | supporting; confirmed via Crossref when possible |
-| Crossref | `published-online`, `published-print`, `issued` | `published_online`, `published_print`, `issued` | **authoritative** (precision checked) |
-| Crossref | `posted` (posted-content, e.g. preprints with DOIs) | `preprint_posted` | authoritative for that preprint |
-| Crossref | `created`, `deposited`, `indexed` | `metadata_created`, `metadata_deposited`, `metadata_indexed` | ❌ never a publication date |
-| OpenAlex | `publication_date` | `openalex_publication_date` | **secondary** |
-| OpenAlex | `created_date` | `index_created` | "newly indexed" detection only |
-| OpenAlex | `updated_date` | `metadata_updated` | ❌ never |
-| Semantic Scholar | `publicationDate` | `s2_publication_date` | **secondary** (often missing or year-only) |
-| ResearchPilot | first time we saw the paper | `first_seen_by_researchpilot` | "newly indexed" fallback only |
+| `preprint_submitted` | Authors submitted the preprint (arXiv v1 timestamp, UTC). **Not** the moment it became public | arXiv API `published` | ❌. Used only as a labelled fallback (below) |
+| `preprint_announced` | The preprint was publicly announced/listed (arXiv daily announcement) | arXiv daily announcement feeds, captured by our daily job (§4.8.5) | ✅ |
+| `preprint_posted` | The preprint was posted publicly (bioRxiv/medRxiv posting date; Crossref `posted` for preprints with DOIs) | bioRxiv/medRxiv API, Crossref | ✅ |
+| `version_submitted` / `version_announced` / `version_posted` | A revision (v2+) | arXiv, bioRxiv/medRxiv | ✅ for that version only; never the work's first appearance |
+| `accepted` | Accepted by a journal (when deposited) | Crossref | ❌ |
+| `published_online` | Version of record first available online | Crossref `published-online` | ✅ |
+| `issue_published` | Final issue (print/issue) publication | Crossref `published-print`, issue date | ✅ but usually later than online; never earlier evidence of novelty |
+| `issued` | Crossref's derived earliest publication date | Crossref `issued` | ✅ (precision checked; recorded as derived) |
+| `reported_publication_date` | A secondary source's "publication date" | OpenAlex `publication_date`, Semantic Scholar `publicationDate` | Supporting only (§4.8.3) |
+| `index_created` | First appeared in an index | OpenAlex `created_date` (premium filter), our `first_seen` | ❌. "Newly indexed" detection only |
+| `metadata_updated` / `metadata_deposited` / `metadata_indexed` | Metadata changed | Crossref `deposited`/`indexed`, OpenAlex `updated_date`, arXiv `updated` | ❌ never |
 
-**2. Derive the first public date and its confidence** (decision **D28**):
+Every event row records: value (UTC), precision (timestamp/day/month/year),
+manifestation, identifier, version, **reporting source**, **upstream
+provenance** (§4.8.3), source record, retrieval time, and flags.
 
-| `date_confidence` | Rule | Allowed in *New research*? |
+#### 4.8.3 Provenance, agreement and independent corroboration
+
+Two sources reporting the same date is **agreement**, not necessarily
+**independent corroboration**. OpenAlex and Semantic Scholar both ingest
+upstream metadata (e.g. Crossref, arXiv, PubMed, publisher feeds), so their
+agreement may simply repeat one upstream value.
+
+- **Reporting source:** the API we read the date from.
+- **Upstream provenance:** where that source got the date, recorded only
+  when the source exposes it (e.g. a location or source field pointing to
+  Crossref or arXiv, an explicit provenance field), with the field path as
+  evidence. Otherwise it is `unknown`. It is never guessed.
+- **System of record:** the registry or server responsible for that
+  manifestation's date: arXiv for arXiv IDs, bioRxiv/medRxiv for their
+  preprints, Crossref for DOIs (as deposited by the publisher). A date read
+  directly from the system of record is **primary**. It is labelled with its
+  meaning ("as deposited by the publisher"), not as absolute truth.
+
+| `date_confidence` | Rule | Default placement |
 |---|---|---|
-| `verified` | Earliest authoritative claim at day (or timestamp) precision, with no authoritative claim disagreeing by more than 2 days | ✅ |
-| `corroborated` | No authoritative claim, but **two independent secondary sources** (OpenAlex and Semantic Scholar) agree within ±1 day at day precision | ✅ with the badge "Date from secondary sources (corroborated)" |
-| `single_secondary` | Only one secondary source gives a day-precision date | ❌ → **Date uncertain** (default) |
-| `conflicting` | Authoritative claims disagree by more than 2 days, or two secondary sources disagree by more than 1 day with no authoritative claim | ❌ → Date uncertain (all claims shown) |
-| `uncertain` | Only month/year precision, a future date, or no claim | ❌ → Date uncertain |
+| `verified` | A **primary** public-availability event from the system of record, at day/timestamp precision, with no primary event disagreeing by more than 2 days | Release-type tab |
+| `corroborated` | No primary event, but **two claims with established, disjoint upstream provenance** agree within ±1 day | Release-type tab, with "Corroborated by independent sources" and the chain shown |
+| `source_agreement` | Several secondary sources agree, but their independence **cannot be established** (unknown or shared upstream) | **Date uncertain**: "Reported by OpenAlex and Semantic Scholar; these may share upstream data" |
+| `single_source` | Exactly one secondary claim | **Date uncertain**: "Only OpenAlex reports this date" |
+| `conflicting` | Primary events disagree by more than 2 days, or secondary claims disagree with no primary event | **Date uncertain**, all claims shown |
+| `uncertain` | Month/year precision only, a future date, or no claim | **Date uncertain** |
 
-Before settling on `single_secondary`, the resolver tries to corroborate: a
-Crossref lookup when a DOI is known, an arXiv lookup when an arXiv ID is
-known, and a bioRxiv/medRxiv lookup for their DOIs. A secondary claim that
-disagrees with an authoritative claim is kept and flagged, but it doesn't
-create a conflict: the authoritative claim wins.
+`corroborated` will be rare in the MVP, because few sources expose
+upstream provenance. That is intended: the system doesn't claim
+independence it can't show. Before settling on `source_agreement` or
+`single_source`, the resolver looks up the system of record (Crossref by
+DOI, arXiv by ID, bioRxiv/medRxiv by DOI). A secondary claim that disagrees
+with a primary event is kept and flagged; the primary event stands.
 
-**3. Classify the release type** relative to the window `[start, end)`
-(decision **D25**):
+#### 4.8.4 First public appearance and release types
+
+**First public appearance** of a work = the earliest *public-availability*
+event across all its manifestations (`preprint_announced`,
+`preprint_posted`, `published_online`, `issue_published`, `issued`). It is
+labelled with its basis:
+
+- `announced` / `posted` / `published_online` / `issue` — the event itself.
+- `submission_only` — for arXiv papers whose announcement date wasn't
+  captured. The **v1 submission timestamp** is used as a stand-in and always
+  displayed with its meaning: "Submitted to arXiv Nov 8, 21:14 CET — public
+  announcement date not verified (usually 1–3 days later)". This basis is
+  verified as a *submission* date, never presented as the public release
+  date.
+
+The 3-day fetch overlap before the window start is **only a retrieval
+tactic**, so that late-announced papers are fetched. It is never evidence
+of a release date.
 
 | Release type | Rule |
 |---|---|
-| New preprint | First preprint version (arXiv v1, or bioRxiv/medRxiv v1) in window, `verified` or `corroborated` |
-| New publication | Published-version date in window **and** no earlier linked version |
-| Published version of an earlier preprint | Published-version date in window **and** a matched earlier preprint (D29); shown with the preprint date |
-| Revised version of an older paper | A new version (v2+) in window **and** first public date before the window |
-| Older paper newly indexed | First public date before the window **and** first indexed in window (OpenAlex `created_date` when that capability is enabled, otherwise our first-seen date, labelled) |
-| Date uncertain | The date that would place it in the window is `single_secondary`, `conflicting` or `uncertain` |
+| New preprint | The work's **first public appearance** is a preprint event in the window (basis announced/posted, or submission_only labelled) with confidence `verified` or `corroborated` |
+| New publication | First public appearance is a published-version event in the window, **and** no earlier manifestation is known after a matching search (arXiv, bioRxiv/medRxiv, Crossref relations). Shown with "No earlier preprint found in: …" |
+| Published version of an earlier preprint | A published-version event in the window for a work whose first public appearance (a preprint) is **before** the window. **Never presented as new research**: shown under *Updates*, excluded from the "new research" counts and digest, and given no novelty credit (RIE §10.1) |
+| Revised version of an older paper | A version event (v2+) in the window, first public appearance before the window |
+| Older paper newly indexed | First public appearance before the window, `index_created` in the window (OpenAlex premium capability, or our first-seen date, labelled) |
+| Date uncertain | The event that would place the paper in a window tab has confidence `source_agreement`, `single_source`, `conflicting` or `uncertain` |
 
 Rules that always apply:
-- A metadata-change date never makes a paper "new".
-- Month- or year-precision dates never fall inside a window of 31 days or
+- Metadata dates never make a paper new.
+- Month- or year-precision events never fall inside a window of 31 days or
   less.
-- Future dates (beyond retrieval time + 1 day) are flagged and treated as
-  uncertain.
-- Release types are recomputed when new date claims or matches arrive
-  (`paper.dates_updated`, `paper.match_decided`). A changed type is shown
-  with "Reclassified", never silently swapped.
-- arXiv's v1 timestamp is the submission time, and announcement can lag 1–3
-  days. Dates are labelled "v1 submitted", and scans fetch 3 extra days
-  before the window start so late announcements aren't missed. Inclusion is
-  still decided by the submission time.
+- Future dates (beyond retrieval time + 1 day) are flagged as `uncertain`.
+- Release types are recomputed when new events or matches arrive
+  (`paper.dates_updated`, `paper.match_decided`). A changed type shows
+  "Reclassified" and is never silently swapped.
 
-**4. Time zones** (decision **D23**):
+#### 4.8.5 arXiv announcement capture
+arXiv's daily announcement (RSS) feeds list each day's new and replaced
+papers at announcement time, and keep no history. A small **daily worker
+job** reads the feeds for every category mapped in any project. It records
+`preprint_announced` / `version_announced` events, with the feed as reporting
+source and arXiv as system of record. Papers announced before capture
+started, or in unmapped categories, keep `submission_only`. The exact feed
+field semantics (which element carries the announcement date and type) must
+be verified at implementation and recorded in the integration doc. Until
+then, the job only records the announcement day the feed was fetched for.
+This needs no new infrastructure: the job runs on the same periodic-task
+mechanism as retention.
+
+#### 4.8.6 Time zones (D23)
 - **Storage and computation in UTC.** Timestamps are `timestamptz`. Rolling
-  windows are computed in UTC: `[now_utc − N×24 h, now_utc)`, start
-  inclusive and end exclusive.
-- **Date-only claims** (Crossref day dates, bioRxiv dates) are stored as
-  calendar dates with `precision = day` and are **never shifted across time
-  zones**. A date-only claim *D* is treated as the UTC day `[D 00:00, D+1
-  00:00)`. It is in the window if that day overlaps the window. If the day
-  is only partly inside (the boundary day), the entry is flagged
-  `boundary_day` and the provenance popover says so.
-- **Display in the user's local time zone.** IANA zone from the browser,
-  overridable in Settings and stored on the user. Timestamps (e.g. arXiv
-  submission) are converted for display ("Submitted Nov 9, 00:30 CET").
-  Date-only values are shown as the date itself, without conversion. Window
-  bounds are shown in local time ("Nov 3, 14:00 – Nov 10, 14:00 CET"). DST
-  transitions are handled by the zone database, never by fixed offsets.
+  windows are `[now_utc − N×24 h, now_utc)`, start inclusive, end exclusive.
+- **Date-only events** (Crossref days, bioRxiv/medRxiv dates, arXiv
+  announcement days) are calendar dates with `precision = day`. They are
+  **never shifted across time zones**. A date-only event *D* is treated as
+  the UTC day `[D 00:00, D+1 00:00)`; it is in the window if that day
+  overlaps the window, and a day only partly inside is flagged
+  `boundary_day`.
+- **Display in the user's local zone** (browser zone, overridable). Timestamps
+  are converted, date-only values are shown as dates, and window bounds are
+  shown in local time. DST is handled by the IANA zone database.
+
+#### 4.8.7 Preprint labelling
+- Every **bioRxiv and medRxiv** record is labelled **"Preprint — not
+  peer-reviewed"**. arXiv records get the same label, because arXiv
+  preprints are moderated but not peer-reviewed.
+- The label is removed only when the item being displayed is a separately
+  **matched published manifestation** (a Crossref journal-article or
+  proceedings record linked by D29 rules). Even then the UI says
+  "Journal version (published in <venue>)". It does not assert the details
+  of peer review, which Crossref doesn't certify.
+- A work with both manifestations shows both, distinctly: "Preprint (arXiv
+  v2, not peer-reviewed) · Journal version (2026)". Quotes and evidence say
+  which manifestation they come from.
 
 ### 4.8a Preprint ↔ publication matching (decision D29)
 
@@ -274,9 +362,10 @@ similarity alone.**
 | **No match** | Everything else, including any pair whose only support is title similarity |
 
 **Preservation:**
-- A match never deletes anything. Identifiers, `source_records` and
-  `paper_dates` keep their source and manifestation, so the preprint's v1
-  date and the journal's publication date both survive in one work.
+- A match never deletes or merges **manifestations**. It attaches them to
+  one work. Identifiers, documents, evidence spans, `source_records` and
+  `paper_dates` stay attached to their own manifestation, so the preprint's
+  v1 date and the journal's publication date both survive, distinctly.
 - Merges are logged in `paper_merge_events` with the match decision that
   caused them, and can be split again, which restores each record's
   identifiers and date claims by source record.
@@ -302,7 +391,8 @@ There is no separate pipeline.
      the API has no full-text search. `/pubs/{server}/{start}/{end}`
      supplies preprint → published links for matching. No official rate
      limit is published, so the client is conservative (1 req/s, cached).
-     medRxiv entries carry a "Preprint — not peer-reviewed" label.
+     bioRxiv and medRxiv records carry the "Preprint — not peer-reviewed"
+     label (see §4.8.7).
    - **Semantic Scholar:** topic search with a publication-date/year range;
      its dates are secondary.
    - **OpenAlex:** topic search with a publication-date filter; its dates
@@ -313,7 +403,7 @@ There is no separate pipeline.
      date. Both paths share one interface and are tested, so paid access can
      be switched on by configuration alone.
    - **Crossref:** `query.bibliographic` with `from-pub-date`/`until-pub-date`
-     for journal articles, and DOI lookups to confirm or corroborate dates
+     for journal articles, and DOI lookups to obtain primary (system-of-record) dates
      for candidates from other sources.
 3. **Deduplicate and match versions** across sources and against the project
    (`Deduplicator` + Version Matcher, §4.8a).
@@ -435,6 +525,31 @@ a **teaching plan** with these steps, in order:
   deletion.
 - Understanding checks are formative and never block the user.
 
+#### 4.10.4 Paper-understanding capability boundaries (MVP)
+
+For each paper in context, the Context Builder computes a **paper access
+level** from stored data. The Tutor may only claim what that level supports:
+
+| Access level | Condition | What the tutor can do (R1) | What it must say |
+|---|---|---|---|
+| `metadata_only` | No abstract available | Concept questions (background, labelled) | "I only have this paper's title and metadata." |
+| `abstract_only` | Abstract stored, no processed full text | Abstract-grounded answers, quoting the abstract | Banner "Based on the abstract only". For anything beyond the abstract: "Not available in the extracted text: only the abstract is accessible." |
+| `full_text_processed` | A document of this manifestation was retrieved **and** parsed (sections, pages) | Section-grounded answers with page/section citations; lessons with a paper-connection step | Which manifestation the text is from ("arXiv v2"), and "Not found in the extracted text" when retrieval returns nothing |
+| `full_text_failed` | Retrieval or parsing failed | Same as `abstract_only` | The failure reason ("PDF could not be parsed") and the upload option |
+| `equations_available` | Equations extracted as text: R1 = user-selected text verified against the document's text layer; R2 = arXiv LaTeX source | Step-by-step explanation of that exact equation | Where the equation text came from. If the selection is unreadable (garbled math in the PDF text layer): "I can't read this equation reliably from the PDF text" |
+
+Rules:
+- The tutor never claims full-paper understanding when the access level is
+  below `full_text_processed`. Phrases such as "the paper shows…" are only
+  allowed for content in the accessible text.
+- General concept questions are always allowed, labelled as background.
+- Equations attributed to a paper are only explained when the access level
+  includes `equations_available` for that equation. Otherwise the tutor says
+  "This equation is not available in the extracted text" and may explain the
+  general concept, labelled as background.
+- Multi-paper comparisons use each paper's own access level and say which
+  papers were only available as abstracts.
+
 ### 4.11 API additions for these features
 
 | Method | Path | Purpose |
@@ -445,7 +560,7 @@ a **teaching plan** with these steps, in order:
 | GET | `/projects/{id}/latest/digest?scan_id=` | "What's new" digest (grounded, cached per scan and level) |
 | GET | `/projects/{id}/latest/{paper_id}/brief` | the eight-question Latest brief |
 | PATCH | `/projects/{id}/items/{item_id}` | save, dismiss (+ reason), read later, tags (shared with other pages) |
-| GET | `/papers/{id}/dates` | all date claims with sources and manifestations, the derived first public date, confidence and release-type history |
+| GET | `/papers/{id}/dates` | all date events with manifestations, reporting and upstream sources, the derived first public appearance and basis, confidence and release-type history |
 | GET | `/papers/{id}/matches` | match decisions (auto, possible, related, rejected) with evidence features |
 | POST | `/match-decisions/{id}/confirm` · `/reject` | user confirms or rejects a possible match (merge / keep separate) |
 | POST | `/papers/{id}/split` | undo a merge |
@@ -495,7 +610,7 @@ a **teaching plan** with these steps, in order:
 | GROBID | PDF → structured TEI | self-hosted | compute only | weak on tables and formulae; no OCR |
 | Hugging Face Hub | models, datasets, paper links | optional token | free | links depend on authors tagging arXiv IDs |
 | GitHub REST | repository metadata and search | token | free | 5,000 req/h; search about 30 req/min |
-| LLM API (Anthropic default) | planning, judgements, extraction, explanations, critique | API key | metered (§7) | cost; latency; refusals; needs validation |
+| LLM API (provider-independent gateway; Anthropic adapter first; **provisional**, D1) | planning, judgements, extraction, explanations, critique | API key | metered (§7) | cost; latency; refusals; needs validation |
 | Google Scholar | — | — | — | not used (no API; terms forbid scraping) |
 | Papers with Code | — | — | — | discontinued in 2025 |
 
@@ -504,14 +619,15 @@ Each integration doc records the verification date.
 
 ## 7. Operational cost estimates
 
-**Assumptions** (to be replaced by measurements in R1): Anthropic list prices
-as of planning (`claude-opus-5-5` $4 / $20 per million input/output tokens;
+**Assumptions** (to be replaced by measurements in R1). The model is the
+**provisional** initial configuration (D1 not yet approved). These are
+Anthropic list prices as of planning (`claude-opus-5-5` $4 / $20 per million input/output tokens;
 `claude-sonnet-5-5` $2 / $10; `claude-haiku-5-5` $0.10 / $0.50). A typical
 project has 300 candidate papers, 120 included and 50 analysed in full text.
 Prompt caching and batch discounts are not counted, so real costs should be
 lower.
 
-| Activity | Token estimate | Opus 5.5 (default) | If Sonnet 5.5 chosen | If Haiku 5.5 chosen |
+| Activity | Token estimate | Opus 5.5 (provisional) | If Sonnet 5.5 chosen | If Haiku 5.5 chosen |
 |---|---|---|---|---|
 | Objective + query planning | ~10k in / 3k out | ~$0.10 | ~$0.05 | <$0.01 |
 | Stage B relevance judgements (top 150 papers; ~1.5k in / 0.3k out each) | 225k / 45k | ~$1.80 | ~$0.90 | ~$0.05 |
@@ -526,8 +642,9 @@ lower.
 | Gap investigation + novelty + red-team (R3) | ~2–3M / 0.4M | ~$16–20 | ~$8–10 | ~$0.40 |
 | Proposal drafting (R4) | ~0.3M / 60k | ~$2.40 | ~$1.20 | ~$0.06 |
 
-These are order-of-magnitude figures. Model choice per task remains your
-decision (decision D1). Quality must be measured with the evaluation
+These are order-of-magnitude figures. Provider and model per task remain
+open (decision D1). Any provider with structured output and streaming can be
+configured per task through the gateway. Quality must be measured with the evaluation
 framework before any downgrade.
 
 **Infrastructure (self-hosted, single user):** one VM or workstation with
@@ -579,9 +696,15 @@ evaluation gates first.
   the humanities) rely on Crossref and have weaker recall for recent work.
 - Publisher dates can be month-precision or revised after the fact. Such
   papers appear as "Date uncertain" rather than in the default view.
-- Papers dated only by one secondary source go to "Date uncertain" (D28).
-  This lowers recall for venues absent from arXiv, bioRxiv/medRxiv and
-  Crossref, by design.
+- Papers dated only by secondary sources (one source, or several whose
+  independence can't be established) go to "Date uncertain" (D28). This
+  lowers recall for venues absent from arXiv, bioRxiv/medRxiv and Crossref,
+  by design.
+- arXiv announcement dates exist only from when the daily capture job
+  started, and only for mapped categories. Other arXiv papers are dated by
+  their labelled v1 submission time (`submission_only`).
+- Upstream provenance is rarely exposed by aggregators, so "corroborated"
+  dates will be uncommon.
 - Version matching without identifier links is conservative. Some true
   preprint/journal pairs remain "possible matches" until the user confirms
   them.
@@ -593,3 +716,22 @@ evaluation gates first.
 - LLM judgements are probabilistic. They are mitigated by quotes,
   cross-checks, calibration and user overrides, but not eliminated.
 - Compute estimates are only possible when papers report hardware and time.
+
+## 11. Security and hosted deployment
+
+Local development can run without authentication. The API binds to
+`localhost` by default, and a startup check refuses a non-local bind unless
+`AUTH_MODE` is enabled. **Any hosted deployment, including a private pilot
+reachable over a network, is blocked until every requirement below is met
+and tested** (IMPLEMENTATION_ROADMAP §8, gate H).
+
+| # | Requirement | Design |
+|---|---|---|
+| S1 | **Authentication** | OIDC (preferred) or email + password with a modern password hash (argon2id), MFA option; secure, HttpOnly, SameSite session cookies or short-lived tokens; CSRF protection on cookie sessions; account lockout and throttling on login |
+| S2 | **Project-level authorization** | Roles per project (owner, editor, viewer). Every API route resolves the project and checks membership in one dependency; repositories require a `ProjectScope`; Postgres row-level security on project-scoped tables as defence in depth; tests for each route (horizontal-access attempts must fail) |
+| S3 | **User data isolation** | All user content (projects, notes, overrides, conversations, saved explanations, progress, uploads, assessments) is project-scoped. Shared caches hold only non-user content (public paper metadata, canonical explanations of public papers without project context). Anything containing project context is cached per project. Embeddings of uploaded PDFs are project-scoped. Logs never contain user content beyond IDs |
+| S4 | **Secrets and API keys** | Secrets only from the deployment's secret store or environment, never in the database, repository, logs, prompts or error messages. Separate keys per environment; documented rotation; secret scanning in CI. If users bring their own API keys later, they are encrypted at rest with a managed key and never returned by the API |
+| S5 | **Rate limiting and abuse protection** | Per-user and per-IP API rate limits; per-user and per-project LLM and external-API budgets; request and upload size limits; scan and lesson concurrency limits; signup protection; outbound calls only through `SourceClient` with per-source limits, so users can't make us exceed provider terms |
+| S6 | **Secure file access** | PDFs and other files live in private storage, never public. They are served only through the API after authorization, or via short-lived signed URLs. Uploads are content-type and size checked and parsed only inside the GROBID container. The downloader fetches only `http(s)` URLs, blocks private/link-local IP ranges and redirects to them (SSRF protection), and enforces size and time limits |
+| S7 | **Retention and deletion enforcement** | Deletion and retention (§4.10.2) cascade to messages, summaries, evidence links, project-scoped caches, embeddings and files. The retention job is monitored, and failures alert. Backups follow a documented retention period, after which deleted data is gone. A deletion audit log records what was deleted and when (no content). Account deletion removes all of the user's projects |
+| S8 | **Transport and platform** | TLS everywhere; strict CORS; security headers (CSP, HSTS); dependency and container vulnerability scanning in CI; least-privilege database roles; audit log of security-relevant events |

@@ -355,7 +355,7 @@ table):
   judgement runs with a differently phrased prompt and the evidence in a
   different order. Disagreement gives the label "uncertain", lowers
   confidence and shows both views.
-- **Factual attributes are never inferred by the LLM:** licences, star counts,
+- **Factual attributes are never inferred by the LLM:** dates, licences, star counts,
   dataset sizes and dates come from metadata or are reported as missing.
   Whether code is "official" requires the URL in the paper text or the
   Hugging Face paper page.
@@ -424,7 +424,7 @@ Papers from the last days have no citation history. The RIE handles them
 without special-casing the scoring:
 
 - **Foundational importance** is reported as **"Too recent to judge
-  influence"** for items whose first public date is under 90 days old. Its
+  influence"** for items whose first public appearance is under 90 days old (or uncertain). Its
   citation-structure signals are null, the dimension's coverage falls below
   the threshold, and the objective profile is renormalised over the
   remaining dimensions (§5.2). Content signals (e.g. "introduces a method
@@ -439,6 +439,19 @@ without special-casing the scoring:
   overlaps_with, unrelated}` with the project item it relates to and a
   verified quote from the new paper's abstract. From R3, the same signal is
   also computed against open gaps and accepted ideas.
+
+- **Journal versions of existing preprints are the same work.** When a
+  published manifestation of a work whose preprint appeared earlier shows up
+  in a window, the work keeps its existing assessment (same item, same
+  signals). It gets **no novelty or "new research" credit**, and its brief
+  says "Journal version of a preprint first public on <date>". Question 2
+  answers "Changes from the preprint not assessed" unless both versions'
+  full texts have been processed (R2). If the user had already saved or
+  assessed the preprint, the entry links to that state rather than
+  presenting a new item.
+- **Dates are never used as signals** by the RIE (unchanged), and date
+  confidence never affects tiers. It only decides which Latest Research tab
+  an entry appears in.
 
 ### 10.2 The Latest brief (eight questions) and card additions
 
@@ -458,7 +471,7 @@ mechanism:
 
 | # | Question | Source of the answer | Claim kind | If no evidence |
 |---|---|---|---|---|
-| 1 | What is the paper about? | Card Writer from the abstract (and full text if parsed) | `ai_interpretation` (grounded, quotes the abstract) | — (an abstract is required; without one: "No abstract available") |
+| 1 | What is the paper about? | Card Writer from the abstract (and full text only if processed; the brief states which) | `ai_interpretation` (grounded, quotes the abstract) | — (an abstract is required; without one: "No abstract available") |
 | 2 | What is new compared with earlier work? | (a) the paper's own comparative statements ("outperforms X", "unlike prior work…") from Extractor abstract mode; (b) comparison with named project items via `relation_to_project` | (a) `reported_finding` with quote; (b) `ai_interpretation` grounded in both items | "Can't tell from the abstract" |
 | 3 | What method, dataset or benchmark does it introduce? | Extractor abstract mode (full text in R2) | `reported_finding` with quote | "Not stated in the abstract" + missing info "Full text needed" |
 | 4 | How does it relate to the research objective? | Relevance Judge per sub-question + tier | `ai_interpretation` (grounded) + `extracted_observation` (tier, sub-questions) | "Insufficient information" tier |

@@ -88,7 +88,8 @@ simply" / "Go deeper").
 │ [New research (23)] [Updates (9)] [Newly indexed (5)] [Date uncertain (6)]
 │ Filters: action ▾ subtopic ▾ method ▾ source ▾ relevance ▾ OA ▾ new ▾  │
 ├───────────────────────────────────────────────────────────────────────┤
-│ ● NEW PREPRINT · v1 submitted Nov 9, 00:30 CET (arXiv) ⓘ               │
+│ ● NEW PREPRINT · Announced on arXiv Nov 10 · v1 submitted Nov 7, 18:02 CET ⓘ
+│ Preprint — not peer-reviewed                                          │
 │ Title … · Authors … · Open-access PDF ✓          [▶ Read now ▾] [Essential ▾]
 │ Subtopic: SQ2 Natural distribution shift                              │
 │ 1 About          … (AI explanation, quotes abstract ↗)                │
@@ -118,18 +119,35 @@ simply" / "Go deeper").
   abbreviation. Date-only values (e.g. journal publication dates) are shown
   as dates without a time and are never shifted between days. Window bounds
   show local start and end times. The zone can be changed in Settings.
-- **ⓘ date provenance** lists every date claim (type, source, manifestation,
-  precision, retrieval time in local time), the confidence, why the paper is
-  in this tab, and "boundary day" when a date-only value sits on the window
-  edge.
-- **Date uncertain** entries explain why: "Only OpenAlex reports a date
-  (Nov 8) — not confirmed by another source", "Sources disagree: Crossref Nov
-  2, OpenAlex Nov 8", or "Month only: November 2026".
+- **ⓘ date provenance** lists every date event separately (submitted,
+  announced/posted, revised, accepted, published online, issue, indexed,
+  metadata updated), each with its manifestation (preprint or journal
+  version), precision, reporting source, upstream source when known ("via
+  Crossref" or "upstream unknown"), and retrieval time in local time. It
+  also shows the confidence level, the basis of the first public appearance,
+  why the paper is in this tab, and "boundary day" when a date-only value
+  sits on the window edge.
+- **Submission-only arXiv dates** are always worded with their meaning:
+  "Submitted to arXiv Nov 8, 21:14 CET — public announcement date not
+  verified (usually 1–3 days later)".
+- **Date uncertain** entries explain why: "Only OpenAlex reports this date
+  (Nov 8)", "Reported by OpenAlex and Semantic Scholar (Nov 8); these may
+  share upstream data, so this is not independent confirmation", "Sources
+  disagree: Crossref Nov 2, OpenAlex Nov 8", or "Month only: November
+  2026".
+- **Corroborated** dates (rare) show "Confirmed by independent sources" with
+  the provenance chain.
 - **Possible matches** show "Possibly the published version of *…* —
   [Same paper] [Different papers]", with the evidence (DOI/arXiv links,
   title and author similarity). Nothing is merged until the user confirms,
   unless the auto-match rules apply.
-- **medRxiv** entries carry "Preprint — not peer-reviewed".
+- **Preprint labelling:** bioRxiv, medRxiv and arXiv entries carry
+  "Preprint — not peer-reviewed". A matched journal version is shown as a
+  distinct line, "Journal version (published in …)". The label is dropped
+  only when that published manifestation is the item displayed.
+- **Journal versions of existing preprints** appear only under *Updates*,
+  as "Journal version of a preprint first public on <date>". They are never
+  counted or summarised as new research.
 - The page answers the user's questions: what's new (tabs + digest), what's
   relevant (tiers, actions), what changed (question 2), overlap or challenge
   (questions 5–6), and what to read first (default sort).
@@ -143,6 +161,7 @@ Opens as a right-hand panel from any page (and from text selection →
 ```
 ┌ Ask & Learn ──────────────────────────────────────────────┐
 │ Context: [Reading: Paper P17 · §3.1 p.4 ✕] [Project ✕]     │
+│ P17 text: Full text (arXiv v2) ✓                           │
 │ Scope: (•) About this paper ( ) My project ( ) General     │
 │ Level: [Beginner ▾]                         [Teach me ▸]   │
 ├────────────────────────────────────────────────────────────┤
@@ -214,6 +233,9 @@ Opens as a right-hand panel from any page (and from text selection →
 | Possible preprint/journal match | "Possibly the published version of …" with [Same paper] [Different papers] |
 | Method/dataset not stated in the abstract | Question 3: "Not stated in the abstract"; missing information: "Full text needed" |
 | No opportunity stated by the authors | Question 7: "None stated in the abstract" (never invented) |
+| Paper available as abstract only | Panel shows "P17: abstract only". Answers start with "Based on the abstract only"; anything beyond it gets "Not available in the extracted text: only the abstract is accessible" and an Upload PDF option |
+| Equation not available as text | "This equation is not available in the extracted text" (or "I can't read this equation reliably from the PDF text" for garbled selections); general explanation offered, labelled background |
+| arXiv paper without a captured announcement | Date shown as "Submitted to arXiv … — announcement date not verified" |
 | Tutor can't find the answer in the paper | First line: "Not found in the available text of this paper (abstract only / section not parsed)." Then optional background, labelled |
 | Paper equation not available | "This paper's equations aren't available as text. Select the equation in the PDF to ask about it." |
 | Lesson step not applicable | Step shown as skipped, with the reason |
@@ -336,3 +358,13 @@ across LEARN and UNDERSTAND and is reachable from every stage.
   exclude, ? to open Ask & Learn, l to mark read later.
 - Long tasks: first progress message within 2 s, then an update at least
   every 10 s.
+
+## 9. Hosted mode
+
+Local use has no sign-in, and the server listens on this computer only. In
+any hosted deployment (gate H, ARCHITECTURE §11), the UI adds sign-in
+(OIDC or email + password with optional MFA), project sharing with roles
+(owner, editor, viewer), visible rate-limit and budget messages ("Daily
+explanation limit reached; resets at 00:00 CET"), and an account page with
+data export and account deletion. Private files open only after
+authorization; links to PDFs expire.

@@ -26,7 +26,8 @@ Two recurring tools sit across the journey:
   progress per project, and cites passages or labels background knowledge.
 
 **Status:** planning. No application code has been written yet. The plan is
-awaiting approval.
+awaiting approval before R0. Local development runs without sign-in (localhost
+only); any hosted deployment is blocked until the security gate (gate H) passes.
 
 ## Documentation (canonical)
 

@@ -192,14 +192,14 @@ can be added later without redesign.
 | LAT-3 | Default window: rolling **7 days** ending now. Storage and window calculation in **UTC**; all dates and window bounds **displayed in the user's local time zone** (browser zone, overridable); date-only values are shown as dates and never shifted across zones (D23). Presets: 24 h, 7 d, 14 d, 30 d, and a custom range |
 | LAT-4 | Sources: arXiv (date-range and category search); **bioRxiv and medRxiv** for life-science objectives or when the user enables them (D22); Semantic Scholar; OpenAlex (basic access by default; paid capabilities can be enabled by configuration later, D24); Crossref (journal articles, authoritative DOI dates and preprint↔publication relations) |
 | LAT-5 | Deduplicate across sources and against the existing project record; a recent paper already in the project is shown once with its existing state |
-| LAT-6 | Each entry shows: title, authors, first-publication or first-preprint date (with source, date type and confidence), source(s), abstract, paper URL, open-access full-text availability, relevant subtopic(s), relevance to the objective (tier + reason), main contribution, and method, dataset or benchmark introduced **when verifiable** (otherwise "not stated in the abstract"); medRxiv entries are labelled "Preprint — not peer-reviewed" |
+| LAT-6 | Each entry shows: title, authors, the **first public appearance** with its basis and meaning (e.g. "Posted on bioRxiv Nov 8", or "Submitted to arXiv Nov 8 — announcement date not verified"), source(s), date confidence, abstract, paper URL, open-access full-text availability, relevant subtopic(s), relevance to the objective (tier + reason), main contribution, and method, dataset or benchmark introduced **when verifiable** (otherwise "not stated in the abstract"); preprint labelling per LAT-24 |
 | LAT-7 | Each relevant entry has a **Latest brief** answering eight questions (LAT-19) and a recommendation card on demand |
 | LAT-8 | Link to related papers already in the project, distinguishing **"cites your saved paper"** (from citation data) and **"similar to your saved paper"** (from text similarity) |
 | LAT-9 | Actions: save, dismiss (optional reason), add note, mark "read later", open in Ask & Learn |
 | LAT-10 | Filters: date range, release type, subtopic, methodology, source, relevance tier, open-access availability, status (new since last visit, saved, dismissed) |
-| LAT-11 | Classify each entry as exactly one release type: **New preprint**, **New publication**, **Published version of an earlier preprint** (separate type, D25), **Revised version of an older paper**, **Older paper newly indexed**, or **Date uncertain**. The default view shows New preprints and New publications; the others are separate, clearly labelled tabs |
+| LAT-11 | Classify each entry as exactly one release type: **New preprint**, **New publication**, **Published version of an earlier preprint** (separate type, D25), **Revised version of an older paper**, **Older paper newly indexed**, or **Date uncertain**. The default view shows New preprints and New publications. A journal publication of an existing preprint is **never presented as new research**: it appears under Updates, is excluded from "new research" counts and the digest's new-work section, and gets no novelty credit |
 | LAT-12 | Never treat a paper as new because its metadata changed. Metadata dates (indexed, deposited, updated, created-in-index) are never used as publication dates |
-| LAT-13 | Every date shown keeps its source, date type, manifestation (preprint/published), precision and retrieval timestamp. A first public date supported only by an **uncorroborated secondary source** (OpenAlex or Semantic Scholar alone) is classified **Date uncertain** by default, never as a confirmed new release (D28). Conflicting dates also go to Date uncertain, with all claims shown. Dates are never invented or rounded |
+| LAT-13 | Every date keeps its event type, manifestation, precision, **reporting source**, **upstream provenance** (when the source exposes it) and retrieval timestamp. Confidence distinguishes **verified** (primary, from the system of record), **corroborated** (agreeing claims whose independent provenance is established), **source agreement** (sources agree but independence cannot be established), **single source**, **conflicting** and **uncertain**. Only verified and corroborated dates can place a paper in a release-type tab; all others are **Date uncertain** by default (D28, revised). Independent corroboration is never claimed unless it can be shown. Dates are never invented or rounded |
 | LAT-14 | Summary for the window: how many new relevant papers, how many Essential, which overlap with or challenge the project's direction, and a short "What's new this week" digest that cites papers (AI explanation, grounded) |
 | LAT-15 | Flag papers that **overlap with** or **challenge** the project's current direction (objective, saved core papers, and from R3 open gaps and accepted ideas), with the passage that shows it |
 | LAT-16 | Default ordering by the Latest brief action (Read now → Save for later → Deprioritise), then RIE priority for the objective. Recency is a filter, not a priority signal |
@@ -209,6 +209,8 @@ can be added later without redesign.
 | LAT-20 | Recency never implies importance: a new paper's tier and action come from the RIE objective profile only. The date window is a filter |
 | LAT-21 | "Possible research opportunity" is shown only when grounded in an author-stated limitation, open problem or future-work statement, or (from R3) a match with an open project gap. It is labelled **Hypothesis (unverified)** |
 | LAT-22 | **Preprint ↔ publication matching** is confidence-aware (DOI, arXiv ID, explicit version relations, title and author similarity, publication metadata). Title similarity alone never merges papers. Possible matches are linked, not merged, and the user can confirm or reject them. Original source records and date provenance are preserved after any match (D29) |
+| LAT-23 | **Date events are kept separately, never merged into one "date":** preprint submission, first public announcement/posting, revision, journal acceptance (when deposited), journal online publication, final issue publication, and metadata/indexing dates. The work's **first public appearance** is the earliest public-availability event across its manifestations. For arXiv, the v1 submission timestamp and the announcement date (when captured) are both kept; if only the submission date is verified, it is displayed with its meaning. Search-window overlap is never treated as evidence of a release date |
+| LAT-24 | **Preprint labelling:** bioRxiv and medRxiv records (and arXiv records) are labelled **"Preprint — not peer-reviewed"** unless the item displayed is a separately matched published manifestation, which is shown as "Journal version (published in …)". Preprint and published manifestations are kept and displayed distinctly; evidence states which version it comes from |
 
 ### 4.13 Ask & Learn (interactive research tutor)
 
@@ -240,6 +242,7 @@ validator.
 | ASK-20 | **Retention controls:** delete a conversation, delete all conversations, and a project retention policy (keep until deleted, delete after 30/90/365 days, or don't keep history). Deleting conversations never deletes saved explanations or learning progress; resetting progress is a separate, confirmed action |
 | ASK-21 | Conversation summaries are AI-generated context, **never evidence**. Evidence references from summarised turns are preserved and re-resolved to the original passages |
 | ASK-22 | Unrelated, non-research requests get a short, polite redirect (D27) |
+| ASK-23 | **MVP paper-understanding boundaries:** the tutor supports general concept questions; abstract-grounded paper questions; full-text questions **only** when that paper's text was retrieved and processed; equation explanations **only** when the equation text is actually available (R1: user selection verified against the document text; R2: arXiv LaTeX source). Otherwise it answers "Not available in the extracted text" and states the paper's access level (abstract only, full text, retrieval failed). It never claims full-paper understanding from an abstract |
 
 ## 5. Evidence and reliability requirements
 
@@ -263,11 +266,12 @@ validator.
 - Classifications show their evidence and confidence, and say "insufficient
   information" instead of guessing.
 - **Dates:** every displayed date comes from a stored source record and
-  states its type (e.g. "arXiv v1 submitted", "published online (Crossref)").
-  Metadata-change dates are never shown as publication dates. Unverifiable
-  dates, including dates supported only by one uncorroborated secondary
-  source, are marked uncertain. Dates are stored and computed in UTC and
-  displayed in the user's local time zone.
+  states its event type and meaning (e.g. "submitted to arXiv", "announced
+  on arXiv", "published online (Crossref, as deposited by the publisher)").
+  Metadata-change dates are never shown as publication dates. Source
+  agreement is not presented as independent corroboration. Dates that are
+  not verified or corroborated are marked uncertain. Dates are stored and
+  computed in UTC and displayed in the user's local time zone.
 - **Tutor:** paper-specific statements must be grounded in retrieved,
   verified passages; everything else is labelled background. Equations
   attributed to a paper must come from its extracted text or source.
@@ -301,6 +305,15 @@ validator.
   recorded fixtures.
 - **Cost control:** LLM use bounded by top-K and on-demand generation, with
   per-project budgets.
+- **Provider independence:** business logic depends only on the LLM gateway
+  interface; provider and model are configured per task. The initial model
+  configuration is provisional until D1 is approved.
+- **Hosted deployment security (release blockers for any networked
+  deployment):** authentication; project-level authorization; user data
+  isolation; secret and API-key management; rate limiting and abuse
+  protection; secure file access; enforced conversation retention and
+  deletion (ARCHITECTURE §11). Local development may run without
+  authentication, bound to localhost only.
 - **Free operation:** the core discovery, filtering (Stage A), field map and
   persistence features work without any paid API or LLM key, at reduced
   depth.
@@ -318,4 +331,6 @@ validator.
 - Scraping Google Scholar or bypassing paywalls.
 - Guaranteed novelty claims.
 - Executing generated code before a sandbox exists.
-- Multi-tenant SaaS features (billing, organisations) before R5.
+- Multi-tenant SaaS features (billing, organisations) before R5. Hosted
+  single- or multi-user deployment is allowed only after the security gate
+  (NFR above) passes.

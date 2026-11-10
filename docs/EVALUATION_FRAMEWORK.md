@@ -34,7 +34,7 @@ data store (larger). They record annotator, date and guidelines version.
 | **G-EXTRACT** | OA papers with hand-labelled datasets, metrics, results tuples, limitations, assumptions, protocols, compute | ≥ 40 papers | team | R2 |
 | **G-EXPLAIN** | Subjects (sections, equations, concepts) with reference points to cover per level | ~150 subjects × 3 levels | domain experts + educators | R1/R2 |
 | **G-STRUCTURE** | Expert field outlines and prerequisite orderings per topic | per topic | experts | R1 |
-| **G-LATEST-DATES** | Frozen source responses (arXiv, bioRxiv/medRxiv, Crossref, OpenAlex, S2) for ≥ 500 papers, covering: new v1 preprints (arXiv and bioRxiv/medRxiv); revisions (v2+) of old papers; journal versions of old preprints; new journal articles without preprints; older papers newly indexed (with and without OpenAlex premium filters); metadata-only updates (Crossref deposited/indexed, OpenAlex updated); **secondary-source-only dates** (OpenAlex only, S2 only); **corroborated secondary dates** (both agree); **conflicting dates** (authoritative vs authoritative; secondary vs secondary; secondary vs authoritative); month/year precision; future dates; **window boundaries** (timestamp exactly at start/end, 1 s either side, date-only values on boundary days); **time-zone display** cases (UTC±14, DST transitions in Europe and North America). Each labelled with true first public date, confidence, expected release type for given windows, and expected local display strings | ≥ 500 papers | team (verified against arXiv/bioRxiv abstract pages and publisher pages) | R1 |
+| **G-LATEST-DATES** | Frozen source responses (arXiv, bioRxiv/medRxiv, Crossref, OpenAlex, S2) for ≥ 500 papers, covering: new v1 preprints (arXiv and bioRxiv/medRxiv); revisions (v2+) of old papers; journal versions of old preprints; new journal articles without preprints; older papers newly indexed (with and without OpenAlex premium filters); metadata-only updates (Crossref deposited/indexed, OpenAlex updated); **secondary-source-only dates** (OpenAlex only, S2 only); **secondary agreement without established independence** (OpenAlex and S2 agree, upstream unknown); **independently corroborated dates** (disjoint recorded upstream provenance); **all date event types** (submission, announcement/posting, revision, acceptance, online, issue, indexing, metadata); **arXiv papers with and without captured announcements**; **journal versions of existing preprints**; **conflicting dates** (authoritative vs authoritative; secondary vs secondary; secondary vs authoritative); month/year precision; future dates; **window boundaries** (timestamp exactly at start/end, 1 s either side, date-only values on boundary days); **time-zone display** cases (UTC±14, DST transitions in Europe and North America). Each labelled with true first public date, confidence, expected release type for given windows, and expected local display strings | ≥ 500 papers | team (verified against arXiv/bioRxiv abstract pages and publisher pages) | R1 |
 | **G-MATCH** | Record pairs labelled same work / preprint→published / related-not-same / different: true preprint↔journal pairs (arXiv and bioRxiv/medRxiv, with and without identifier links); **adversarial similar-title pairs**: same title with different authors, generic titles, Part I/II, comment/reply/erratum/retraction, conference vs extended journal version, thesis vs article, same authors with a different paper | ≥ 600 pairs (≥ 200 adversarial) | team | R1 |
 | **G-LATEST-RELEVANCE** | For 5 topics × 2 weeks: all papers in the mapped arXiv categories + other-source candidates for the window, with expert labels (relevant to objective: 0–3; sub-question) | ~5 × 2 × 300 | domain experts | R1 |
 | **G-TUTOR** | Per topic: (a) concept questions at 3 levels; (b) paper-specific questions with gold answer spans; (c) equation questions with gold symbol definitions (arXiv LaTeX papers); (d) algorithm/architecture questions; (e) **unanswerable-from-paper** questions (answer not in the paper or only abstract available); (f) scripted multi-turn dialogues with follow-ups ("simpler", "example", "show the maths", pronoun references, scope switches), including **long dialogues (≥ 25 turns) whose later questions depend on facts and sources from turns 1–10** (so they are answered from the summary + carried references); (g) anchored questions (e.g. "What is message passing?" while reading a GNN paper) with the expected paper-specific meaning; (h) **progressive lessons**: per concept, expert reference points for each of the eight steps, valid check questions with answer keys, and scripted user actions (next, simpler, deeper, jump, interrupt + resume, stop) | ≥ 300 questions + 50 dialogues + 40 lessons | domain experts + educators | R1 (a,b,d,e,f,g,h) / R2 (c) |
@@ -43,6 +43,59 @@ data store (larger). They record annotator, date and guidelines version.
 Annotation guidelines are written before annotation. Inter-annotator
 agreement (Cohen's κ for categorical labels, Krippendorff's α for ordinal) is
 reported. Labels with agreement below 0.6 are revised before use.
+
+## 2a. Staged benchmarks and data separation
+
+The long-term targets in §3 stay unchanged. They are reached through four
+benchmark stages. **No example is used for more than one purpose**: prompt
+development, threshold calibration and final evaluation each use separate
+data.
+
+| Stage | Name | Purpose | Size (initial) | Who labels | May be used for | Never used for |
+|---|---|---|---|---|---|---|
+| **B0** | Development benchmark | Fast iteration: prompt development, debugging, regression tests in CI | Small: 2 topics; ~50 relevance items per objective; ~100 date cases; ~100 match pairs; ~60 tutor questions + 10 dialogues + 5 lessons | Project team (non-expert labels allowed, marked as such) | Prompt writing, examples in tests, failure analysis | Calibration, release decisions |
+| **B1** | Initial MVP benchmark | Calibrating thresholds (RIE tiers, matching, date rules) and the first MVP quality estimate | 3 further topics; full G-MATCH and G-LATEST-DATES calibration splits; tutor set per topic | Domain experts (2 per item) + adjudicator | Threshold/weight calibration; the "MVP estimate" reported internally | Prompt development; final release decision |
+| **B2** | Expanded expert-labelled benchmark | Broader coverage before targets are claimed: more fields, levels and edge cases | 10 topics total, full gold-set sizes in §2 | Domain experts + educators (tutor) + adjudicators | Re-calibration at a release boundary; error analysis | Prompt development on the same items |
+| **B3** | Held-out evaluation benchmark | Release decisions only | ≥ 2 topics (R1), growing to ≥ 4 (R2+); for Latest Research, weeks not used elsewhere; for G-MATCH and dates, a separate split | Domain experts; locked after approval | Final metrics for release gates, run by the benchmark custodian | Anything else. Developers don't see items or answers |
+
+**Separation rules**
+- Splits are made **by topic** (relevance, tutor, explanations), **by week**
+  (Latest Research relevance), and **by work** (dates, matching), so the same
+  paper, topic or week never appears in two stages.
+- Items used in prompt examples are recorded and excluded from B1–B3
+  (checked automatically by hashing the items).
+- B3 is stored with restricted access. The implementing developer, including
+  any AI coding assistant, never reads B3 items or answers. Evaluation runs
+  on B3 are executed by the custodian and report aggregates plus
+  failure categories, not item contents.
+- When B3 results lead to changes, the affected B3 items are retired into B2
+  and replaced, so the held-out set stays unseen.
+- AI-generated labels are never gold. An LLM may pre-annotate B0 only, and
+  every such label is marked and reviewed by a person.
+
+**Targets by stage**
+- **Honesty gates (§3.3) apply at every stage with zero tolerance.**
+- **R1 release:** the §3 targets are evaluated on B3 (R1 size), with 95%
+  confidence intervals. Because the R1 held-out set is small, a target
+  counts as met if the point estimate meets it and the lower bound is no
+  more than 0.05 below it. Any miss needs a documented, approved exception.
+- **R2 onwards:** targets apply on the expanded B3, without the interval
+  allowance.
+
+## 2b. Labelling roles and responsibilities
+
+| Role | Responsibility | Who (to be assigned, D19) |
+|---|---|---|
+| **Evaluation lead** | Owns the gold sets, writes and versions the annotation guidelines, **approves final gold answers**, signs off release evaluation reports | One named person on your side |
+| **Annotators** | Label items independently, at least two per item for B1–B3; tutor items rated by a domain expert and by an annotator at the target level | Domain experts per topic; educators for level fit; team members for B0 and for date/match cases (verified against primary pages) |
+| **Adjudicator** | Resolves annotator disagreements and records the reason; escalates guideline gaps to the evaluation lead | A senior domain expert per field |
+| **Benchmark custodian** | Controls B3 access, runs held-out evaluations, retires and replaces exposed items | One person not involved in prompt development |
+| **Developer** (including AI assistants) | Builds the harness, uses B0 freely and B1 only for calibration, never accesses B3 | Implementation team |
+
+Process: guidelines → pilot (20 items) → agreement check (κ/α ≥ 0.6, or the
+guidelines are revised) → full labelling → adjudication → evaluation-lead
+approval → version freeze. Every gold item records its annotators, the
+adjudicator (if any), the approver and the guideline version.
 
 ## 3. Metrics and targets
 
@@ -77,6 +130,9 @@ reported. Labels with agreement below 0.6 are revised before use.
 - **Merges supported by title similarity alone**: 0 (§3.1).
 - **Secondary-only dates shown as confirmed new releases**: 0 (§3.8).
 - **Conversation summaries or earlier AI answers cited as evidence**: 0 (§3.9).
+- **Independent corroboration claimed without recorded provenance**: 0 (§3.8).
+- **Journal versions of existing preprints presented as new research**: 0 (§3.8).
+- **Full-text or equation claims beyond a paper's access level**: 0 (§3.9).
 
 ### 3.4 Explanations
 Human rubric (1–5) per explanation, rated by an annotator at the target level
@@ -114,15 +170,20 @@ rate ≥ 0.95 of raw outputs.
 ### 3.8 Latest Research
 | Test | Metric / rule | Target |
 |---|---|---|
-| Window filtering | On G-LATEST-DATES, entries in *New research* for a window are exactly those whose true first public date (day precision) falls in `[start, end)` | precision = recall = 1.0 on day-precision cases; boundary cases (exact start/end, UTC vs local) pass |
+| Window filtering | On G-LATEST-DATES, entries in *New research* for a window are exactly those whose true first public appearance (verified or corroborated, day precision or better) falls in `[start, end)` | precision = recall = 1.0 on day-precision cases; boundary cases (exact start/end, UTC vs local) pass |
 | Revisions | Revised versions (vN > 1 in window, v1 before) never appear as New preprint | 0 violations |
 | Metadata-only changes | Papers whose only in-window dates are metadata dates never appear in *New research* or *Updates* | 0 violations |
 | Journal versions | Published versions of earlier preprints are classified as such and show the preprint date | ≥ 0.98 accuracy |
 | Newly indexed | Older papers first indexed in window go to *Newly indexed* | ≥ 0.95 accuracy (depends on OpenAlex created-date availability; fallback measured separately) |
 | Uncertain dates | Month/year-precision or conflicting dates go to *Date uncertain* | 1.0 |
-| **Secondary-source-only dates** (D28) | A paper whose only day-precision date comes from one secondary source is *Date uncertain*, never *New research*, and shows the unconfirmed date as such | 1.0 |
-| Corroborated secondary dates | Two independent secondary sources agreeing within ±1 day → allowed in *New research* with the corroborated badge; disagreement → *Date uncertain* | 1.0 |
-| Conflicting publication dates | Authoritative claims > 2 days apart → *Date uncertain* with all claims shown; a secondary claim disagreeing with an authoritative one is flagged but doesn't block | 1.0 |
+| **Secondary-source-only dates** (D28) | A paper whose only day-precision date comes from one secondary source (`single_source`) is *Date uncertain*, never *New research*, and shows the unconfirmed date as such | 1.0 |
+| **Source agreement ≠ corroboration** | Agreeing secondary sources with unknown or shared upstream provenance are `source_agreement` → *Date uncertain*; `corroborated` only when disjoint upstream provenance is recorded | 1.0; 0 corroboration claims without recorded provenance |
+| Date events kept separately | Submission, announcement/posting, revision, acceptance, online publication, issue publication and metadata dates are stored and displayed as distinct events with their manifestation | 100% of G-LATEST-DATES cases |
+| Submission-only arXiv dates | Without a captured announcement, the date is labelled as a submission date, with its meaning; never shown as the public release date | 100% |
+| Journal versions of existing preprints | Never in *New research*, counts or the digest's new-work section; shown with the preprint's first public date | 0 violations |
+| Preprint labels | All bioRxiv/medRxiv/arXiv manifestations labelled "Preprint — not peer-reviewed" unless a matched published manifestation is displayed | 100% |
+| Corroborated dates | Claims with established, disjoint upstream provenance agreeing within ±1 day → allowed in a release-type tab with the corroborated badge; disagreement → *Date uncertain* | 1.0 |
+| Conflicting publication dates | Primary (system-of-record) events > 2 days apart → *Date uncertain* with all events shown; a secondary claim disagreeing with a primary event is flagged but doesn't block | 1.0 |
 | Window boundaries | Start inclusive, end exclusive (timestamps); 1 s before start excluded; date-only boundary days flagged; results identical whatever the user's time zone | 1.0 |
 | **Local time-zone display** | Timestamps converted to the user's zone (incl. DST); date-only values never shifted; window bounds shown in local time | 100% of G-LATEST-DATES display cases |
 | Latest brief completeness | Every relevant entry has all eight answers, each evidence-backed or an explicit "can't tell / not stated / none stated" | 100% |
@@ -156,6 +217,7 @@ rate ≥ 0.95 of raw outputs.
 | Style compliance | The requested style is followed (rater check) | ≥ 0.9 |
 | Prerequisite detection | Expert agreement that listed prerequisites are needed and sufficient | ≥ 0.8 |
 | Latency | Time to first streamed token | p50 ≤ 3 s, p95 ≤ 8 s |
+| **Capability boundaries** | At each paper access level (metadata only, abstract only, full text processed, full text failed, equations available): no full-text claims below `full_text_processed`; no paper-equation explanation without available equation text; the required "not available in the extracted text" wording appears | 100% (validator) + ≥ 0.95 (expert sample) |
 | **Progressive teaching** | On G-TUTOR (h): steps appear in order; skipped steps give a valid reason; "simpler"/"deeper"/jump/interrupt-resume behave as scripted; expert rubric per step (correctness ≥ 4.5, level fit ≥ 4.0); check answer keys correct | 100% flow correctness; rubric targets; answer keys ≥ 0.98 correct |
 | **Long-context retention** | Long dialogues (f): questions depending on turns 1–10 answered correctly after summarisation | ≥ 0.9 |
 | **Evidence preservation** | After summarisation, every source cited in summarised turns is still resolvable (same quote, page, section), and answers re-citing it point to the original passage | 100% |
@@ -183,7 +245,7 @@ rate ≥ 0.95 of raw outputs.
 |---|---|---|
 | Unit/property tests | every commit | deterministic signals, anti-proxy rules, validators |
 | Recorded-output regression | every commit | gold inputs + recorded LLM outputs; metrics must not drop |
-| Live model evaluation | nightly/weekly + before each release + on any prompt/model change | run agents on gold sets; compute metrics; compare to last release |
+| Live model evaluation | nightly/weekly on B0/B1; before each release and on any provider/model/prompt change on B1 + (custodian) B3 | run agents on gold sets; compute metrics; compare to last release. A model change is evaluated per task before it is configured |
 | Human evaluation | before each release | rubric sampling (≥ 50 explanations, ≥ 100 cards, all fabrication checks) |
 | Online feedback | continuously | overrides, wrong-statement reports, feeds into next gold-set update |
 
@@ -192,20 +254,26 @@ versions and weight versions, so results can be reproduced.
 
 ## 5. Calibration procedure (RIE)
 
-1. Compute Stage A/B signals for G-RELEVANCE items.
+1. Compute Stage A/B signals for the **B1** (and later B2) calibration items.
+   B0 items are never used for calibration.
 2. Fit tier thresholds (τ_high, τ_mid, τ_low, τ_rel, c_min) and evidence
-   quality weights on a training split (topics A–F) by maximising expert
-   agreement subject to Not-useful precision ≥ 0.90.
-3. Report all metrics on held-out topics (G–J). Thresholds are versioned
-   (`weights_version`).
+   quality weights by maximising expert agreement subject to Not-useful
+   precision ≥ 0.90. Matching and date thresholds (D30) are calibrated the
+   same way on their B1 splits.
+3. Report all metrics on **B3** (held-out), run by the custodian. Thresholds
+   are versioned (`weights_version`, `match_rule_version`).
 4. Re-calibrate only in a release, never silently in production.
 
 ## 6. Release gates
 
 A release ships only if:
 1. All §3.3 honesty checks pass (zero tolerance).
-2. That release's metric targets are met on held-out topics, or a documented
-   exception is approved.
+2. That release's metric targets are met on the **B3 held-out benchmark**
+   (with the R1 interval rule in §2a), or a documented exception is approved
+   by the evaluation lead.
 3. No metric regresses by more than 2 points against the previous release
    without approval.
 4. The usability round passes (R1, and any release that changes the main flow).
+5. For any hosted deployment, gate H passes (IMPLEMENTATION_ROADMAP §8.2).
+
+The full list of release blockers is in IMPLEMENTATION_ROADMAP §8.
