@@ -277,6 +277,14 @@ graph-ready from R0, so Neo4j can be added in R2 without changing models.
   (`project_id`, `scope_project_id`), derived pointers, node data, derived
   analytics (`direction_relations`), learning data, decision logs, snapshots
   and project memory (full list: ARCHITECTURE §12.4.3).
+- **Project-scope invariant** (ARCHITECTURE §12.4.2a): the trigger
+  `enforce_relation_scope()` is attached to every relationship source table
+  and rejects relationships that connect different projects' nodes, carry a
+  scope different from their project-scoped endpoint, or are global (`null`)
+  while touching a project-scoped node or produced in a project context.
+  Global-only tables (`citations`, `paper_authors`, `author_affiliations`,
+  `limitations`) also have `CHECK (scope_project_id IS NULL)`.
+  `scope_project_id` references `projects(id) ON DELETE CASCADE` everywhere.
 - **Common relationship columns** on every **research** relationship table listed above (structural sources carry only `assertion = structural`, scope and `row_version`):
   - `assertion enum(source_metadata, author_reported, extracted, computed, inferred, hypothesized, user_asserted, user_confirmed, rejected, structural)`
   - `confidence numeric null`
@@ -305,13 +313,15 @@ graph-ready from R0, so Neo4j can be added in R2 without changing models.
 
 | Table | Key columns | Rel. |
 |---|---|---|
-| `graph_nodes` | `uid PK, kind (node label), scope_project_id null, UNIQUE(uid, kind)` — node identity registry; one row per node-source row, inserted/deleted in the same transaction by trigger; deleting it cascades to relationship rows (which write deletion markers) | R0 |
+| `graph_nodes` | `uid PK, kind (node label), scope_project_id null FK projects ON DELETE CASCADE, UNIQUE(uid, kind)` — node identity registry. Rows are written only by the registration triggers of tables in `node_source_registry`, under their conditions; `scope_project_id` equals the source row's project (null for global) and is **immutable** (trigger) | R0 |
+| `node_source_registry` | `source_table PK, label, registration_condition, scope_rule enum(global, own_project_id, parent_project), introduced_in` — the complete node-source inventory (§16.3, ARCHITECTURE §12.3). Conditions: reports only where type is proposal; entities only where type is not term. Tables not listed (e.g. `experiment_plans`) have no registration trigger | R0 |
 | `relation_registry` | `type PK, class enum(research, structural), source_table, source_column null, projected bool, required_evidence_policy, introduced_in` — exactly one row per type, so a type cannot have two sources (UNIQUE on `type`); mirrored by the code registry and checked against it in CI | R1 |
 | `relation_endpoint_rules` | `type FK relation_registry, from_kind, to_kind, role null, cardinality (e.g. exactly_one_per_child), on_parent_delete enum(cascade_child, detach), PK(type, from_kind, to_kind, role)` | R1 |
 | `structural_relations` | `id (uid), type enum(PART_OF, RESULT_FOR)` (**only these two**; CHECK + registry), `child_uid, child_kind, parent_uid, parent_kind` (composite FKs to `graph_nodes(uid, kind)`), `role null` (RESULT_FOR: reported_in, method, dataset, benchmark, metric), `assertion = structural` (CHECK), `scope_project_id null, row_version, created_at, UNIQUE(type, child_uid, parent_uid, role)` — the only owner of PART_OF and RESULT_FOR; endpoint, cardinality and delete rules from `relation_endpoint_rules` | R1 (PART_OF for sub-questions) / R2 (results) / R4 (experiments) |
 | `research_relations` | `id (uid), type enum(EXTENDS, CONTRADICTS, RELATED_TO, ADDRESSES, DERIVED_FROM, VALIDATED_BY)` (**only these six types**; CHECK constraint), `from_uid, from_kind, to_uid, to_kind` (composite FKs to `graph_nodes(uid, kind)`; allowed combinations in `relation_endpoint_rules`), properties jsonb (e.g. subtype, basis, outcome, membership_score, qualifier), assertion, confidence, evidence, provenance, scope_project_id, status, row_version, created_at, updated_at, UNIQUE(type, from_uid, to_uid, (properties->>'qualifier'), scope_project_id)` — the single source for these six types (including direction membership, paper-to-paper relations, relevance-judge relations to project items, gap probe matches, hypothesis/proposal/experiment links) | R1 |
 | `relation_assertion_log` | `id, relation_table, relation_id, from_assertion, to_assertion, reason (quote_verified, user_confirmed, user_rejected, source_retracted), actor (service or user), created_at` | R1 |
 | `relation_suppressions` | `id, type, from_uid, to_uid null, fingerprint (hash of evidence span or normalised text; no content stored), scope_project_id, reason, created_by (user), created_at` — prevents rejected relationships from being re-created in a slightly different form | R1 |
+| `relation_decisions` | `id, scope_project_id NOT NULL FK projects ON DELETE CASCADE, relation_table, relation_uid, decision enum(confirmed, rejected), decided_by (user), decided_at, UNIQUE(scope_project_id, relation_uid)` — project-scoped overlays for user decisions on **global** relationships (not a relationship source: no endpoints); applied by `GraphService` for that project only | R1 |
 | `research_groups` | `id, display_name, ror_id null, openalex_institution_id null, country null, kind enum(institution, lab, consortium, unknown), source, source_record_id, row_version` | R1 |
 | `author_affiliations` | `id, author_id, group_id, paper_id null, raw_affiliation, period jsonb null` + common relationship columns (assertion usually `source_metadata`) | R1 |
 | `entity_tombstones` | `uid (opaque UUID or one-way UUIDv5), kind (label or relationship type), reason enum(user_delete, retention, project_delete, account_delete, merge_split, retracted, rejected), deleted_at, graph_removed_at null, verified_absent_at null, attempts, purge_after (= min(verified_absent_at, deleted_at + 30 days))` — **minimum metadata only**: no content, names, text, endpoint IDs, project IDs or user IDs; purged when verified absent from Neo4j or after 30 days (alert if unverified); see ARCHITECTURE §12.6a | R1 (written from R1; consumed from R2) |
@@ -320,20 +330,28 @@ graph-ready from R0, so Neo4j can be added in R2 without changing models.
 | `graph_dead_letters` | `id, uid, kind, event_id, error, attempts, created_at, resolved_at` | R2 |
 | `graph_query_log` | `id, project_id, template_name, params_hash, assertion_policy, backend enum(postgres, neo4j), graph_version, result_count, created_at` — makes graph-derived signals reproducible (R3) | R2 |
 
-### 16.3 Node sources (summary)
-Every node-source table registers its rows in `graph_nodes`.
-Projects, objectives, sub-questions, directions, papers, manifestations,
-authors, research groups, entities (methods, algorithms, architectures,
-datasets, benchmarks, metrics, tasks, concepts), limitations and clusters,
-gaps, ideas (hypotheses), reports of type proposal, experiment plans,
-experiments, reported and user results, repositories and models. All are
-existing tables with UUIDv7 keys (ARCHITECTURE §12.3 maps them to labels).
+### 16.3 Node sources (inventory)
+Exactly these tables register rows in `graph_nodes`, under the stated
+condition (mirrored in `node_source_registry`; ARCHITECTURE §12.3):
+
+| Source table | Condition | Scope |
+|---|---|---|
+| `projects`, `research_objectives`, `objective_sub_questions`, `research_directions`, `limitation_clusters`, `gaps`, `ideas`, `experiments`, `experiment_results` | always | project (own or parent's) |
+| `papers`, `paper_manifestations`, `authors`, `research_groups`, `limitations`, `reported_results`, `code_repositories` | always | global |
+| `entities` | type ≠ `term` | global |
+| `reports` | `type = 'proposal'` | project |
+
+**Not node sources:** `experiment_plans` (node data of its Proposal,
+projected as Proposal properties), glossary terms, non-proposal reports, and
+every other table. They have no registration trigger.
 
 ### 16.4 Eligibility for sync (validated records only)
 A row is projected only when: it comes from the registered single source
 for its type (snapshots are never sources); its `status` is `active`; its
 `assertion` is not `rejected` (rejected rows and suppressed fingerprints are
-never projected, so resync and rebuild cannot resurrect them); extracted relationships have verified evidence; matches are
+never projected, so resync and rebuild cannot resurrect them; project
+`relation_decisions` overlays are never projected and are applied at query
+time; rows violating the project-scope invariant are refused and alerted); extracted relationships have verified evidence; matches are
 not `possible_match`; and claims are not hidden pending review. In R2 only
 established assertions are eligible (`source_metadata`, `author_reported`,
 `extracted`, `computed`, `user_asserted`, `user_confirmed`, `structural`).

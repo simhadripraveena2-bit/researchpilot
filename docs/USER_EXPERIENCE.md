@@ -269,7 +269,9 @@ approximated.
 - **Clicking an edge** shows its type, assertion, confidence, evidence
   quotes (with page and paper version) and provenance. Inferred edges offer
   **Confirm** / **Reject**; both are logged, and rejected links are not
-  proposed again, even by later re-analysis.
+  proposed again, even by later re-analysis. For shared (global) knowledge
+  such as citations between public papers, the decision applies to **your
+  project only**; other users' projects are unaffected.
 - Structural links (e.g. "version of", "part of project") are drawn in
   grey and never presented as findings.
 - **Paths** (R2+): "How is A connected to B?" shows paths, each labelled

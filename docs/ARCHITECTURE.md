@@ -592,7 +592,7 @@ Rules:
 | GET | `/graph/nodes/{uid}/neighbors` | 1-hop neighbours with relationship assertion, confidence and evidence (R1+) |
 | GET | `/graph/paths?from=&to=&max_hops=&assertion_policy=` | multi-hop paths, each labelled with its weakest assertion (**R2+**; earlier or in degraded mode: `graph-capability-unavailable`) |
 | GET | `/graph/nodes/{uid}/provenance-trail` | proposal/hypothesis → gaps → limitations → papers → evidence (R4) |
-| POST | `/relations/{uid}/confirm` · `/reject` | user confirms or rejects an inferred relationship (logged; never automatic) |
+| POST | `/relations/{uid}/confirm` · `/reject` | user confirms or rejects an inferred relationship in the active project (logged; never automatic). For a global relationship this writes a project-scoped overlay (`relation_decisions`) and never changes the global row (§12.4.2a) |
 
 ## 5. Weaknesses of the previous plan and how this version addresses them
 
@@ -812,6 +812,25 @@ requires no changes to agents, APIs or database models.
 | `Result` (`kind`: paper_reported, user_reported) | `reported_results`, `experiment_results` | global (paper-reported) / project (user-reported) |
 | `Repository`, `Model` (R4) | `code_repositories`, `entities` (+ `model_details`) | global |
 
+**Node-source inventory and registration.** The table above is the
+complete inventory. It is mirrored by `node_source_registry` in the database
+(§12.4.2), and only these tables register rows in `graph_nodes`, under these
+conditions:
+
+| Source table | Registers a node when | Scope taken from |
+|---|---|---|
+| `projects`, `research_objectives`, `objective_sub_questions`, `research_directions`, `limitation_clusters`, `gaps`, `ideas`, `experiments`, `experiment_results` | always | the row's project (`project_id`, or the parent's project for sub-questions and user results) |
+| `papers`, `paper_manifestations`, `authors`, `research_groups`, `limitations`, `reported_results`, `code_repositories` | always | global |
+| `entities` | `type` is method, architecture, algorithm, dataset, benchmark, metric, model, task or concept (**not** `term`: glossary terms are learning data) | global |
+| `reports` | `type = 'proposal'` only (discovery and literature-review reports are snapshots, not nodes) | the report's project |
+
+**Not node sources:** `experiment_plans`, which is node data of its
+Proposal. Its fields are projected as properties of the Proposal node, and
+it has no `graph_nodes` row and no registration trigger. The same applies to
+every other table not listed above (node data, evidence, logs, snapshots,
+learning data, project memory). Introducing a separate `ExperimentPlan`
+node would require a registry change and is not planned.
+
 ### 12.4 Relationship types and their single source of truth
 
 Relationships fall into two classes:
@@ -861,9 +880,11 @@ the registry.
 
 #### 12.4.2 Endpoint validation and referential integrity
 - **`graph_nodes`** is the node identity registry: `(uid, kind,
-  scope_project_id)`. Every row in a node-source table (§12.3) creates its
-  `graph_nodes` row in the same transaction, and deleting the source row
-  deletes it.
+  scope_project_id)`. Only tables in `node_source_registry` (the inventory in
+  §12.3, with its registration conditions) have the registration trigger.
+  Each qualifying row creates its `graph_nodes` row in the same
+  transaction, with its kind and scope; deleting the source row deletes it.
+  A scope never changes after registration.
 - Relationship tables with polymorphic endpoints (`research_relations`,
   `structural_relations`) reference `graph_nodes(uid, kind)` with
   **composite foreign keys** on both endpoints. A link to a non-existent
@@ -882,6 +903,69 @@ the registry.
   writes a deletion marker (§12.6a).
 - Single-table sources (`citations`, `paper_authors`, `entity_links`,
   `limitations`, …) use ordinary foreign keys to their endpoint tables.
+
+#### 12.4.2a Project-scope invariant for relationships
+
+Every node has a fixed scope (`graph_nodes.scope_project_id`: null =
+global, otherwise one project). It is set from the source row at
+registration and is **immutable**; a trigger rejects any change. Every
+relationship row has a scope `r` (null = global, or a project ID). For
+endpoints with scopes `a` and `b`:
+
+| Endpoint scopes | Allowed relationship scope | Example |
+|---|---|---|
+| both project-scoped, **same** project P | `r = P` only | Gap(P) `DERIVED_FROM` LimitationCluster(P) |
+| both project-scoped, **different** projects P ≠ Q | **never** (rejected) | — |
+| one project-scoped (P), one global | `r = P` only | Gap(P) `DERIVED_FROM` Paper(global); Paper `IN_PROJECT` Project(P); user Result(P) `RESULT_FOR` Dataset(global) |
+| both global | `r = null` (**global relationship**) or `r = P` (**project-scoped assertion about global nodes**) | `CITES` (global); an inferred `RELATED_TO` between two papers made in project P's context (scope P) |
+
+**Global-scope rule** (when `r = null`): the relationship may only be
+produced from global inputs. These are source metadata, paper text, and
+deterministic computation over global data. Its provenance must show
+`project_context = false`, and its assertion must be one of
+`source_metadata`, `author_reported`, `extracted`, `computed` or `inferred`
+(an inferred judgement made from the paper alone). Anything produced
+in a project's context — relevance judgements, relations to a project's
+items, user assertions, confirmations or rejections — is scoped to that
+project.
+
+**User decisions never change global rows.** When a user confirms or
+rejects a *global* relationship, the decision is a project-scoped
+**overlay** in `relation_decisions` `(scope_project_id, relation_uid,
+decision, user, time)`. An overlay is not a relationship: it has no
+endpoints and doesn't duplicate the source. A rejection also writes a
+project-scoped `relation_suppressions` fingerprint, so the same link isn't
+re-proposed in that project. `GraphService` applies the caller's project
+overlays at query time (confirmed → shown as user-confirmed; rejected →
+hidden). Overlays are never stored on the shared Neo4j edge, and other
+projects are unaffected. Decisions on project-scoped relationships update
+the row itself, as before. Global rows can only be rejected or retracted by system
+verification (failed quote verification, source retraction). Sticky
+rejection (§12.5) applies per scope.
+
+**Where it is enforced (three layers; the database is authoritative):**
+1. **Database:** one trigger function, `enforce_relation_scope()`, runs
+   `BEFORE INSERT OR UPDATE` on **every** relationship source table
+   (`research_relations`, `structural_relations`, `entity_links`,
+   `citations`, `paper_authors`, `author_affiliations`, `limitations`,
+   `item_code_links`, `project_items`). It reads both endpoint scopes from
+   `graph_nodes` and rejects any row that violates the table above or the
+   global-scope rule. Tables whose endpoints are always global (`citations`,
+   `paper_authors`, `author_affiliations`, `limitations`) also have
+   `CHECK (scope_project_id IS NULL)`. The project-scope column references
+   `projects(id) ON DELETE CASCADE`, so deleting a project removes its
+   scoped relationships between global nodes too, writing deletion markers.
+   A CI test checks that the trigger is attached to every table in the
+   relation registry.
+2. **`RelationWriter`:** validates scope before writing, so callers get a
+   clear error instead of a database exception. It never decides scope
+   implicitly: callers pass the `ProjectScope` they act in.
+3. **Projection and queries:** the Graph Projector re-checks the invariant
+   and refuses (and alerts on) any violating row. Reconciliation runs a
+   **scope audit**: the count of Neo4j edges violating the rule must be 0.
+   `GraphService` returns an edge only when **both** endpoints are visible
+   in the caller's scope (global, or the caller's project), so a scoped edge
+   can never expose another project's node.
 
 #### 12.4.3 What is *not* a relationship source
 To prevent hidden second sources, the registry also lists FK columns and
@@ -986,8 +1070,11 @@ write path below):
   `structural_relations(type, child_uid, parent_uid, role)`,
   `entity_links(subject_uid, entity_id, role, scope)`). A re-extraction
   therefore finds the existing rejected row instead of creating a new one.
-- **Rejection is sticky.** A trigger blocks any change *from* `rejected`
-  unless it is made by a user action. `RelationWriter` turns an automatic
+- **Rejection is sticky** (per scope, §12.4.2a). A trigger blocks any change
+  *from* `rejected` unless it is made by a user action in that row's scope.
+  A user's decision on a global relationship is a project-scoped overlay
+  (`relation_decisions`) plus suppression, and never modifies the global
+  row. `RelationWriter` turns an automatic
   write that hits a rejected row into a no-op and logs it as "suppressed".
 - **Fuzzy duplicates.** For relationships without a stable natural key
   (e.g. limitations whose wording varies, similarity links), rejection
@@ -1023,7 +1110,9 @@ PostgreSQL write ─(same transaction)─▶ domain_events (outbox; includes del
 - **Sync eligibility (validated records only):** a row is projected only if
   it passes the eligibility rule for its type. Extractions need verified
   evidence. Matches must not be `possible_match`. Claims hidden pending
-  review are excluded. `rejected` relationships are excluded. From R2 the
+  review are excluded. `rejected` relationships are excluded. Project
+  overlays (`relation_decisions`) are not synced; `GraphService` applies them
+  at query time for the caller's project. From R2 the
   established assertions are synced; `inferred` and `hypothesized`
   relationships are synced from R3, always labelled.
 - **Retries:** exponential backoff. After N attempts the item goes to
@@ -1084,7 +1173,9 @@ while Neo4j is down or before it exists (R1). They are not an archive.
 - **Scheduled reconciliation** (daily, plus on demand) compares PostgreSQL
   and Neo4j per label and per relationship type: counts, then hashes of
   `(uid, pg_version)` in batches. Mismatched batches are re-projected, and
-  orphans that are no longer in PostgreSQL are deleted. Results are logged in
+  orphans that are no longer in PostgreSQL are deleted. A **scope audit**
+  confirms that no edge violates the project-scope invariant (§12.4.2a) and
+  that every node's scope matches `graph_nodes`. Results are logged in
   `graph_sync_runs`.
 - **Full rebuild:** a command that recreates the graph from PostgreSQL into
   a fresh database and switches the service over when it completes, using a
@@ -1127,7 +1218,10 @@ class GraphService(Protocol):
   visible to all; project-scoped nodes and edges only to members of that
   project. This holds even though Neo4j Community Edition has no per-user
   database security, because isolation is enforced in the service (gate H,
-  H3). Cross-project queries see only the global layer.
+  H3). Cross-project queries see only the global layer. An edge is returned
+  only if both of its endpoints are visible in the caller's scope, and
+  project-scoped suppressions of global relationships are applied for the
+  caller's project.
 
 **Capabilities by release and backend.** The API contract (`GraphView`
 nodes/edges with assertion, confidence and evidence; named patterns;

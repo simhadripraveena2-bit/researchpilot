@@ -255,11 +255,11 @@ basic graph views through PostgreSQL (ARCHITECTURE §12).
 | KG-1 | Maintain a research knowledge graph of projects and objectives, papers and paper versions, authors and research groups, topics and subtopics, methods/algorithms/architectures, datasets and benchmarks, metrics, limitations and gaps, hypotheses and proposals, experiments and results |
 | KG-2 | Relationships include CITES, AUTHORED_BY, USES_METHOD, EVALUATES_ON, INTRODUCES, EXTENDS, CONTRADICTS, REPORTS_LIMITATION, RELATED_TO, ADDRESSES, DERIVED_FROM and VALIDATED_BY, each with provenance, confidence and supporting evidence where applicable |
 | KG-3 | Inferred relationships are never presented as established facts; every relationship shows its assertion type (reported by a source, stated by authors, extracted, computed, inferred, hypothesised, user-asserted or user-confirmed) |
-| KG-4 | Users can confirm or reject inferred relationships; rejections are remembered |
+| KG-4 | Users can confirm or reject inferred relationships; decisions are remembered. Decisions on shared (global) knowledge apply only to the user's project |
 | KG-5 | Basic graph views in R1 (citation graph, paper versions, direct neighbours, related papers); multi-hop knowledge-graph exploration with Neo4j (R2); graph-assisted gap, contradiction and novelty investigation (R3); provenance trails from proposals to evidence (R4); a continuously evolving graph with impact alerts (R5) |
 | KG-7 | Each relationship type has one source of truth; structural links (version of, part of, in project) are distinguished from research claims; research claims carry the evidence their assertion type requires; rejected relationships never reappear through automatic analysis or synchronisation |
 | KG-8 | Deletion reaches the graph: conversation, project and account deletion and retention expiry remove graph content; deletion markers keep no personal or project content |
-| KG-6 | Graph views respect project privacy: users see only global knowledge and their own projects' content |
+| KG-6 | Graph views respect project privacy: users see only global knowledge and their own projects' content; no relationship ever connects two different projects' private content |
 
 ## 5. Evidence and reliability requirements
 
