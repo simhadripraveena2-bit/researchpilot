@@ -1,5 +1,7 @@
 # 4. Agents and LangGraph workflows
 
+> **Amended by [doc 11 §11.7–11.8](11-architecture-v2.md#117-revised-agent-responsibilities)** (new Tutor, Learning Path Planner, Field Navigator, Project Monitor; merged agents).
+
 ## 4.1 Design rules
 
 1. **An agent is a plain, typed, async unit.**

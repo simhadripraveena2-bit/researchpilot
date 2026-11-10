@@ -1,5 +1,7 @@
 # 9. Implementation roadmap and acceptance criteria
 
+> **Superseded for ordering and scope by [doc 14](14-mvp-and-roadmap.md).** Phase 1–2 acceptance criteria are reused as R0/R1; later criteria move to R2–R5.
+
 Each phase ends with a demo, a tagged release, passing CI, and updated docs.
 A phase is not started until the previous phase's acceptance criteria pass.
 Phases are split into small PR-sized steps.

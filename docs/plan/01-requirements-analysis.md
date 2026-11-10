@@ -1,5 +1,7 @@
 # 1. Requirements analysis
 
+> **Superseded for product scope by [doc 10](10-product-requirements.md).** Engineering requirements below still apply.
+
 ## 1.1 What the product must do
 
 | Capability | Interpreted requirement | Phase |

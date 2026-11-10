@@ -1,5 +1,7 @@
 # 3. Database schema
 
+> **Amended by [doc 11 §11.6](11-architecture-v2.md#116-database-schema-changes)** (claim kinds v2, learning tables, persistence tables, outbox).
+
 PostgreSQL 16 is the system of record. Qdrant holds embeddings that point back
 to Postgres IDs. Neo4j (Phase 7) is a *projection* rebuilt from Postgres, never
 the source of truth.

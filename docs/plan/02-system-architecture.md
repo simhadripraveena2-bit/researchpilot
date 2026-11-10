@@ -1,5 +1,7 @@
 # 2. System architecture
 
+> **Amended by [doc 11](11-architecture-v2.md)** (Postgres-only queue, pgvector, Neo4j deferred, on-demand explanation service, domain events).
+
 ## 2.1 Runtime topology
 
 ```

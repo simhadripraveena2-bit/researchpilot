@@ -1,5 +1,12 @@
 # 0. Plan index, principles and open decisions
 
+> **v2 update (product vision):** docs 10–14 extend this plan with the
+> "From Research Beginner to Research Creator" vision. Where they conflict
+> with docs 01–09, docs 10–14 win. Start with
+> [10-product-requirements.md](10-product-requirements.md) and
+> [14-mvp-and-roadmap.md](14-mvp-and-roadmap.md). Revised decisions
+> (D3, D12–D17) are listed in doc 14 §14.6.
+
 ## Summary
 
 ResearchPilot is a research workspace, not a chatbot. Its core asset is a
@@ -60,7 +67,7 @@ listed first.
 |---|----------|----------------|--------------|
 | D1 | LLM provider | Provider-agnostic `LLMGateway` interface; first implementation uses the Anthropic SDK with `claude-opus-5-5` for every agent, model configurable per agent via env | OpenAI, local models via an adapter. Per-agent cheaper models (e.g. `claude-sonnet-5-5` / `claude-haiku-5-5` for bulk extraction) are a cost decision for you to make after we measure quality |
 | D2 | PDF text library | **PyMuPDF is AGPL-3.0.** If ResearchPilot will ever be offered as a network service without releasing its source, that is a licensing problem. Recommend: GROBID (Apache-2.0) as primary, `pypdfium2` (Apache/BSD) as fallback, PyMuPDF behind an optional adapter | Use PyMuPDF and accept AGPL / buy an Artifex commercial licence |
-| D3 | Job execution | Separate worker process; Redis for job queue (arq), shared rate-limit buckets and progress pub/sub; LangGraph Postgres checkpointer for durable, resumable runs | Postgres-only queue (`SKIP LOCKED`) to avoid Redis; in-process background tasks (not durable) |
+| D3 | Job execution | *(revised in doc 14: Postgres-only queue for the MVP)* Separate worker process; Redis for job queue (arq), shared rate-limit buckets and progress pub/sub; LangGraph Postgres checkpointer for durable, resumable runs | Postgres-only queue (`SKIP LOCKED`) to avoid Redis; in-process background tasks (not durable) |
 | D4 | Embeddings | Local `sentence-transformers` model (e.g. a SPECTER2 / general-purpose MiniLM-class model) so retrieval works without paid APIs | Hosted embedding API |
 | D5 | Auth / multi-user | Single-user local deployment first; `user_id` column on owned tables from day one so auth can be added in Phase 7 | Auth from Phase 1 |
 | D6 | Google Scholar | **Not integrated.** No official API and its terms forbid automated scraping. Coverage gap is filled by OpenAlex + Semantic Scholar + Crossref | — |
@@ -80,7 +87,12 @@ listed first.
 6. [Frontend](06-frontend.md)
 7. [Repository structure](07-repository-structure.md)
 8. [External APIs](08-external-apis.md)
-9. [Roadmap & acceptance criteria](09-roadmap.md)
+9. [Roadmap & acceptance criteria](09-roadmap.md) *(superseded for ordering by doc 14)*
+10. [Product requirements v2](10-product-requirements.md)
+11. [Architecture v2: architecture, schema and agent changes](11-architecture-v2.md)
+12. [User journeys](12-user-journeys.md)
+13. [Competitive differentiation](13-competitive-differentiation.md)
+14. [Prioritisation, MVP and roadmap v2](14-mvp-and-roadmap.md)
 
 API facts in document 8 (rate limits, quotas, terms) reflect my knowledge as of
 planning and **must be re-verified against each provider's current docs** when

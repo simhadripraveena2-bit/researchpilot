@@ -2,6 +2,10 @@
 
 Autonomous literature review and research discovery platform.
 
+**From Research Beginner to Research Creator** — a persistent research
+companion across DISCOVER → LEARN → UNDERSTAND → COMPARE → INVESTIGATE →
+VALIDATE → INNOVATE.
+
 ResearchPilot takes a research topic or problem statement and runs an
 evidence-first workflow: discover papers across academic sources, deduplicate
 them, explore citations, analyse full texts, surface datasets / benchmarks /
@@ -25,4 +29,9 @@ awaiting approval.
 | 6 | [Frontend](docs/plan/06-frontend.md) | Pages, components, state management |
 | 7 | [Repository structure](docs/plan/07-repository-structure.md) | Folder layout, tooling |
 | 8 | [External APIs](docs/plan/08-external-apis.md) | Each integration, its limits and failure modes |
-| 9 | [Roadmap & acceptance criteria](docs/plan/09-roadmap.md) | Phases, Milestone 1 spec, acceptance criteria |
+| 9 | [Roadmap & acceptance criteria](docs/plan/09-roadmap.md) | Phases, Milestone 1 spec, acceptance criteria (ordering superseded by 14) |
+| 10 | [Product requirements v2](docs/plan/10-product-requirements.md) | Vision, personas, requirements by journey stage, claim taxonomy, UX |
+| 11 | [Architecture v2](docs/plan/11-architecture-v2.md) | Review of v1, extensibility decisions, schema and agent changes |
+| 12 | [User journeys](docs/plan/12-user-journeys.md) | Beginner, advanced and intermediate journeys |
+| 13 | [Competitive differentiation](docs/plan/13-competitive-differentiation.md) | Strengths of existing tools and where ResearchPilot differs |
+| 14 | [MVP & roadmap v2](docs/plan/14-mvp-and-roadmap.md) | Prioritisation, MVP scope and acceptance criteria, releases R0–R5 |
