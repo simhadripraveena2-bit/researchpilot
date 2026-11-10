@@ -4,7 +4,9 @@
 `docs/plan/11 §11.6`, adding the Research Intelligence Engine tables and
 the `research_items` supertype.
 
-PostgreSQL 16 with `pgvector` and `pg_trgm`. Conventions: UUIDv7 primary keys;
+PostgreSQL 16 with `pgvector` and `pg_trgm`. PostgreSQL is the
+transactional source of truth; from R2, Neo4j holds a synchronised knowledge
+graph built from these tables (§16, ARCHITECTURE §12). Conventions: UUIDv7 primary keys;
 `created_at` and `updated_at` as `timestamptz`; enums managed by Alembic;
 `jsonb` only for variable payloads. The **Rel.** column gives the release
 that introduces each table (see IMPLEMENTATION_ROADMAP).
@@ -37,7 +39,8 @@ projects ─< tutor_conversations ─< tutor_messages ─< tutor_message_evidenc
 projects ─< teaching_sessions ─< understanding_checks; concept_progress; saved_explanations
 papers ─< paper_match_decisions (version matching, D29)
 claims ─< claim_evidence, claim_verifications
-domain_events (outbox)
+domain_events (outbox) ─▶ graph sync (R2+) ─▶ Neo4j knowledge graph (read model)
+research_relations, author_affiliations, research_groups, entity_tombstones (graph-ready, §16)
 ```
 
 ## 2. Research items (supertype)
@@ -234,7 +237,9 @@ the scan. A paper's state is therefore consistent everywhere in the app.
 ## 15. Data retention and reproducibility
 
 - Raw source records and run manifests are kept for the lifetime of the
-  project. Matching and merging never delete source records or date claims.
+  project.
+- Deletions propagate to the Neo4j graph via `entity_tombstones` (§16); the
+  graph never retains data deleted from PostgreSQL. Matching and merging never delete source records or date claims.
 - Tutor conversations follow the project retention policy
   (`tutor_retention_policy`). A daily job deletes expired conversations.
   Saved explanations and learning progress are retained until deleted or
@@ -242,3 +247,63 @@ the scan. A paper's state is therefore consistent everywhere in the app.
 - Reports, assessments history and objective versions are append-only.
 - Embedding model name and version are stored per vector column version;
   changing models triggers a re-embed job and never mixes vectors.
+
+## 16. Knowledge-graph readiness (R0–R1) and Neo4j sync (R2+)
+
+PostgreSQL is the source of truth for everything that appears in the Neo4j
+knowledge graph (ARCHITECTURE §12). These conventions make every table
+graph-ready from R0, so Neo4j can be added in R2 without changing models.
+
+### 16.1 Conventions for all graph-projected tables
+- **Stable IDs:** UUIDv7 primary keys. The same UUID becomes the Neo4j
+  `uid`. Composite-key link tables (e.g. `citations`, `paper_authors`,
+  `direction_members`) also get a `relation_uid uuid` column holding a
+  deterministic UUIDv5 of `(relation_type, table, from_uid, to_uid,
+  qualifier)`.
+- **`row_version bigint not null default 1`**, incremented by trigger on
+  every update. Used for idempotent, version-guarded sync.
+- **Common relationship columns** on every relationship-bearing table
+  (`citations`, `paper_authors`, `author_affiliations`,
+  `paper_entity_mentions`, `paper_contributions`, `paper_relations`,
+  `limitations`, `direction_members`, `gap_probes` (outcome links),
+  `item_code_links`, `research_relations`):
+  - `assertion enum(source_metadata, author_reported, extracted, computed, inferred, hypothesized, user_asserted, user_confirmed, rejected, structural)`
+  - `confidence numeric null`
+  - `evidence jsonb` (evidence span IDs with manifestation, source record IDs, signal IDs)
+  - `provenance jsonb` (service/agent + version, prompt version, task/provider/model, source API)
+  - `scope_project_id uuid null` (null = global)
+  - `status enum(active, retracted) default active`
+  - `row_version`
+- Promotions of `assertion` (inferred → extracted after quote verification;
+  inferred → user_confirmed) are written to `relation_assertion_log`.
+
+### 16.2 New tables
+
+| Table | Key columns | Rel. |
+|---|---|---|
+| `research_relations` | `id (uid), type enum(CITES, AUTHORED_BY, USES_METHOD, EVALUATES_ON, INTRODUCES, EXTENDS, CONTRADICTS, REPORTS_LIMITATION, RELATED_TO, ADDRESSES, DERIVED_FROM, VALIDATED_BY), from_uid, from_kind, to_uid, to_kind, properties jsonb (e.g. basis, outcome, metric ids), assertion, confidence, evidence, provenance, scope_project_id, status, row_version, created_at, updated_at, UNIQUE(type, from_uid, to_uid, (properties->>'qualifier'), scope_project_id)` — relationships that have no domain table of their own (e.g. ADDRESSES, DERIVED_FROM, VALIDATED_BY, inferred CONTRADICTS/RELATED_TO). Domain tables remain the source for relationships they already hold, so no relationship is stored twice | R1 |
+| `relation_assertion_log` | `id, relation_table, relation_id, from_assertion, to_assertion, reason (quote_verified, user_confirmed, user_rejected, source_retracted), actor (service or user), created_at` | R1 |
+| `research_groups` | `id, display_name, ror_id null, openalex_institution_id null, country null, kind enum(institution, lab, consortium, unknown), source, source_record_id, row_version` | R1 |
+| `author_affiliations` | `id, author_id, group_id, paper_id null, raw_affiliation, period jsonb null` + common relationship columns (assertion usually `source_metadata`) | R1 |
+| `entity_tombstones` | `uid, kind (label or relationship type), deleted_at, reason enum(user_delete, retention, project_delete, merge_split, retracted), graph_removed_at null` — no content; kept until reconciliation confirms removal from Neo4j | R1 (written from R1; consumed from R2) |
+| `graph_sync_state` | `uid, kind, pg_version, synced_version, status enum(pending, synced, failed, ineligible), attempts, last_error, last_synced_at, PK(uid)` | R2 |
+| `graph_sync_runs` | `id, kind enum(incremental, reconciliation, rebuild), started_at, finished_at, graph_version, counts jsonb, mismatches jsonb, repaired jsonb, status` | R2 |
+| `graph_dead_letters` | `id, uid, kind, event_id, error, attempts, created_at, resolved_at` | R2 |
+| `graph_query_log` | `id, project_id, template_name, params_hash, assertion_policy, backend enum(postgres, neo4j), graph_version, result_count, created_at` — makes graph-derived signals reproducible (R3) | R2 |
+
+### 16.3 Node sources (summary)
+Projects, objectives, sub-questions, directions, papers, manifestations,
+authors, research groups, entities (methods, algorithms, architectures,
+datasets, benchmarks, metrics, tasks, concepts), limitations and clusters,
+gaps, ideas (hypotheses), reports of type proposal, experiment plans,
+experiments, reported and user results, repositories and models. All are
+existing tables with UUIDv7 keys (ARCHITECTURE §12.3 maps them to labels).
+
+### 16.4 Eligibility for sync (validated records only)
+A row is projected only when: its `status` is `active`; its `assertion` is
+not `rejected`; extracted relationships have verified evidence; matches are
+not `possible_match`; and claims are not hidden pending review. In R2 only
+established assertions are eligible (`source_metadata`, `author_reported`,
+`extracted`, `computed`, `user_asserted`, `user_confirmed`, `structural`).
+`inferred` and `hypothesized` become eligible in R3, and are always
+labelled.

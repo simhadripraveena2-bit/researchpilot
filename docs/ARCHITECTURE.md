@@ -15,7 +15,8 @@
 | A6 | **Claims are typed and validated in one place** | A single `ClaimValidator` serialises every AI-produced statement |
 | A7 | **Domain events (outbox)** | Staleness, recomputes, monitoring and alerts are event consumers, added without changing producers |
 | A8 | **Declarative journey** | The nine stages are a registry. Readiness is derived from data, never stored |
-| A9 | **Swappable infrastructure behind interfaces** | `JobQueue`, `VectorStore`, `GraphStore`, `LLMGateway`, `ObjectStore` |
+| A9 | **Swappable infrastructure behind interfaces** | `JobQueue`, `VectorStore`, `GraphService`, `LLMGateway`, `ObjectStore` |
+| A10 | **Graph-ready from day one; Neo4j as the long-term knowledge graph** | Every entity has a stable UUID and every relationship carries assertion, confidence, evidence and provenance. PostgreSQL stays the source of truth; Neo4j (from R2) is a synchronised graph read model behind `GraphService` (§12) |
 
 ## 2. Runtime topology (MVP)
 
@@ -44,9 +45,11 @@ PostgreSQL   GROBID       File storage          External APIs
                           content-addressed)    Crossref · Unpaywall · HF · GitHub · LLM
 ```
 
-**Five containers:** `postgres` (with pgvector), `grobid`, `api`, `worker`,
-`frontend`. Redis, Qdrant and Neo4j are not needed for the MVP; adapters can
-be added behind the interfaces in A9 if scale requires them (see §9).
+**Five containers in the MVP:** `postgres` (with pgvector), `grobid`, `api`,
+`worker`, `frontend`. **Neo4j joins in R2** as the research knowledge graph
+(§12). Deferring it is a sequencing decision: R0–R1 build the graph-ready
+model and run graph queries through the PostgreSQL implementation of
+`GraphService`. Redis and Qdrant are optional scaling adapters (§9).
 
 ## 3. Backend modules
 
@@ -76,6 +79,9 @@ researchpilot/
   llm/           LLMGateway, Anthropic implementation, fake gateway,
                  prompt registry (versioned files)
   agents/        LLM-backed agents (see AGENT_DESIGN)
+  graph/         GraphService interface, relation registry, projector,
+                 sync worker, reconciler; adapters/postgres, adapters/neo4j (R2)
+                 (the Neo4j driver is imported only in adapters/neo4j)
   workflows/     LangGraph graphs and shared state
   journey/       stage registry, readiness rules, next-step logic
   events/        outbox writer, dispatcher, consumers
@@ -162,6 +168,7 @@ retries):
 | `paper.added_to_project` | assessment Stage A, field-map staleness, monitor impact check (R5) |
 | `document.parsed` / `extraction.completed` | signal recompute, card staleness |
 | `objective.updated` | reassessment of all items (Stage A now, Stage B lazily) |
+| any change or delete to a graph-projected table (from R2) | Graph Sync Worker: re-project the affected nodes/edges or apply tombstones (§12.6) |
 | `override.created` | decision log, feedback pattern detection |
 | `gap.updated` / `idea.status_changed` | novelty-dimension recompute, impact watch list |
 | `latest_scan.completed` | "new since last visit" counters; (R5) notifications and impact alerts |
@@ -581,6 +588,11 @@ Rules:
 | POST | `/tutor/messages/{id}/feedback` | helpful / unclear / wrong |
 | POST | `/tutor/messages/{id}/learning-sequence` | build a prerequisite sequence and optionally add it to the learning path |
 | GET / PUT | `/me/preferences` | time zone (browser or manual), default level |
+| GET | `/projects/{id}/graph` | backend-neutral `GraphView` subgraph: `labels`, `rel_types`, `assertion_policy` (default `established_only`), `include_inferred`, filters. Served by `GraphService` (PostgreSQL in R1, Neo4j from R2), with the same schema either way |
+| GET | `/graph/nodes/{uid}/neighbors` | neighbours with relationship assertion, confidence and evidence |
+| GET | `/graph/paths?from=&to=&max_hops=&assertion_policy=` | paths, each labelled with its weakest assertion |
+| GET | `/graph/nodes/{uid}/provenance-trail` | proposal/hypothesis → gaps → limitations → papers → evidence (R4) |
+| POST | `/relations/{uid}/confirm` · `/reject` | user confirms or rejects an inferred relationship (logged; never automatic) |
 
 ## 5. Weaknesses of the previous plan and how this version addresses them
 
@@ -590,7 +602,7 @@ Rules:
 | No structured research objective (topic string only) | Relevance can't be judged against sub-questions or constraints | Versioned `research_objectives` with sub-questions, tasks, exclusions and constraints |
 | Polymorphic `(subject_type, subject_id)` references | No referential integrity; orphaned notes and feedback | `research_items` supertype with real foreign keys; sections and equations referenced explicitly |
 | 14 "agents", many of them deterministic | Over-engineering; hard to test; LLM used where code suffices | Split into deterministic **services** and 10 LLM **agents** (AGENT_DESIGN) |
-| Five or more infrastructure services in the MVP (Redis, Qdrant, Neo4j planned) | Ops burden for a single-user tool | Postgres + pgvector + GROBID only; adapters later |
+| Five or more infrastructure services in the MVP (Redis, Qdrant, Neo4j planned) | Ops burden for a single-user tool | MVP runs Postgres + pgvector + GROBID; **Neo4j is sequenced to R2** (not removed) with a graph-ready model from R0; Redis/Qdrant remain optional adapters |
 | Generic `entities` table without type-specific attributes | Can't hold licence, size or HF IDs for datasets and models | Typed detail tables (`dataset_details`, `model_details`, `metric_details`) |
 | User overrides limited to paper include/exclude | Doesn't meet "override any classification" | Generic `overrides` on any item and field |
 | No gold-standard evaluation for relevance | No way to know whether rankings are useful | EVALUATION_FRAMEWORK with gold sets, baselines and release gates |
@@ -611,6 +623,7 @@ Rules:
 | Hugging Face Hub | models, datasets, paper links | optional token | free | links depend on authors tagging arXiv IDs |
 | GitHub REST | repository metadata and search | token | free | 5,000 req/h; search about 30 req/min |
 | LLM API (provider-independent gateway; Anthropic adapter first; **provisional**, D1) | planning, judgements, extraction, explanations, critique | API key | metered (§7) | cost; latency; refusals; needs validation |
+| Neo4j (R2+) | research knowledge graph (read model) | self-hosted container | compute only (Community Edition, GPLv3); Enterprise features (fine-grained database security, clustering) not required because isolation is enforced in `GraphService` | another stateful service to operate; requires sync, reconciliation and rebuild procedures (§12.6–12.7) |
 | Google Scholar | — | — | — | not used (no API; terms forbid scraping) |
 | Papers with Code | — | — | — | discontinued in 2025 |
 
@@ -682,7 +695,7 @@ evaluation gates first.
 |---|---|
 | Multiple workers or users | add Redis-backed rate limiting, or Postgres advisory locks; authentication |
 | More than ~5M chunks, or cross-project semantic search at scale | Qdrant adapter for `VectorStore` |
-| Cross-project graph analytics | Neo4j projection for `GraphStore`, rebuilt from Postgres |
+| Very large graphs or heavy analytics | Neo4j Graph Data Science, read replicas, or a dedicated analytics instance (Neo4j itself is part of the planned architecture from R2, §12) |
 | Many concurrent long runs | separate worker pools per workflow type |
 
 ## 10. Technical limitations (known and accepted)
@@ -729,9 +742,226 @@ and tested** (IMPLEMENTATION_ROADMAP §8, gate H).
 |---|---|---|
 | S1 | **Authentication** | OIDC (preferred) or email + password with a modern password hash (argon2id), MFA option; secure, HttpOnly, SameSite session cookies or short-lived tokens; CSRF protection on cookie sessions; account lockout and throttling on login |
 | S2 | **Project-level authorization** | Roles per project (owner, editor, viewer). Every API route resolves the project and checks membership in one dependency; repositories require a `ProjectScope`; Postgres row-level security on project-scoped tables as defence in depth; tests for each route (horizontal-access attempts must fail) |
-| S3 | **User data isolation** | All user content (projects, notes, overrides, conversations, saved explanations, progress, uploads, assessments) is project-scoped. Shared caches hold only non-user content (public paper metadata, canonical explanations of public papers without project context). Anything containing project context is cached per project. Embeddings of uploaded PDFs are project-scoped. Logs never contain user content beyond IDs |
+| S3 | **User data isolation** | All user content (projects, notes, overrides, conversations, saved explanations, progress, uploads, assessments) is project-scoped. Shared caches hold only non-user content (public paper metadata, canonical explanations of public papers without project context). Anything containing project context is cached per project. Embeddings of uploaded PDFs are project-scoped. Logs never contain user content beyond IDs. **Graph:** project-scoped nodes and edges carry `scope`, and `GraphService` enforces it on every query; cross-project queries see only the global layer |
 | S4 | **Secrets and API keys** | Secrets only from the deployment's secret store or environment, never in the database, repository, logs, prompts or error messages. Separate keys per environment; documented rotation; secret scanning in CI. If users bring their own API keys later, they are encrypted at rest with a managed key and never returned by the API |
 | S5 | **Rate limiting and abuse protection** | Per-user and per-IP API rate limits; per-user and per-project LLM and external-API budgets; request and upload size limits; scan and lesson concurrency limits; signup protection; outbound calls only through `SourceClient` with per-source limits, so users can't make us exceed provider terms |
 | S6 | **Secure file access** | PDFs and other files live in private storage, never public. They are served only through the API after authorization, or via short-lived signed URLs. Uploads are content-type and size checked and parsed only inside the GROBID container. The downloader fetches only `http(s)` URLs, blocks private/link-local IP ranges and redirects to them (SSRF protection), and enforces size and time limits |
-| S7 | **Retention and deletion enforcement** | Deletion and retention (§4.10.2) cascade to messages, summaries, evidence links, project-scoped caches, embeddings and files. The retention job is monitored, and failures alert. Backups follow a documented retention period, after which deleted data is gone. A deletion audit log records what was deleted and when (no content). Account deletion removes all of the user's projects |
+| S7 | **Retention and deletion enforcement** | Deletion and retention (§4.10.2) cascade to messages, summaries, evidence links, project-scoped caches, embeddings, files **and the knowledge graph (tombstones, §12.6)**. The retention job is monitored, and failures alert. Backups follow a documented retention period, after which deleted data is gone. A deletion audit log records what was deleted and when (no content). Account deletion removes all of the user's projects |
 | S8 | **Transport and platform** | TLS everywhere; strict CORS; security headers (CSP, HSTS); dependency and container vulnerability scanning in CI; least-privilege database roles; audit log of security-relevant events |
+
+## 12. Research knowledge graph (Neo4j)
+
+Neo4j is a **planned, permanent part of the architecture**. It is the
+specialised research knowledge graph that powers graph-native intelligence
+from R2 onwards: multi-hop related work, gap and novelty investigation,
+provenance trails from proposals back to evidence, and an evolving map of a
+field. It is not in the MVP deployment for **sequencing** reasons only. R0–R1
+make every entity and relationship graph-ready, so introducing Neo4j in R2
+requires no changes to agents, APIs or database models.
+
+### 12.1 Roles of the two stores
+
+| | PostgreSQL | Neo4j |
+|---|---|---|
+| Role | **Transactional source of truth** for every entity, relationship, evidence link, assertion status and user decision | **Specialised read model** for graph traversal and graph analytics |
+| Written by | Application services and workflow nodes (agents never write directly) | **Only** the Graph Sync Worker (§12.6) |
+| If lost | Restore from backup | Rebuilt entirely from PostgreSQL (§12.7) |
+| Used by | All features | Only through `GraphService` (§12.8) |
+
+### 12.2 Stable identifiers (shared across both databases)
+
+- **Node identity:** every graph node carries `uid` = the PostgreSQL UUIDv7
+  primary key of the row it represents. Neo4j enforces a uniqueness
+  constraint on `uid` for each label. `research_items.id` already covers
+  papers, entities, gaps and ideas. All other node sources (projects,
+  objectives, manifestations, authors, research groups, sub-questions,
+  directions, limitations, proposals, experiments, results) have UUIDv7 keys
+  too.
+- **Edge identity:** every relationship carries `uid` = the UUID of its
+  PostgreSQL row. Edges that come from link tables with composite keys
+  (e.g. `citations`) get a **deterministic UUIDv5** of
+  `(relation_type, source_table, from_uid, to_uid, qualifier)`. Re-syncing
+  therefore always produces the same edge identity.
+- **Versioning:** every synced table has `row_version bigint` (incremented by
+  a trigger on update), and each Neo4j node/edge stores the `pg_version` it
+  was built from. External identifiers (DOI, arXiv ID, ORCID, ROR/OpenAlex
+  institution ID) are properties, never keys.
+
+### 12.3 Node labels
+
+| Label | PostgreSQL source | Scope |
+|---|---|---|
+| `Project`, `Objective` | `projects`, `research_objectives` | project |
+| `Topic` (`kind`: sub_question, direction, task, concept) | `objective_sub_questions`, `research_directions`, `entities` (task, concept) | project (sub-questions, directions) / global (task, concept) |
+| `Paper` (work) | `papers` | global |
+| `PaperVersion` | `paper_manifestations` | global |
+| `Author` | `authors` | global |
+| `ResearchGroup` | `research_groups` (institutions/labs) | global |
+| `Method` (`kind`: method, algorithm, architecture) | `entities` | global |
+| `Dataset`, `Benchmark` | `entities` (+ `dataset_details`) | global |
+| `Metric` | `entities` (+ `metric_details`) | global |
+| `Limitation` | `limitations`, `limitation_clusters` | global (paper-stated) / project (clusters) |
+| `Gap` | `gaps` | project |
+| `Hypothesis` | `ideas` | project |
+| `Proposal` | `reports` (type proposal), `experiment_plans` | project |
+| `Experiment` | `experiments` | project |
+| `Result` (`kind`: paper_reported, user_reported) | `reported_results`, `experiment_results` | global (paper-reported) / project (user-reported) |
+| `Repository`, `Model` (R4) | `code_repositories`, `entities` (+ `model_details`) | global |
+
+### 12.4 Relationship types
+
+The twelve planned relationship types, plus four **structural** ones needed
+to connect the planned entities (marked *structural*; they carry no research
+claim).
+
+| Type | Typical endpoints | PostgreSQL source | Usual assertion |
+|---|---|---|---|
+| `CITES` | Paper → Paper | `citations` | `source_metadata` |
+| `AUTHORED_BY` | Paper → Author | `paper_authors` | `source_metadata` |
+| `USES_METHOD` | Paper/Experiment → Method | `paper_entity_mentions` (role uses), `experiment_plans` | `extracted` / `user_asserted` |
+| `EVALUATES_ON` | Paper/Method/Experiment → Dataset/Benchmark (property: metric ids) | `paper_entity_mentions` (evaluates_on), `reported_results`, `experiment_plans` | `extracted` / `author_reported` |
+| `INTRODUCES` | Paper → Method/Dataset/Benchmark/Metric | `paper_entity_mentions` (proposes/defines), `paper_contributions` | `author_reported` (quote-verified) |
+| `EXTENDS` | Paper → Paper, Method → Method | `paper_relations` (improves_on, extends) | `author_reported` / `extracted` / `inferred` |
+| `CONTRADICTS` | Paper → Paper, Result → Result, Paper → Hypothesis | `paper_relations` (contradicts), conflict detection, `research_relations` (challenges, red-team counter-evidence) | `computed` (result conflicts) / `inferred` |
+| `REPORTS_LIMITATION` | Paper → Limitation | `limitations` | `author_reported` / `extracted` / `inferred` |
+| `RELATED_TO` (property `basis`: similarity, co-citation, direction_membership, sub_question_match, topic) | any → any | `direction_members`, related-item links, `research_relations` | `computed` / `inferred` |
+| `ADDRESSES` | Paper → Gap/Topic, Hypothesis → Gap, Proposal → Hypothesis, Experiment → Hypothesis | `gap_probes` outcomes, `research_relations` | `inferred` / `user_asserted` / `user_confirmed` |
+| `DERIVED_FROM` | Gap → Limitation/Paper, Hypothesis → Gap, Proposal → Hypothesis, Result → Experiment | `gaps.signal`, `ideas.gap_id`, `research_relations` | `computed` / `hypothesized` / `user_asserted` |
+| `VALIDATED_BY` (property `outcome`: supports, refutes, inconclusive) | Hypothesis → Result/Experiment | `research_relations` | `user_asserted` (user-reported results) / `computed` |
+| `HAS_VERSION` *(structural)* | Paper → PaperVersion | `paper_manifestations` | `source_metadata` |
+| `AFFILIATED_WITH` *(structural)* | Author → ResearchGroup (property: paper uid, period) | `author_affiliations` | `source_metadata` |
+| `PART_OF` *(structural)* | Objective → Project, Topic → Objective/Topic, Gap/Hypothesis/Experiment → Project | foreign keys | `structural` |
+| `IN_PROJECT` *(structural)* | Paper → Project (property: inclusion, tier) | `project_items`, `assessments` | `structural` / `user_*` |
+
+New relationship types are added through the **relation registry** (§12.6)
+without changing existing code.
+
+### 12.5 Provenance, confidence and evidence (on every relationship)
+
+Every relationship, in PostgreSQL and in Neo4j, carries:
+
+| Property | Meaning |
+|---|---|
+| `assertion` | `source_metadata` (reported by an external index, e.g. citations, authorship) · `author_reported` (stated in the paper; quote-verified) · `extracted` (extracted by ResearchPilot from text; evidence verified) · `computed` (deterministic statistic, e.g. co-citation, result conflict) · `inferred` (model judgement, not proven by a quote) · `hypothesized` (AI-generated hypothesis link) · `user_asserted` · `user_confirmed` · `rejected` · `structural` (foreign-key links that carry no research claim, e.g. `PART_OF`) |
+| `confidence` | 0–1 where meaningful (null for `source_metadata` and user assertions) |
+| `evidence` | evidence span IDs (with manifestation), source record IDs, signal IDs |
+| `provenance` | producing service/agent and version, prompt version, task/provider/model (if any), source API, created and updated time, `pg_table`, `pg_id`, `pg_version` |
+| `scope` | `global` or a `project_id` |
+| `status` | `active` · `retracted` (source withdrew it, superseded or rejected) |
+
+**Inferred is never treated as established:**
+- `inferred` and `hypothesized` relationships are excluded from traversals
+  by default. Every `GraphService` query takes an explicit `AssertionPolicy`
+  (default: `established_only` = source_metadata, author_reported,
+  extracted, computed, user_confirmed). Including inferred edges requires
+  `include_inferred = true`, and every result path then reports the weakest
+  assertion on it.
+- Results derived from paths that contain inferred edges are labelled `ai_interpretation`
+  or `unverified_hypothesis` (claim kinds), never `reported_finding`.
+- An inferred relationship is promoted only by verification (a verified
+  quote turns it into `extracted`) or by a user (`user_confirmed`). Both
+  promotions are logged. Nothing is promoted automatically by repetition or
+  by agreement between models.
+- `rejected` relationships stay in PostgreSQL, so the system doesn't
+  re-propose them, but they are never traversed.
+
+### 12.6 Synchronisation (asynchronous, idempotent)
+
+```
+PostgreSQL write ─(same transaction)─▶ domain_events (outbox; includes deletes as tombstones)
+                                            │
+                                   Graph Sync Worker (worker periodic + event-driven)
+                                            │ for each event: load CURRENT state of the
+                                            │ affected rows from PostgreSQL (state-based, not payload-based)
+                                            ▼
+                                   Graph Projector + relation registry
+                                   (PG row → GraphNode / GraphEdge with uid, pg_version,
+                                    assertion, evidence, scope)
+                                            │
+                                            ▼
+                                   Neo4j: MERGE on uid; apply only if pg_version ≥ stored version;
+                                          missing endpoints MERGEd as stubs and completed later
+                                            │
+                                   graph_sync_state (per uid: synced_version, status, attempts, error)
+```
+
+- **Idempotent:** MERGE by `uid` plus a version guard means replaying any
+  event, in any order, gives the same graph.
+- **Sync eligibility (validated records only):** a row is projected only if
+  it passes the eligibility rule for its type. Extractions need verified
+  evidence. Matches must not be `possible_match`. Claims hidden pending
+  review are excluded. `rejected` relationships are excluded. From R2 the
+  established assertions are synced; `inferred` and `hypothesized`
+  relationships are synced from R3, always labelled.
+- **Retries:** exponential backoff. After N attempts the item goes to
+  `graph_dead_letters`, an alert is raised, and reconciliation retries it
+  later. Neo4j being unavailable never blocks PostgreSQL writes.
+- **Deletion propagation:** deletes (user deletions, retention expiry,
+  project deletion, merge splits) emit tombstone events with the `uid`s. The
+  worker removes the nodes (`DETACH DELETE`) or edges.
+  `entity_tombstones` keeps the uid and kind (no content) until
+  reconciliation confirms removal, so deletions survive worker downtime.
+  Retention enforcement (S7, gate H) includes the graph.
+- **Merges and splits:** when versions are matched (D29), the `PaperVersion`
+  nodes stay distinct and are connected to the surviving `Paper`. A split
+  re-projects both works from PostgreSQL.
+
+### 12.7 Reconciliation and rebuild
+- **Scheduled reconciliation** (daily, plus on demand) compares PostgreSQL
+  and Neo4j per label and per relationship type: counts, then hashes of
+  `(uid, pg_version)` in batches. Mismatched batches are re-projected, and
+  orphans that are no longer in PostgreSQL are deleted. Results are logged in
+  `graph_sync_runs`.
+- **Full rebuild:** a command that recreates the graph from PostgreSQL into
+  a fresh database and switches the service over when it completes, using a
+  blue/green database name. Neo4j can therefore always be discarded.
+- Every sync batch increments a `graph_version` stored in Neo4j. Results that
+  depend on the graph (R3 signals) record the `graph_version` and query
+  template used, for reproducibility.
+
+### 12.8 `GraphService`: the only way to use the graph
+
+```python
+class GraphService(Protocol):
+    async def neighbors(self, uid, rel_types, direction, policy: AssertionPolicy,
+                        scope: ProjectScope, limit) -> GraphView: ...
+    async def paths(self, from_uid, to_uid, rel_types, max_hops, policy, scope) -> list[GraphPath]: ...
+    async def subgraph(self, scope, labels, rel_types, policy, filters) -> GraphView: ...
+    async def related_work(self, paper_uid, policy, scope, limit) -> list[RankedNode]: ...
+    async def pattern_counts(self, pattern: NamedPattern, params, policy, scope) -> list[PatternRow]: ...
+    async def provenance_trail(self, uid, scope) -> GraphView: ...   # proposal → … → evidence
+```
+
+- **Two implementations behind one interface:**
+  - `PostgresGraphService` (R0–R1, and as a fallback): recursive CTEs plus
+    in-memory `networkx` for small project graphs.
+  - `Neo4jGraphService` (R2+): parameterised Cypher templates (and optionally
+    the Graph Data Science library for analytics).
+  - A configuration flag selects the backend. A **parity test suite** runs
+    the same fixtures against both and must agree on supported queries.
+- **No direct Neo4j dependency:** only `graph/adapters/neo4j/` imports the
+  Neo4j driver (lint rule). Agents, services and API routers use
+  `GraphService`. API responses use a backend-neutral `GraphView` schema
+  (nodes and edges with assertion, confidence, evidence), so switching
+  backends changes no API.
+- **Named patterns only:** queries are predefined, parameterised templates
+  (e.g. `methods_on_dataset`, `limitation_along_extends_chain`,
+  `contradiction_paths`). No user- or LLM-composed Cypher is executed.
+- **Scope enforcement:** every call takes a `ProjectScope`. Global nodes are
+  visible to all; project-scoped nodes and edges only to members of that
+  project. This holds even though Neo4j Community Edition has no per-user
+  database security, because isolation is enforced in the service (gate H,
+  H3). Cross-project queries see only the global layer.
+- **Degradation:** if Neo4j is unavailable, `GraphService` falls back to the
+  PostgreSQL implementation for supported queries. Graph-only analytics show
+  "Graph analysis temporarily unavailable". Source data is never affected.
+
+### 12.9 How graph intelligence grows by release
+
+| Release | Graph capability |
+|---|---|
+| R0–R1 | Graph-compatible model: stable UUIDs, `row_version`, assertion/confidence/evidence/provenance on every relationship table, `research_relations`, relation registry, tombstones, `GraphService` with the PostgreSQL implementation (citation graph, field map, related items). **No Neo4j deployment required** |
+| R2 | Neo4j deployed (`neo4j` container), projector + sync worker + reconciliation + rebuild; synchronises **validated** records (established assertions); parity tests; the citation graph, field map and evolution views move to `Neo4jGraphService` where they benefit |
+| R3 | Graph traversal for **gap discovery** (e.g. method × dataset structural holes, limitations propagated along `EXTENDS` chains, under-connected communities), **related-work analysis** (multi-hop `CITES`/`EXTENDS`/`USES_METHOD` with assertion policies), and **novelty investigation** (the neighbourhood of a hypothesis's methods, datasets and limitations, and contradiction paths) before and alongside external searches. Inferred and hypothesised relationships are synced, labelled |
+| R4 | `Proposal`, `Experiment` and `Result` connected through `DERIVED_FROM`, `ADDRESSES`, `VALIDATED_BY`, `USES_METHOD` and `EVALUATES_ON`; **provenance trails** from a proposal back to gaps, limitations, papers and quoted evidence; repository and model nodes |
+| R5 | **Continuously evolving graph:** monitors add nodes and edges incrementally; temporal properties (`first_seen`, `valid_from`, `retracted_at`) and `graph_version` history; impact alerts computed by traversal (new paper → `ADDRESSES`/`CONTRADICTS` → accepted hypothesis); cross-project discovery on the global layer only |

@@ -13,6 +13,12 @@ metrics, find research gaps, challenge candidate hypotheses with a red-team
 reviewer, and produce reports in which every claim traces back to a paper (and,
 where possible, a page or section).
 
+A **research knowledge graph** connects papers, versions, authors, topics,
+methods, datasets, metrics, limitations, gaps, hypotheses, proposals,
+experiments and results. PostgreSQL is the source of truth; Neo4j joins in R2
+as the graph store. Every relationship records its evidence, confidence and
+whether it is established or AI-inferred.
+
 Two recurring tools sit across the journey:
 
 - **Latest Research:** a dedicated page showing what was released in your

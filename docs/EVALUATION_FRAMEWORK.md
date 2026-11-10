@@ -133,6 +133,10 @@ adjudicator (if any), the approver and the guideline version.
 - **Independent corroboration claimed without recorded provenance**: 0 (§3.8).
 - **Journal versions of existing preprints presented as new research**: 0 (§3.8).
 - **Full-text or equation claims beyond a paper's access level**: 0 (§3.9).
+- **Inferred or hypothesised graph relationships presented as established**
+  (UI, API, exports, graph-derived statements): 0 (from R2).
+- **Data deleted in PostgreSQL still present in the knowledge graph** after
+  reconciliation: 0 (from R2).
 
 ### 3.4 Explanations
 Human rubric (1–5) per explanation, rated by an annotator at the target level

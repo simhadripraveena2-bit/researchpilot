@@ -46,6 +46,14 @@ Rules:
    never a provider or model. Provider and model come from the task
    configuration, which is provisional until D1 is approved (ARCHITECTURE
    §4.2).
+0b. **Agents never touch Neo4j.** They read graph structure only through
+   `GraphService`, with an explicit assertion policy and project scope. The
+   relationships they produce are persisted (by workflow nodes, rule 1) only
+   to PostgreSQL; Neo4j receives them through sync. An LLM-proposed
+   relationship is stored as `assertion = inferred` (or `hypothesized`) with its evidence
+   and confidence, and is promoted only by verification or the user. LLMs
+   never compose graph queries; they can only trigger named, parameterised
+   patterns.
 1. Agents never write to the database; workflow nodes persist results
    through repositories.
 2. Every output schema is Pydantic. Semantic validators check that item IDs
@@ -163,6 +171,10 @@ Validation (ClaimValidator):
 | Action Recommender (RIE) | Deterministic read now / save for later / deprioritise / check manually rule from tier, relations and links; never uses dates or citation counts | R1 |
 | Learning Progress Tracker | Update `concept_progress` from lesson steps and checks; emit `concept_progress.updated` | R1 |
 | Retention Enforcer | Daily job applying each project's tutor retention policy; deletion cascades as specified (ARCHITECTURE §4.10.2) | R1 |
+| **GraphService** (interface) | The only access path to graph queries for agents, services and APIs: neighbours, paths, subgraphs, related work, named patterns, provenance trails; assertion policy and project scope required on every call. PostgreSQL implementation in R0–R1, Neo4j implementation from R2 (ARCHITECTURE §12.8) | R0 (interface + PostgreSQL) / R2 (Neo4j) |
+| Relation Registry + Graph Projector | Map PostgreSQL rows to graph nodes/edges with stable `uid`, assertion, confidence, evidence, provenance, scope; eligibility rules (validated records only) | R1 (registry) / R2 (projector) |
+| Graph Sync Worker | Consume outbox events (incl. tombstones), re-project current state, idempotent version-guarded MERGE into Neo4j, retries, dead letters | R2 |
+| Graph Reconciler | Scheduled count/hash comparison per label and relationship type, repair, orphan removal, blue/green full rebuild | R2 |
 | Scope Router | Pick the default scope (anchored view → about_this_paper; project page → about_project; otherwise general); the user can override | R1 |
 
 ## 5. Shared workflow state
@@ -276,6 +288,31 @@ message → Context Builder (project memory + view context + last 12 turns
 `carried_refs` are collected **deterministically** from
 `tutor_message_evidence` and saved explanations, not from the summary text,
 so a summary can never add or lose an evidence reference.
+
+### W9 Graph synchronisation and reconciliation (R2)
+```
+domain_events (incl. tombstones) → Graph Sync Worker → load current PG state
+→ Graph Projector (eligibility, uid, assertion, evidence) → Neo4j MERGE (version-guarded)
+→ graph_sync_state; failures → retries → graph_dead_letters
+daily: Graph Reconciler → compare counts/hashes → re-project or delete → graph_sync_runs
+on demand: full rebuild into a fresh database → switch over
+```
+
+### 6.1 Graph use by agents and services
+
+| Agent / service | Graph use | From |
+|---|---|---|
+| Field Mapper, Related Item Linker | Citation communities, co-citation, related items via `GraphService` (PostgreSQL implementation) | R1 |
+| Comparator | `EXTENDS` / `CONTRADICTS` chains for evolution timelines and conflict context | R2 |
+| Gap Signal Engine + Gap Investigator | Named patterns: method × dataset structural holes, limitations propagated along `EXTENDS`, weakly connected directions; results stored as `computed` signals with `graph_query_log` reference | R3 |
+| Novelty Search + Red-Team Reviewer | Graph neighbourhood of a hypothesis (shared methods, datasets, limitations; `CONTRADICTS` paths) searched **before** external probes; inferred edges only with `include_inferred` and labelled | R3 |
+| Writer (proposals) | Provenance trail: proposal → hypothesis → gap → limitations → papers → evidence | R4 |
+| Project Monitor | Impact detection: new paper → `ADDRESSES`/`CONTRADICTS`/`EXTENDS` paths → accepted hypotheses, open gaps, experiments | R5 |
+
+No new LLM agents are needed for the graph. Relationships the agents
+already produce (relevance relations, extraction mentions, comparator
+relations, gap outcomes, red-team counter-evidence) are written to
+PostgreSQL with assertion metadata and reach Neo4j through sync.
 
 ## 7. Checkpoints
 

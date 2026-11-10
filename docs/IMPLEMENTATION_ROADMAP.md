@@ -78,6 +78,12 @@ graph TD
   MAN[Manifestations: preprint vs published]
   ANN[arXiv announcement capture job]
   GATEH[Gate H: hosted-deployment security]
+  GR[Graph-ready model: UUIDs, row_version, relation metadata, research_relations, tombstones]
+  GSV[GraphService + PostgreSQL implementation]
+  NEO[R2: Neo4j + sync + reconciliation]
+  GTRAV[R3: graph traversal for gaps, related work, novelty]
+  GPROV[R4: proposal/experiment/result graph + provenance trails]
+  GEVO[R5: continuously evolving graph]
   LES[Progressive lessons + project learning progress]
   RETN[Retention + deletion controls]
 
@@ -106,6 +112,14 @@ graph TD
   F0 --> GW --> OBJ
   F0 --> SECS --> GATEH
   RETN --> GATEH
+  F0 --> GR --> GSV --> FM
+  GSV --> NEO
+  EXT --> NEO
+  NEO --> GTRAV --> GAP
+  GTRAV --> IDEA
+  NEO --> GPROV --> PROP
+  GPROV --> GEVO
+  MON --> GEVO
   RB --> LAT
   CARD --> LAT
   PDF --> RET --> ASK
@@ -133,10 +147,10 @@ Ask & Learn depends on the PDF pipeline and retrieval; it gains equations
 |---|---|---|
 | **R0** | Foundation | — |
 | **R1 (MVP)** | Discover, Filter & Learn | DISCOVER, FILTER (papers), LEARN, UNDERSTAND (reading) · **Latest Research** · **Ask & Learn v1** |
-| **R2** | Understand & Compare | UNDERSTAND (full), COMPARE, FILTER (methods/datasets/benchmarks/metrics) |
-| **R3** | Investigate & Validate | INVESTIGATE, VALIDATE |
-| **R4** | Experiment & Propose | EXPERIMENT, PROPOSE |
-| **R5** | Persist & Monitor | all (long-term); scheduled Latest Research scans + notifications |
+| **R2** | Understand & Compare **+ Neo4j knowledge graph introduced** | UNDERSTAND (full), COMPARE, FILTER (methods/datasets/benchmarks/metrics); validated records synchronised to Neo4j |
+| **R3** | Investigate & Validate | INVESTIGATE, VALIDATE; graph traversal for gap discovery, related work and novelty investigation |
+| **R4** | Experiment & Propose | EXPERIMENT, PROPOSE; proposals, experiments, methods and results connected in the graph; provenance trails |
+| **R5** | Persist & Monitor | all (long-term); scheduled Latest Research scans + notifications; continuously evolving knowledge graph |
 
 ### Why this MVP
 - It delivers the critical new requirement (objective-aware usefulness with
@@ -187,6 +201,7 @@ EVALUATION_FRAMEWORK.
 8. Docker Compose (postgres, grobid, api, worker, frontend); CI (lint, types, tests, build, secret scanning).
 9. **LLM gateway skeleton:** provider-neutral interface, task → {provider, model} configuration file marked provisional (D1), fake gateway, first provider adapter behind `llm/adapters/`, lint rule forbidding provider SDK imports elsewhere.
 10. **Security scaffolding for later hosting** (cheap now, costly later): `project_members` with a single local owner, a `ProjectScope` dependency on every project route, repository methods that require a scope, localhost-only bind unless `AUTH_MODE` is set, private file storage served through the API.
+11. **Graph-ready foundations:** UUIDv7 keys everywhere; `row_version` trigger convention; `GraphService` interface with the PostgreSQL implementation skeleton and a backend-neutral `GraphView` schema; lint rule that the Neo4j driver may only be imported in `graph/adapters/neo4j/` (ARCHITECTURE §12).
 
 **Acceptance tests**
 - R0-1 `make up` from a clean clone starts all services with healthy checks.
@@ -198,6 +213,7 @@ EVALUATION_FRAMEWORK.
 - R0-7 Journey endpoint returns nine stages with deterministic states for a fixture project.
 - R0-8 **Provider independence:** swapping the task configuration to the fake provider runs the dummy workflow unchanged; the lint rule fails the build if a provider SDK is imported outside `llm/adapters/`; run manifests record provider, model and `provisional = true`.
 - R0-9 Every project-scoped route rejects requests without a resolved project scope (route-inventory test); the server refuses to bind to a non-local address with authentication disabled.
+- R0-10 **Graph readiness:** a migration test asserts every table in the graph-projection list has a UUID key and a working `row_version` trigger; `GraphService` (PostgreSQL) returns a `GraphView` for a fixture project; the lint rule rejects a Neo4j import outside the adapter.
 
 ### R1 — MVP: Discover, Filter & Learn (+ Latest Research, Ask & Learn)
 
@@ -209,6 +225,8 @@ EVALUATION_FRAMEWORK.
 4a. Date provenance: `paper_dates` as separate **events** (submitted, announced/posted, revised, accepted, published online, issue, issued, reported, indexed, metadata) with reporting source and upstream provenance; Date Resolver (system-of-record lookups; confidence verified / corroborated / source agreement / single source / conflicting / uncertain — D28 revised; first public appearance + basis incl. `submission_only`; release-type rules incl. "journal version is not new research"); **arXiv Announcement Capture** daily job and `arxiv_announcement_log`; preprint labelling; UTC storage and windows with boundary-day flags (D23); user time zone and `LocalTime` display; table-driven tests from G-LATEST-DATES (B0, B1 splits).
 5. Research objective model + Planner (LLM) + rule-based fallback; objective editor UI.
 6. Discovery workflow W1 with plain-language checkpoints; search log; manual add by identifier.
+
+6a. **Graph-compatible relationships:** common relationship columns (assertion, confidence, evidence, provenance, scope, status, row_version) on all relationship tables; `research_relations`, `relation_assertion_log`, `research_groups`, `author_affiliations`, `entity_tombstones`; relation registry mapping every planned relationship type to its PostgreSQL source; citation graph and related items served by `GraphService` (PostgreSQL); graph parity fixture set prepared for R2.
 
 **M1b Filter — tasks**
 7. Signal plugin framework; Stage A paper signals (semantic match, focus/exclusion coverage, in-corpus citation share, co-citation, intents, field-normalised citations with cap, survey flag, currency).
@@ -312,8 +330,12 @@ EVALUATION_FRAMEWORK.
 - R1-61 **Preprint labels and manifestations:** bioRxiv, medRxiv and arXiv manifestations show "Preprint — not peer-reviewed"; a matched journal manifestation is shown as a distinct "Journal version" line; evidence quotes state which manifestation they come from; splitting a match restores both manifestations intact.
 - R1-62 **Tutor capability boundaries:** for fixtures at each access level, abstract-only papers produce "Based on the abstract only" and "Not available in the extracted text" for beyond-abstract questions; full-text answers cite sections/pages only when the text was processed; paper-equation explanations occur only for equation text that is available (verified selection in R1); garbled selections produce "can't read this equation reliably"; general concept questions are answered and labelled background.
 - R1-63 **Evaluation data separation:** an automated check confirms no item hash appears in more than one of B0/B1/B3 or in prompt examples; B3 runs are executed by the custodian; the R1 evaluation report states CI intervals and the approver.
+- R1-64 **Relationship metadata:** every relationship row produced in R1 (citations, authorship, affiliations, term mentions, related-item links, relevance relations, match links) has an assertion, provenance and scope; LLM-produced relationships are stored as `inferred` with evidence and confidence; none is ever shown as established without verification or user confirmation (UI and API label check).
+- R1-65 **Relation registry coverage:** every planned relationship type (CITES … VALIDATED_BY, plus structural types) maps to exactly one PostgreSQL source; a test fails if a relationship would be stored in two places.
+- R1-66 **Tombstones:** deleting a conversation, project or merged paper writes `entity_tombstones` for every affected graph uid (no content), even though Neo4j is not yet deployed.
 
 ### R2 — Understand & Compare
+**Knowledge graph tasks:** add the `neo4j` service (Compose profile, then default from R2); uniqueness constraints on `uid` per label; Graph Projector + Graph Sync Worker (outbox-driven, version-guarded MERGE, retries, dead letters, tombstones); Graph Reconciler (daily count/hash comparison, repair, orphan deletion) and blue/green full rebuild; `Neo4jGraphService` with named Cypher templates; backend switch with PostgreSQL fallback; parity test suite; sync **validated** records only (established assertions); move citation graph, field map, evolution and comparison neighbourhoods to the graph where beneficial; graph monitoring (sync lag, dead letters).
 **Tasks:** Ask & Learn gains paper equations (from arXiv LaTeX) with step-by-step maths, algorithm/architecture walkthroughs with pseudocode, and multi-paper questions grounded in extractions; Latest Research cards gain full-text-verified contributions/datasets for open-access recent papers; Extractor (contributions, methods, datasets, metrics, results, limitations, assumptions, protocols, compute) with quote verification and Batches API option; typed entity normalisation + detail tables; arXiv LaTeX source + equation explainer; algorithm explainer; exercises (not run); Comparator (tables, `paper_relations`, evolution, conflicts with comparability); field map v2 (methods/datasets per direction, taxonomy); RIE signals for papers using full text, plus RIE for methods, datasets, benchmarks and metrics; resources UI; G-EXTRACT and G-RESOURCES evaluation.
 
 **Acceptance tests**
@@ -325,8 +347,17 @@ EVALUATION_FRAMEWORK.
 - R2-6 Dimension agreement κ ≥ 0.6 with full text (E §3.2); paper tiers re-evaluated after extraction, with tier changes notified.
 - R2-7 Exercises always display "not run".
 - R2-8 Mathematical explanation targets met on G-TUTOR (c) (E §3.9); paper equations in answers match extracted LaTeX exactly.
+- R2-9 **Idempotent sync:** replaying the full event log twice, and in shuffled order, produces an identical graph (node/edge sets and properties); stale events (lower `pg_version`) never overwrite newer state.
+- R2-10 **Stable identity:** a full rebuild from PostgreSQL produces the same node and edge `uid`s as incremental sync.
+- R2-11 **Retries and dead letters:** with Neo4j stopped during writes, PostgreSQL writes succeed; after restart, pending items sync; items failing N times appear in dead letters and are repaired by reconciliation.
+- R2-12 **Reconciliation:** injected drift (missing nodes, extra orphans, stale versions) is detected and repaired; the run is logged in `graph_sync_runs`.
+- R2-13 **Deletion propagation:** user deletions, retention expiry, project deletion and merge splits remove the corresponding nodes and edges from Neo4j (tombstone audit), including project-scoped inferred edges.
+- R2-14 **Validated records only:** possible matches, unverified extractions, hidden claims, rejected relations and (in R2) inferred/hypothesised relationships never appear in Neo4j.
+- R2-15 **Backend parity and independence:** the parity suite returns identical `GraphView` results from PostgreSQL and Neo4j implementations for supported queries; switching the backend flag changes no API response schema; with Neo4j down, supported queries fall back to PostgreSQL.
+- R2-16 **Scope isolation in the graph:** a project member cannot retrieve another project's scoped nodes or edges through any `GraphService` method (automated suite); cross-project queries return only global nodes.
 
 ### R3 — Investigate & Validate
+**Knowledge graph tasks:** named traversal patterns for gap discovery (method × dataset structural holes, limitations along `EXTENDS` chains, weakly connected directions), related-work analysis (multi-hop `CITES`/`EXTENDS`/`USES_METHOD` with assertion policies) and novelty investigation (hypothesis neighbourhood, `CONTRADICTS` paths); `graph_query_log` for reproducibility; sync of `inferred`/`hypothesized` relationships with labels; user confirm/reject of inferred relationships.
 **Tasks:** limitation clustering (independent-group rule), intersection matrices, conflict-derived gaps; Novelty Search service; overlap and contradiction probes; Gap Investigator; RIE for gaps; hypotheses with falsification criteria; Red-Team Reviewer with revise loop; RIE for ideas (novelty dimension) and novelty-implication signals on papers; idea status tracking; gap and idea UIs; G-GAPS evaluation.
 
 **Acceptance tests**
@@ -337,8 +368,13 @@ EVALUATION_FRAMEWORK.
 - R3-5 Papers gain "closest prior work / supports / challenges" novelty tags against user ideas, with quotes.
 - R3-6 Gap reality and probe adequacy targets met (E §3.7).
 - R3-7 Idea status changes are logged with reasons.
+- R3-8 **Graph-derived signals are reproducible:** each gap or novelty signal derived from the graph records template, parameters, assertion policy and `graph_version`; re-running against the same graph version gives the same result.
+- R3-9 **Inferred never treated as established:** with the default policy, traversals exclude inferred and hypothesised edges; with `include_inferred`, every path reports its weakest assertion and derived statements are labelled AI interpretation or hypothesis (fixture with a mixed path).
+- R3-10 **Graph adds value:** on B1/B3 gap and novelty sets, the graph-assisted pipeline finds at least as many expert-confirmed gaps and at least as much known prior work as the non-graph pipeline (no regression), with improvement reported.
+- R3-11 Confirming or rejecting an inferred relationship updates PostgreSQL, logs the change, and reaches Neo4j through sync; rejected relationships are never re-proposed.
 
 ### R4 — Experiment & Propose
+**Knowledge graph tasks:** `Proposal`, `Experiment`, `Result`, `Repository` and `Model` nodes; `DERIVED_FROM`, `ADDRESSES`, `VALIDATED_BY`, `USES_METHOD`, `EVALUATES_ON` connections; provenance-trail queries and UI (proposal → hypothesis → gap → limitations → papers → evidence).
 **Tasks:** GitHub and Hugging Face resolution with link confidence; RIE for models and repositories (constraint-aware: licence, size vs. compute, activity); experiment plans (datasets, baselines, metrics, protocols, ablations, compute from `compute_reports` only); experiment tracking with user-reported results; Writer; literature review and proposal reports; Citation Validator; LaTeX/PDF/BibTeX/RIS export.
 
 **Acceptance tests**
@@ -348,8 +384,11 @@ EVALUATION_FRAMEWORK.
 - R4-4 User-reported results are never shown alongside paper-reported results without a distinguishing label.
 - R4-5 100% of report citations resolve to project papers; factual sentences without citations are blocked or removed.
 - R4-6 LaTeX export compiles in CI; references include DOI / arXiv ID / URL where known.
+- R4-7 **Provenance trail:** for every proposal, the trail reaches quoted evidence for each cited gap and limitation; any link in the trail that is inferred is labelled as such.
+- R4-8 User-reported results connect to hypotheses via `VALIDATED_BY` with outcome and `user_asserted` assertion, never mixed with paper-reported results.
 
 ### R5 — Persist & Monitor
+**Knowledge graph tasks:** continuous incremental updates from monitors; temporal properties (`first_seen`, `valid_from`, `retracted_at`) and `graph_version` history; impact alerts by traversal (new paper → `ADDRESSES`/`CONTRADICTS`/`EXTENDS` → accepted hypotheses, open gaps, experiments); retraction handling; cross-project discovery on the global layer only; optional Graph Data Science analytics (D35).
 **Tasks:** scheduled Latest Research scans per project (reusing W8) with notifications (in-app first, email optional); scheduled monitors; impact detection against open gaps, accepted ideas and running experiments; incremental re-assessment; multi-user collaboration features beyond gate H (shared projects, comments); optional sandboxed exercise execution; optional Qdrant/Neo4j adapters; backups and runbook.
 
 **Acceptance tests**
@@ -357,6 +396,8 @@ EVALUATION_FRAMEWORK.
 - R5-2 Every impact alert contains the new paper, the affected item and the overlapping passage; dismissals are logged.
 - R5-3 Re-assessment after new papers reuses prior signals and reports which tiers changed.
 - R5-4 Scheduled scans produce the same entries as a manual scan for the same window; notifications are sent only for new Essential/Recommended entries or overlap/challenge flags, never for reclassified old papers.
+- R5-5 **Evolving graph:** after a week of scheduled scans, new nodes and edges appear incrementally with correct `first_seen`; retracted relationships are marked, not silently removed from history; reconciliation stays clean.
+- R5-6 **Impact by traversal:** fixture paths (new paper `CONTRADICTS` a paper that an accepted hypothesis `DERIVED_FROM`) raise an alert with the full path and evidence; paths through inferred edges are labelled.
 
 ## 5. Free-source plan
 
@@ -407,6 +448,10 @@ before the LLM layer that enriches it.
 | T24 | Evaluation leakage (the same items used for prompts, calibration and release) inflates results | Medium | High | B0–B3 separation by topic/week/work, hash checks, custodian-run B3, retirement of exposed items |
 | T25 | arXiv announcement feed semantics differ from expectations, or capture misses days | Medium | Medium | Verify fields at implementation; record only what the feed shows; fall back to labelled `submission_only`; monitor job success |
 | T26 | Too few "verified" dates outside arXiv/bioRxiv/Crossref, so useful papers sit in *Date uncertain* | Medium | Medium | Visible, filterable *Date uncertain* tab with explanations; system-of-record lookups; recall measured per field |
+| T27 | Graph drift from PostgreSQL (missed events, partial failures) | Medium | Medium | Outbox, version-guarded idempotent sync, daily reconciliation, full rebuild; sync-lag monitoring |
+| T28 | Project data leaking through graph queries (Community Edition has no per-user database security) | Medium | High | Scope on every node/edge; `GraphService` is the only path; named templates only; isolation test suite (R2-16, gate H) |
+| T29 | Inferred relationships read as facts in traversals | Medium | High | Assertion property on every edge; `established_only` default policy; weakest-assertion labelling; promotions logged |
+| T30 | Operating another stateful service (backups, upgrades, licence) | Medium | Low–Medium | Neo4j is rebuildable from PostgreSQL (no backup dependency); pinned versions; GPLv3 Community Edition reviewed for the deployment model (D34) |
 
 ## 7. Decisions
 
@@ -434,7 +479,7 @@ before the LLM layer that enriches it.
 | D5 | Auth | **Revised:** not required for local development (localhost only). Required for any hosted deployment (gate H, §8); security scaffolding is built in R0 |
 | D11 | OpenAlex budget | Daily usage budget; free core works with OpenAlex disabled |
 | D12 | Vector store | pgvector behind an interface |
-| D13 | Graph store | Postgres + networkx; Neo4j deferred |
+| D13 | Graph store | **Revised (required):** Neo4j is the long-term research knowledge graph, introduced in R2; PostgreSQL remains the source of truth; R0–R1 run graph queries through the PostgreSQL implementation of `GraphService` |
 | D18 | MVP scope | R1 = Discover, Filter (papers), Latest Research, Learn & Ask, in milestones M1a–M1d |
 | D20 | RIE default weights and thresholds | Start with the profiles in RIE §5.2; calibrate on B1 before release |
 | D30 | Matching and date thresholds | Start with the thresholds in ARCHITECTURE §4.8–4.8a; calibrate on the B1 splits of G-MATCH and G-LATEST-DATES |
@@ -445,6 +490,8 @@ before the LLM layer that enriches it.
 | # | Decision | Needed by |
 |---|---|---|
 | D19 | Named people for the evaluation roles (EVALUATION_FRAMEWORK §2b): evaluation lead (approves gold answers), annotators per topic, adjudicators, benchmark custodian (B3). The team can build B0 and the date/match sets; B1–B3 relevance, Latest relevance and tutor sets need domain experts and educators | Evaluation lead and custodian before M1a ends; annotators before M1b calibration |
+| D34 | Neo4j edition, version and hosting (Community Edition self-hosted recommended; Enterprise only if clustering or database-level security becomes necessary) | Before R2 |
+| D35 | Use of the Neo4j Graph Data Science library for analytics (communities, centrality) versus computing them in the worker | Before R3 |
 | D33 | Hosting target and identity provider for gate H (e.g. which OIDC provider, where it runs) | Before any hosted deployment |
 
 ## 8. Release blockers
@@ -457,6 +504,7 @@ before the LLM layer that enriches it.
 5. Anti-proxy property tests pass (no tier or action from dates/citations alone).
 6. Provider independence check passes (R0-8); the model configuration is labelled provisional unless D1 is approved.
 7. Usability round passes (R1, and any release that changes the main flow).
+8. **From R2:** graph reconciliation shows no unresolved drift; no inferred or hypothesised relationship is presented as established (UI/API/export check); graph parity and scope-isolation suites pass.
 
 ### 8.2 Gate H — hosted deployment (any networked access beyond localhost)
 Nothing may be deployed where other people or the internet can reach it
@@ -466,11 +514,11 @@ until each of these is implemented and tested (ARCHITECTURE §11):
 |---|---|---|
 | H1 | Authentication (S1) | Unauthenticated requests to every non-public route return 401 (route inventory); login throttling and lockout work; session cookies are HttpOnly, Secure, SameSite; CSRF tokens enforced |
 | H2 | Project-level authorization (S2) | For every route, a member of project A cannot read or change project B (automated horizontal-access suite); viewer cannot edit; row-level security blocks direct SQL across projects |
-| H3 | User data isolation (S3) | Caches, embeddings, uploads and exports never leak across projects (cross-tenant tests); logs contain no user content |
+| H3 | User data isolation (S3) | Caches, embeddings, uploads, exports and knowledge-graph queries never leak across projects (cross-tenant tests); logs contain no user content |
 | H4 | Secrets and API keys (S4) | Secret scanning passes; no secret in DB, logs, prompts, error responses (fuzzed error test); rotation procedure documented and rehearsed |
 | H5 | Rate limiting and abuse protection (S5) | Per-user/IP limits and LLM/API budgets enforced under load test; uploads and requests above limits rejected; outbound calls stay within provider limits |
 | H6 | Secure file access (S6) | Files unreachable without authorization; signed links expire; SSRF tests (private IPs, redirects, non-http schemes) blocked; malformed/oversized PDFs rejected safely |
-| H7 | Retention and deletion enforcement (S7) | Deletion and expiry remove data from DB, project caches, embeddings and files (audit test); retention job monitored with alerting; backup retention documented; account deletion removes all user data |
+| H7 | Retention and deletion enforcement (S7) | Deletion and expiry remove data from DB, project caches, embeddings, files and the Neo4j graph (audit test); retention job monitored with alerting; backup retention documented; account deletion removes all user data |
 | H8 | Transport and platform (S8) | TLS only; security headers present; dependency and container scans have no unresolved critical findings |
 
 Gate H can be completed any time after R1. It is required before hosting,

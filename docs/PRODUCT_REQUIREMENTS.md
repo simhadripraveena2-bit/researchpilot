@@ -244,6 +244,20 @@ validator.
 | ASK-22 | Unrelated, non-research requests get a short, polite redirect (D27) |
 | ASK-23 | **MVP paper-understanding boundaries:** the tutor supports general concept questions; abstract-grounded paper questions; full-text questions **only** when that paper's text was retrieved and processed; equation explanations **only** when the equation text is actually available (R1: user selection verified against the document text; R2: arXiv LaTeX source). Otherwise it answers "Not available in the extracted text" and states the paper's access level (abstract only, full text, retrieval failed). It never claims full-paper understanding from an abstract |
 
+### 4.14 Research knowledge graph (long-term, Neo4j)
+
+Graph intelligence is a permanent part of the product. Neo4j is introduced
+in R2; the MVP is built graph-ready (ARCHITECTURE §12).
+
+| ID | Requirement |
+|---|---|
+| KG-1 | Maintain a research knowledge graph of projects and objectives, papers and paper versions, authors and research groups, topics and subtopics, methods/algorithms/architectures, datasets and benchmarks, metrics, limitations and gaps, hypotheses and proposals, experiments and results |
+| KG-2 | Relationships include CITES, AUTHORED_BY, USES_METHOD, EVALUATES_ON, INTRODUCES, EXTENDS, CONTRADICTS, REPORTS_LIMITATION, RELATED_TO, ADDRESSES, DERIVED_FROM and VALIDATED_BY, each with provenance, confidence and supporting evidence where applicable |
+| KG-3 | Inferred relationships are never presented as established facts; every relationship shows its assertion type (reported by a source, stated by authors, extracted, computed, inferred, hypothesised, user-asserted or user-confirmed) |
+| KG-4 | Users can confirm or reject inferred relationships; rejections are remembered |
+| KG-5 | Graph exploration (R2), graph-assisted gap, related-work and novelty investigation (R3), provenance trails from proposals to evidence (R4), and a continuously evolving graph with impact alerts (R5) |
+| KG-6 | Graph views respect project privacy: users see only global knowledge and their own projects' content |
+
 ## 5. Evidence and reliability requirements
 
 ### 5.1 Four claim kinds
@@ -305,6 +319,10 @@ validator.
   recorded fixtures.
 - **Cost control:** LLM use bounded by top-K and on-demand generation, with
   per-project budgets.
+- **Knowledge graph:** PostgreSQL is the transactional source of truth; Neo4j
+  (from R2) is a synchronised graph that can be rebuilt from PostgreSQL at
+  any time. The application uses the graph only through a service interface,
+  and deletions propagate to it.
 - **Provider independence:** business logic depends only on the LLM gateway
   interface; provider and model are configured per task. The initial model
   configuration is provisional until D1 is approved.

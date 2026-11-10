@@ -243,6 +243,37 @@ Opens as a right-hand panel from any page (and from text selection →
 | Tutor question unrelated to research | Short, polite redirect |
 | LLM unavailable or budget reached | Tutor, lessons, briefs and digest show "Explanations are unavailable right now"; Latest Research still shows date-verified entries, release types, tiers from deterministic signals, and links |
 
+## 4d. Research Knowledge Graph
+
+`/projects/:id/graph`. In R1 this is the citation and related-paper graph,
+served by the PostgreSQL implementation. From R2 it is the full Neo4j
+knowledge graph. The UI is the same for both.
+
+- **Node types** are filterable: papers (and their versions), authors and
+  groups, topics, methods, datasets/benchmarks, metrics, limitations, gaps,
+  hypotheses, proposals, experiments and results.
+- **Relationships are styled by assertion:** solid lines for established
+  relationships (reported by a source, stated by the authors, extracted with
+  verified evidence, computed, user-confirmed); **dashed lines with an "AI
+  inferred" tag** for inferred relationships; dotted for hypotheses.
+  Inferred relationships are hidden by default ("Show AI-inferred links" is
+  a toggle).
+- **Clicking an edge** shows its type, assertion, confidence, evidence
+  quotes (with page and paper version) and provenance. Inferred edges offer
+  **Confirm** / **Reject**; both are logged, and rejected links are not
+  proposed again.
+- **Paths:** "How is A connected to B?" shows paths, each labelled with its
+  weakest assertion.
+- **Provenance trail** (R4): from a proposal or hypothesis back through gaps
+  and limitations to papers and quoted evidence.
+- **Beginner view** shows topics, key papers and methods with plain labels.
+  **Advanced view** shows all node types, filters, assertion details and
+  graph metrics.
+- **Privacy:** only global knowledge and the user's own projects are
+  visible.
+- If the graph backend is temporarily unavailable: "Graph analysis
+  temporarily unavailable — basic views still work".
+
 ## 5. User journeys
 
 ### 5.1 Beginner — "I don't know where to start"
@@ -307,6 +338,7 @@ report). The primer is short and the glossary tooltips are on.
 | Filter / Triage (tiers, cards, overrides) | `/projects/:id/filter` | R1 |
 | Learn: primer, glossary, learning path | `/projects/:id/learn` | R1 |
 | Field map | `/projects/:id/map` | R1 |
+| Research Knowledge Graph | `/projects/:id/graph` | R1 (citation/related graph) / R2 (Neo4j knowledge graph) / R3–R5 (traversal views, provenance trails, evolving graph) |
 | Paper explorer & Read with me | `/projects/:id/papers`, `/papers/:id/read` | R1 |
 | Saved items & notes | `/saved` | R1 |
 | Project history & decisions | `/projects/:id/history` | R1 |
@@ -334,7 +366,7 @@ switch, streaming), `GlossaryTooltip`, `LearningPath`, `FieldMap`
 picker, coverage), `ReleaseTypeTabs`, `ReleaseBadge` + `DateProvenancePopover`,
 `LatestEntryCard`, `RelatedInProject`, `DigestPanel`, `AskPanel`,
 `ContextChips`, `ScopeSwitch`, `FollowUpChips`, `StyleMenu`, `AnswerBlock`,
-`SourcesList`, `PrerequisiteOffer`, `SaveToProject`, `LatestBrief` (eight questions), `ActionChip`, `PossibleMatchPrompt`, `LocalTime` (time-zone-aware timestamp/date renderer), `LessonStepper`, `LessonControls`, `UnderstandingCheck`, `ResumeLessonChip`, `LearningProgressList`, `SavedExplanationsLibrary`, `RetentionSettings`, `DeleteConversationDialog`.
+`KnowledgeGraphView` (assertion-styled edges), `EdgeEvidencePanel` (confirm/reject inferred links), `PathExplorer`, `ProvenanceTrail`, `SourcesList`, `PrerequisiteOffer`, `SaveToProject`, `LatestBrief` (eight questions), `ActionChip`, `PossibleMatchPrompt`, `LocalTime` (time-zone-aware timestamp/date renderer), `LessonStepper`, `LessonControls`, `UnderstandingCheck`, `ResumeLessonChip`, `LearningProgressList`, `SavedExplanationsLibrary`, `RetentionSettings`, `DeleteConversationDialog`.
 
 ## 7a. Navigation
 
