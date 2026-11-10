@@ -9,20 +9,35 @@ from __future__ import annotations
 
 import json
 from collections import defaultdict, deque
-from collections.abc import AsyncIterator
+from collections.abc import AsyncIterator, Callable
 from typing import Any
 
 from researchpilot.llm.adapters.base import CompletionRequest, RawCompletion
 from researchpilot.llm.types import LLMCapabilities, LLMUsage, StopReason
 
 FakeResponse = str | dict[str, Any] | RawCompletion
+Responder = Callable[[CompletionRequest], dict[str, Any]]
+
+
+def _echo_responder(request: CompletionRequest) -> dict[str, Any]:
+    """Deterministic answer for the R0 ``dummy_echo`` task (echoes the user's text)."""
+    content = request.messages[0].content
+    return {"echo": content.split(": ", 1)[1].strip() if ": " in content else content.strip()}
+
+
+DEV_RESPONDERS: dict[str, Responder] = {"dummy_echo": _echo_responder}
 
 
 class FakeProviderAdapter:
     name = "fake"
 
-    def __init__(self, responses: dict[tuple[str, str], list[FakeResponse]] | None = None) -> None:
+    def __init__(
+        self,
+        responses: dict[tuple[str, str], list[FakeResponse]] | None = None,
+        responders: dict[str, Responder] | None = None,
+    ) -> None:
         self._responses: dict[tuple[str, str], deque[FakeResponse]] = defaultdict(deque)
+        self._responders = dict(responders or {})
         self.calls: list[CompletionRequest] = []
         for key, items in (responses or {}).items():
             self.add(key[0], key[1], *items)
@@ -36,6 +51,8 @@ class FakeProviderAdapter:
     def _next(self, request: CompletionRequest) -> RawCompletion:
         self.calls.append(request)
         queue = self._responses.get((request.task, request.prompt_id))
+        if not queue and request.task in self._responders:
+            queue = deque([self._responders[request.task](request)])
         if not queue:
             raise AssertionError(
                 f"FakeProviderAdapter has no response for {(request.task, request.prompt_id)}"

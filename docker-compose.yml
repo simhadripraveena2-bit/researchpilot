@@ -1,0 +1,105 @@
+# Local development stack (R0). Every published port is bound to 127.0.0.1: the API runs
+# without authentication (AUTH_MODE=disabled) and must not be reachable from other machines.
+# Hosted deployment is blocked until gate H passes (docs/IMPLEMENTATION_ROADMAP.md §8.2).
+# Neo4j is introduced in R2 (decision D13) and is deliberately absent here.
+
+x-backend: &backend
+  build:
+    context: ./backend
+    secrets: [extra_ca]
+  image: researchpilot-backend:dev
+  environment: &backend-env
+    DATABASE_URL: postgresql+psycopg://researchpilot:researchpilot@postgres:5432/researchpilot
+    AUTH_MODE: disabled
+    CONTAINER_LOCAL: "true"
+    BIND_HOST: 0.0.0.0
+    LLM_FORCE_FAKE: ${LLM_FORCE_FAKE:-true}
+    ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY:-}
+    LOG_LEVEL: ${LOG_LEVEL:-INFO}
+    GIT_SHA: ${GIT_SHA:-dev}
+    STORAGE_DIR: /app/var/storage
+  depends_on:
+    postgres:
+      condition: service_healthy
+
+services:
+  postgres:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: researchpilot
+      POSTGRES_PASSWORD: researchpilot
+      POSTGRES_DB: researchpilot
+    ports: ["127.0.0.1:${POSTGRES_PORT:-5432}:5432"]
+    volumes: [pgdata:/var/lib/postgresql/data]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U researchpilot -d researchpilot"]
+      interval: 3s
+      timeout: 3s
+      retries: 20
+
+  migrate:
+    <<: *backend
+    command: ["alembic", "upgrade", "head"]
+    restart: "no"
+
+  api:
+    <<: *backend
+    command: ["python", "-m", "researchpilot.api"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    ports: ["127.0.0.1:${API_PORT:-8000}:8000"]
+    volumes: [storage:/app/var/storage]
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/api/v1/health/ready', timeout=3)"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  worker:
+    <<: *backend
+    command: ["python", "-m", "researchpilot.worker"]
+    depends_on:
+      migrate:
+        condition: service_completed_successfully
+    volumes: [storage:/app/var/storage]
+    healthcheck:
+      test: ["CMD-SHELL", "python -c \"import psycopg, os; psycopg.connect(os.environ['DATABASE_URL'].replace('+psycopg', '')).close()\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  frontend:
+    build:
+      context: ./frontend
+      secrets: [extra_ca]
+    image: researchpilot-frontend:dev
+    depends_on:
+      api:
+        condition: service_healthy
+    ports: ["127.0.0.1:${FRONTEND_PORT:-3000}:8080"]
+    healthcheck:
+      test: ["CMD", "wget", "-q", "-O", "/dev/null", "http://127.0.0.1:8080/"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+
+  grobid:
+    # PDF structure extraction, used from R1 (milestone M1d). CPU image, pinned version.
+    image: lfoppiano/grobid:0.8.1
+    ports: ["127.0.0.1:8070:8070"]
+    healthcheck:
+      # The image has no curl/wget; use bash's /dev/tcp to call the isalive endpoint.
+      test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8070 && printf 'GET /api/isalive HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q true <&3"]
+      interval: 10s
+      timeout: 5s
+      start_period: 60s
+      retries: 30
+
+secrets:
+  extra_ca:
+    file: ${EXTRA_CA_FILE:-/dev/null}
+
+volumes:
+  pgdata:
+  storage:

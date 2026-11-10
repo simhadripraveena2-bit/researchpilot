@@ -6,7 +6,7 @@ from collections.abc import Callable, Mapping
 
 from researchpilot.core.settings import Settings
 from researchpilot.llm.adapters.base import ProviderAdapter
-from researchpilot.llm.adapters.fake import FakeProviderAdapter
+from researchpilot.llm.adapters.fake import DEV_RESPONDERS, FakeProviderAdapter
 from researchpilot.llm.config import LLMConfig, load_llm_config
 from researchpilot.llm.gateway import StructuredLLMGateway
 from researchpilot.llm.prompts import PromptRegistry
@@ -39,3 +39,17 @@ def build_gateway(
         if factory is not None:
             resolved[provider] = factory(settings)
     return StructuredLLMGateway(config, PromptRegistry(settings.prompts_dir), resolved)
+
+
+def runtime_llm_config(settings: Settings) -> LLMConfig:
+    """The configuration a process actually runs with (recorded in run manifests)."""
+    config = load_llm_config(settings.llm_config_path)
+    return config.with_provider("fake") if settings.llm_force_fake else config
+
+
+def build_runtime_gateway(settings: Settings) -> StructuredLLMGateway:
+    config = runtime_llm_config(settings)
+    adapters: dict[str, ProviderAdapter] = {}
+    if settings.llm_force_fake:
+        adapters["fake"] = FakeProviderAdapter(responders=DEV_RESPONDERS)
+    return build_gateway(settings, config=config, adapters=adapters)

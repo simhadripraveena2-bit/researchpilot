@@ -46,10 +46,21 @@ class Settings(BaseSettings):
     bind_host: str = "127.0.0.1"
     bind_port: int = 8000
     auth_mode: AuthMode = AuthMode.DISABLED
+    # Set only by the local Docker Compose stack: the API binds 0.0.0.0 *inside* its
+    # container, and Compose publishes ports on 127.0.0.1 only (checked by a test).
+    container_local: bool = False
 
     storage_dir: Path = Path("./var/storage")
     llm_config_path: Path = BACKEND_ROOT / "config" / "llm_tasks.yaml"
     prompts_dir: Path = BACKEND_ROOT / "prompts"
+    # Route every LLM task to the deterministic fake provider (tests, offline development, and
+    # the R0 stack while decision D1 is open). Recorded in run manifests.
+    llm_force_fake: bool = False
+
+    worker_poll_seconds: float = 1.0
+    job_heartbeat_seconds: float = 5.0
+    job_stale_after_seconds: float = 30.0
+    git_sha: str = "dev"
 
     # Polite-pool contact address for scholarly APIs (OpenAlex, Crossref, Unpaywall).
     contact_email: str | None = None

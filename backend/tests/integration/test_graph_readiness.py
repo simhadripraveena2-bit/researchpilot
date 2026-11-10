@@ -18,7 +18,10 @@ pytestmark = pytest.mark.integration
 
 def _make_user(conn: psycopg.Connection) -> uuid.UUID:
     uid = uuid7()
-    conn.execute("INSERT INTO users (id, display_name) VALUES (%s, 'Local user')", (uid,))
+    conn.execute(
+        "INSERT INTO users (id, display_name, auth_provider) VALUES (%s, 'User', 'password')",
+        (uid,),
+    )
     return uid
 
 

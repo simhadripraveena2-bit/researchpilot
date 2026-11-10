@@ -4,6 +4,7 @@ from researchpilot.db.models.claims import Claim, ClaimEvidence, ClaimVerificati
 from researchpilot.db.models.events import DomainEvent, DomainEventDelivery
 from researchpilot.db.models.graph import GraphNode, NodeSourceRegistry, ResearchItem
 from researchpilot.db.models.identity import Project, ProjectMember, User
+from researchpilot.db.models.jobs import Job
 from researchpilot.db.models.runs import Checkpoint, ResearchRun, RunEvent, TaskExecution
 
 __all__ = [
@@ -14,6 +15,7 @@ __all__ = [
     "DomainEvent",
     "DomainEventDelivery",
     "GraphNode",
+    "Job",
     "NodeSourceRegistry",
     "Project",
     "ProjectMember",

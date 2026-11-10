@@ -164,3 +164,17 @@ class VerificationLevel(StrEnum):
 class VerificationResult(StrEnum):
     PASS = "pass"  # noqa: S105
     FAIL = "fail"
+
+
+class JobStatus(StrEnum):
+    QUEUED = "queued"
+    RUNNING = "running"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"
+
+
+class StageState(StrEnum):
+    DONE = "done"
+    IN_PROGRESS = "in_progress"
+    READY = "ready"
+    NOT_READY = "not_ready"

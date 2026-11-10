@@ -23,6 +23,15 @@ from researchpilot.domain.enums import (
 
 class User(Base):
     __tablename__ = "users"
+    __table_args__ = (
+        # At most one implicit local user (AUTH_MODE=disabled), even under concurrent requests.
+        sa.Index(
+            "uq_users_single_local",
+            "auth_provider",
+            unique=True,
+            postgresql_where=sa.text("auth_provider = 'local_none'"),
+        ),
+    )
 
     id: Mapped[uuid.UUID] = uuid_pk()
     display_name: Mapped[str] = mapped_column(sa.Text, nullable=False)

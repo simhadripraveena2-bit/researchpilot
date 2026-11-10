@@ -32,9 +32,25 @@ Two recurring tools sit across the journey:
   concepts step by step with short understanding checks, tracks learning
   progress per project, and cites passages or labels background knowledge.
 
-**Status:** planning. No application code has been written yet. The plan is
-awaiting approval before R0. Local development runs without sign-in (localhost
-only); any hosted deployment is blocked until the security gate (gate H) passes.
+**Status:** R0 (foundation) implemented and awaiting review; R1 has not started. See
+[R0 implementation notes](docs/R0_IMPLEMENTATION_NOTES.md). Local development runs
+without sign-in (localhost only); any hosted deployment is blocked until the security
+gate (gate H) passes.
+
+## Quick start (local)
+
+```bash
+cp .env.example .env
+make up            # postgres, migrate, api, worker, frontend, grobid (ports on 127.0.0.1)
+```
+
+Open http://127.0.0.1:3000, create a project and run the system check. Development:
+
+```bash
+make install && make lint typecheck
+TEST_DATABASE_ADMIN_URL=postgresql://postgres:postgres@localhost:5432/postgres make test
+make frontend-test
+```
 
 ## Documentation (canonical)
 
