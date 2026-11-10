@@ -3,8 +3,8 @@
 Autonomous literature review and research discovery platform.
 
 **From Research Beginner to Research Creator** — a persistent research
-companion across DISCOVER → LEARN → UNDERSTAND → COMPARE → INVESTIGATE →
-VALIDATE → INNOVATE.
+companion across DISCOVER → LEARN → UNDERSTAND → FILTER → COMPARE →
+INVESTIGATE → VALIDATE → EXPERIMENT → PROPOSE.
 
 ResearchPilot takes a research topic or problem statement and runs an
 evidence-first workflow: discover papers across academic sources, deduplicate
