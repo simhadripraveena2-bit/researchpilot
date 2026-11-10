@@ -27,6 +27,16 @@ Three things set it apart:
    explained for beginners, intermediate users or experts, from the same
    evidence.
 
+Two recurring tools sit across the whole journey rather than inside one
+stage:
+
+- **Latest Research** — a dedicated page answering "what is new in my area
+  this week, what matters for my objective, and what should I read first?"
+  (§4.12).
+- **Ask & Learn** — a conversational research tutor that can be opened from
+  anywhere. It knows the project and the paper or section being viewed, and
+  still answers general questions (§4.13).
+
 ## 2. Users
 
 | Persona | Typical goal | Needs most | Default level |
@@ -93,6 +103,7 @@ numbers are given in [IMPLEMENTATION_ROADMAP](IMPLEMENTATION_ROADMAP.md).
 | LRN-3 | Prerequisite learning path (concepts and papers in order, each with a reason) with progress tracking; paper choice driven by RIE (learning-resource role) |
 | LRN-4 | Switch any explanation between beginner, intermediate and advanced |
 | LRN-5 | Explain concepts from fundamentals; content with no project source is labelled as background |
+| LRN-6 | All explanations (primer, glossary, sections, equations) are delivered through Ask & Learn (§4.13); a one-click "Explain this" opens a tutor conversation anchored to the item |
 
 ### 4.4 UNDERSTAND
 | ID | Requirement |
@@ -167,6 +178,59 @@ numbers are given in [IMPLEMENTATION_ROADMAP](IMPLEMENTATION_ROADMAP.md).
 | PER-4 | Scheduled monitoring for new papers |
 | PER-5 | Impact alerts when new work affects an open gap, an accepted idea or a running experiment |
 
+### 4.12 Latest Research (dedicated page)
+
+A recurring discovery capability for recently released work. It reuses
+discovery, deduplication, date verification and the Research Intelligence
+Engine. It is built so that scheduled scans and notifications (PER-4, PER-5)
+can be added later without redesign.
+
+| ID | Requirement |
+|---|---|
+| LAT-1 | A dedicated **Latest Research** page per project, in the main navigation |
+| LAT-2 | Discover recent papers from the project topic, objective sub-questions (subtopics), focus concepts and field-map directions, using the **current objective version** |
+| LAT-3 | Default window: rolling **7 days** ending now (UTC, shown in the user's timezone); user-selectable ranges (presets 24 h, 7 d, 14 d, 30 d, and a custom range) |
+| LAT-4 | Sources: arXiv (date-range and category search), Semantic Scholar, OpenAlex (when enabled), Crossref (journal articles with DOIs, and as the authority on DOI publication dates); optional further preprint servers by decision |
+| LAT-5 | Deduplicate across sources and against the existing project record; a recent paper already in the project is shown once with its existing state |
+| LAT-6 | Each entry shows: title, authors, first-publication or first-preprint date (with its source), source(s), abstract, paper URL, open-access full-text availability, relevant subtopic(s), relevance to the objective (tier + reason), main contribution, and method, dataset or benchmark introduced **when verifiable** (otherwise "not stated in the abstract") |
+| LAT-7 | Explain why each paper is relevant and what the user could learn from it (recommendation card with a "What's new" field) |
+| LAT-8 | Link to related papers already in the project, distinguishing **"cites your saved paper"** (from citation data) and **"similar to your saved paper"** (from text similarity) |
+| LAT-9 | Actions: save, dismiss (optional reason), add note, mark "read later", open in Ask & Learn |
+| LAT-10 | Filters: date range, release type, subtopic, methodology, source, relevance tier, open-access availability, status (new since last visit, saved, dismissed) |
+| LAT-11 | Classify each entry as exactly one release type: **New preprint**, **New publication**, **Published version of an earlier preprint**, **Revised version of an older paper**, **Older paper newly indexed**, or **Date uncertain**. The default view shows only New preprints and New publications; the others are separate, clearly labelled tabs |
+| LAT-12 | Never treat a paper as new because its metadata changed. Metadata dates (indexed, deposited, updated, created-in-index) are never used as publication dates |
+| LAT-13 | Every date shown keeps its source, date type, precision and retrieval timestamp. If the first public date can't be verified to day precision inside the window, mark it **Date uncertain** rather than inventing or rounding a date |
+| LAT-14 | Summary for the window: how many new relevant papers, how many Essential, which overlap with or challenge the project's direction, and a short "What's new this week" digest that cites papers (AI explanation, grounded) |
+| LAT-15 | Flag papers that **overlap with** or **challenge** the project's current direction (objective, saved core papers, and from R3 open gaps and accepted ideas), with the passage that shows it |
+| LAT-16 | "Read first" ordering by RIE priority for the objective. Recency is a filter, not a priority signal |
+| LAT-17 | Each scan is stored (window, sources, objective version, coverage, failures) so results are reproducible and "new since last visit" works; scans are refreshed on demand and automatically when the page is opened if the last scan is over 24 h old |
+| LAT-18 | Source failures and coverage gaps are shown on the page (e.g. "Semantic Scholar unavailable — results may be incomplete") |
+
+### 4.13 Ask & Learn (interactive research tutor)
+
+The conversational form of the learning assistant. It reuses the Tutor, the
+explanation cache, evidence retrieval, the project record and the claim
+validator.
+
+| ID | Requirement |
+|---|---|
+| ASK-1 | Ask about any concept, term, algorithm, equation, architecture, paper, methodology, dataset or research direction |
+| ASK-2 | Follow-up questions keep the relevant conversation context; conversations are saved per project and can be resumed or deleted |
+| ASK-3 | Level per answer: beginner, intermediate or expert (defaults to the project level) |
+| ASK-4 | Explanation styles: simple intuitive, step by step, technical, mathematical, practical example, code-oriented, comparison with related concepts |
+| ASK-5 | One-click follow-ups: Explain more simply · Give me an example · Explain step by step · Show the mathematics · Compare with… · How would I implement it? · What do I need to know first? |
+| ASK-6 | Equations and notation explained step by step. Paper equations come only from extracted equations (arXiv LaTeX source), user selection or verified text, and are never written from memory |
+| ASK-7 | Algorithms and architectures explained with examples and pseudocode; code is labelled AI-generated and "not run" |
+| ASK-8 | **Context-aware:** knows the project objective, level, glossary and saved items, and what the user is viewing (paper, section, page, selected text, table, card). "What is message passing?" asked while reading a GNN paper is answered in that paper's terms first |
+| ASK-9 | **Scope control:** the user can switch between "About this paper", "About my project" and "General" for any question; the active scope is always shown |
+| ASK-10 | Paper questions use the paper's extracted content when accessible, and answers link to the supporting sections, pages or verified passages |
+| ASK-11 | Content not drawn from the user's papers is labelled **"Background explanation — AI-generated, not from your sources"** |
+| ASK-12 | Never fabricate paper claims, equations, quotations or citations. If the paper's available text doesn't answer the question, say so ("Not found in the available text of this paper; this paper is available as abstract only") before giving any background explanation |
+| ASK-13 | Identify missing prerequisites and offer a learning sequence, which can be added to the project learning path |
+| ASK-14 | Save an answer or part of one to the project as a note, or pin it to an item; saved answers keep their sources and claim kinds |
+| ASK-15 | Available from paper reading, recommendation cards, literature review, comparison tables, the field map, Latest Research, the glossary and the learning path; selecting text and choosing "Ask" starts a question about that text |
+| ASK-16 | Feedback on any answer (helpful, unclear, wrong); "wrong" hides the statement pending review |
+
 ## 5. Evidence and reliability requirements
 
 ### 5.1 Four claim kinds
@@ -188,6 +252,13 @@ numbers are given in [IMPLEMENTATION_ROADMAP](IMPLEMENTATION_ROADMAP.md).
 - Clear, specific messages when full text or metadata is unavailable.
 - Classifications show their evidence and confidence, and say "insufficient
   information" instead of guessing.
+- **Dates:** every displayed date comes from a stored source record and
+  states its type (e.g. "arXiv v1 submitted", "published online (Crossref)").
+  Metadata-change dates are never shown as publication dates. Unverifiable
+  dates are marked uncertain.
+- **Tutor:** paper-specific statements must be grounded in retrieved,
+  verified passages; everything else is labelled background. Equations
+  attributed to a paper must come from its extracted text or source.
 
 ## 6. User experience requirements
 | ID | Requirement |
@@ -200,6 +271,8 @@ numbers are given in [IMPLEMENTATION_ROADMAP](IMPLEMENTATION_ROADMAP.md).
 | UX-6 | Beginner defaults: fewer columns, explanations expanded, glossary tooltips. Advanced defaults: dense tables, raw values, signal details |
 | UX-7 | Every AI-written block has a kind badge and a "Report a problem" control |
 | UX-8 | Overrides are one click, with an optional reason |
+| UX-9 | Latest Research is a top-level navigation item with a "new since last visit" count |
+| UX-10 | Ask & Learn opens as a side panel from anywhere (and full-page for history). It shows the active context and scope as removable chips |
 
 ## 7. Non-functional requirements
 
@@ -223,8 +296,10 @@ numbers are given in [IMPLEMENTATION_ROADMAP](IMPLEMENTATION_ROADMAP.md).
 
 ## 8. Non-goals
 
-- A general open-ended chatbot. Questions are asked in the context of an
-  item, section, term or table.
+- A general-purpose chatbot. Ask & Learn is scoped to research and technical
+  learning: general research questions are welcome; unrelated requests get
+  a short, polite redirect. *(Changed from the earlier "no open chat" rule
+  because of ASK-1 and ASK-9.)*
 - Scraping Google Scholar or bypassing paywalls.
 - Guaranteed novelty claims.
 - Executing generated code before a sandbox exists.

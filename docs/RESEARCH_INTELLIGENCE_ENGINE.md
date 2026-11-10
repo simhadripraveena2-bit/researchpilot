@@ -416,7 +416,67 @@ weights_version)`. Domain events (`paper.added`, `document.parsed`,
 right away; Stage B and cards are recomputed when next viewed. Cards show "Updated
 since you last saw it" when the tier changes.
 
-## 10. Example (abbreviated, synthetic)
+## 10. Recent items (Latest Research) and tutor support
+
+### 10.1 Assessing very recent papers
+Papers from the last days have no citation history. The RIE handles them
+without special-casing the scoring:
+
+- **Foundational importance** is reported as **"Too recent to judge
+  influence"** for items whose first public date is under 90 days old. Its
+  citation-structure signals are null, the dimension's coverage falls below
+  the threshold, and the objective profile is renormalised over the
+  remaining dimensions (§5.2). Content signals (e.g. "introduces a method
+  that addresses SQ2") still count.
+- **Recency is never a priority signal** on the Latest Research page. The
+  date window is a filter, and "Read first" ordering uses the same objective
+  profile as everywhere else (anti-proxy rules §5.4 unchanged).
+- **Novelty implications from R1:** before gaps and ideas exist (R3), this
+  dimension is assessed against the project's **current direction**: the
+  objective plus the user's Essential/saved items. The Relevance Judge
+  returns `relation_to_project ∈ {extends, alternative_to, challenges,
+  overlaps_with, unrelated}` with the project item it relates to and a
+  verified quote from the new paper's abstract. From R3, the same signal is
+  also computed against open gaps and accepted ideas.
+
+### 10.2 Card additions for recent items
+`RecommendationCard` gains two optional fields, used on the Latest Research
+page and anywhere a recent item appears:
+
+```python
+    whats_new: list[Statement] | None        # what changes compared with existing approaches,
+                                             # relative to named project items (grounded, abstract-level
+                                             # unless full text is available)
+    relation_to_project: list[ProjectRelation] | None
+                                             # {relation, project_item_id, evidence, kind}
+```
+
+"What you could learn from it" is expressed through `use_for` with the
+`learn_background` and `adopt_method` uses, tied to sub-questions.
+
+Contribution, method, dataset and benchmark statements on recent cards come
+from the Extractor's **abstract mode**. Each is a `reported_finding` with a
+quote verified against the abstract. When the abstract doesn't state them,
+the card says "Not stated in the abstract" and adds a missing-information
+entry ("Full text needed to confirm datasets used").
+
+### 10.3 Signals added
+| Item | Dimension | Signal | Method | Rel. |
+|---|---|---|---|---|
+| Paper | Novelty implications | `relation_to_project` (vs. objective + saved/Essential items) | LLM judgement with quote | R1 |
+| Paper | Direct relevance | Sub-question match from scan query provenance (which subtopic's query found it) | deterministic | R1 |
+| Paper | Direct relevance | Similarity to the user's saved/Essential items | deterministic | R1 |
+| Paper | — (display only) | `cites_saved_items` (count and IDs) | deterministic (citations when available) | R1 |
+
+### 10.4 Support for Ask & Learn
+- When the tutor suggests further reading or prerequisites, it picks
+  project items tagged **Learning resource** or **Foundational** for the
+  current objective, and shows the tier.
+- Saving a tutor answer about an item doesn't change the item's
+  assessment. Notes are not signals, so the user's notes never feed back into
+  rankings without an explicit override.
+
+## 11. Example (abbreviated, synthetic)
 
 The paper, numbers and quotes below are **placeholders** that show the
 format. They are not claims about any real paper.

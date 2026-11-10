@@ -57,12 +57,12 @@ Rules:
 
 | Agent | Responsibility | Inputs → outputs | Mode | Rel. |
 |---|---|---|---|---|
-| **Planner** | Draft the research objective (core question, sub-questions, tasks, focus concepts, exclusions) and the search plan, in plain language | topic, level, goal → `ResearchObjective` draft + `QueryPlan` | batch | R1 |
-| **Relevance Judge** (RIE) | Per sub-question relevance label with a verified quote; second, independent judgement for high-stakes cases | objective + item text → `RelevanceJudgement[]` | batch (top-K) + on demand | R1 |
-| **Card Writer** (RIE) | Phrase the six-question recommendation card at the user's level from the deterministic skeleton and evidence only | assessment + evidence + level → `RecommendationCard` | on demand | R1 |
-| **Tutor** | Primer, glossary definitions, section/equation/algorithm explanations, worked examples, exercises; enforces grounded/background labelling | subject + level (+ section text) → `Explanation` / `Exercise` | on demand | R1 (primer, terms, sections) / R2 (equations, algorithms, exercises) |
+| **Planner** | Draft the research objective (core question, sub-questions, tasks, focus concepts, exclusions) and the search plan, in plain language; for Latest Research, per-subtopic recent-search queries and an arXiv category mapping (user-editable) | topic, level, goal → `ResearchObjective` draft + `QueryPlan` (+ `LatestScanPlan`) | batch | R1 |
+| **Relevance Judge** (RIE) | Per sub-question relevance label with a verified quote; `relation_to_project` (extends / alternative to / challenges / overlaps with / unrelated, naming the project item, with a quote); second, independent judgement for high-stakes cases | objective + item text (+ saved/Essential project items) → `RelevanceJudgement[]` | batch (top-K) + on demand | R1 |
+| **Card Writer** (RIE) | Phrase the six-question recommendation card (plus "What's new" for recent items) at the user's level from the deterministic skeleton and evidence only; **digest mode** writes the Latest Research "What's new this week" digest from the scan's top verified statements | assessment + evidence + level → `RecommendationCard`; scan skeleton → `Digest` | on demand | R1 |
+| **Tutor** (powers **Ask & Learn**) | Conversational answers and one-shot explanations: primer, glossary definitions, sections, concepts, papers, methods, datasets, directions; seven styles; follow-up intents; missing prerequisites; rolling conversation summaries; enforces grounded/background labelling and "not found in sources" | question + view context + project context + retrieved evidence + conversation memory + level/style → `TutorAnswer` | on demand, streamed | R1 (concepts, papers, sections, follow-ups, styles) / R2 (paper equations via LaTeX, algorithm walkthroughs, exercises, multi-paper comparisons using extractions) |
 | **Curriculum Builder** | Propose prerequisite edges between concepts; order a learning path with rationales | concepts, glossary, RIE learning-resource tags, level → prerequisite edges + path | batch | R1 |
-| **Extractor** | Full-text extraction: contributions, methods, datasets, metrics, results, limitations, assumptions, protocols, compute, method relations | section text → typed extractions with quotes | batch (Batches API eligible) | R2 |
+| **Extractor** | **Abstract mode (R1):** main contribution and any method/dataset/benchmark *stated in the abstract*, quotes verified against the abstract. **Full-text mode (R2):** contributions, methods, datasets, metrics, results, limitations, assumptions, protocols, compute, method relations | abstract or section text → typed extractions with quotes | batch (Batches API eligible) | R1 (abstract) / R2 (full text) |
 | **Comparator** | Comparison table cell normalisation, improves-on/extends judgements, conflict comparability notes, evolution narrative | extractions + citation contexts → `paper_relations`, table, notes | batch + on demand | R2 |
 | **Gap Investigator** | Label limitation clusters; judge overlap and contradiction probe results; draft hypotheses with falsification criteria | gap signals + probe results → gap outcomes, ideas | batch | R3 |
 | **Red-Team Reviewer** | Adversarial critique of ideas with its own search budget; prior work, confounds, evaluation flaws, feasibility blockers, triviality | idea + evidence + novelty check → `RedTeamReview` | batch | R3 |
@@ -73,6 +73,46 @@ searches) and the Gap Investigator's overlap judgement. It stays separate from
 the Red-Team Reviewer so the critic is independent of the generator.
 "Monitor impact" judgements reuse the Gap Investigator's overlap judgement
 (R5).
+
+**No new agents were added for Latest Research or Ask & Learn.** Latest
+Research reuses Planner, Relevance Judge, Card Writer and Extractor (abstract
+mode). Ask & Learn is the conversational mode of the existing Tutor, plus
+deterministic context and retrieval services.
+
+### 3.1 Tutor answer contract
+
+```python
+class TutorAnswer(BaseModel):
+    scope_used: Literal["about_this_paper", "about_project", "general"]
+    answer_status: Literal["grounded", "partially_grounded", "background_only",
+                           "not_found_in_sources", "out_of_scope"]
+    blocks: list[AnswerBlock]            # ordered; each is one claim
+    not_found: list[str]                 # what the sources did not contain
+    missing_prerequisites: list[str]     # concept names → matched to glossary/concepts
+    suggested_followups: list[FollowUpIntent]
+
+class AnswerBlock(BaseModel):
+    kind: ClaimKind                      # reported_finding | extracted_observation | ai_interpretation
+    grounding: Literal["grounded", "background"] | None
+    style: ExplanationStyle              # intuitive | step_by_step | technical | mathematical |
+                                         # practical_example | code | comparison
+    text: str                            # Markdown; LaTeX allowed in $…$
+    evidence: list[str]                  # handles E1…En from the retrieval table only
+    equation_refs: list[str]             # equation handles from the provided table only
+    code: CodeBlock | None               # language, source; always "not run"
+```
+
+Validation (ClaimValidator):
+- `grounded` blocks must cite at least one provided evidence handle, and
+  quoted text must verify.
+- Equations attributed to a paper must match an `equations` row or the user
+  selection exactly (after LaTeX normalisation). Otherwise the block is
+  rejected.
+- If `scope_used = about_this_paper` and no block is grounded, then
+  `answer_status` must be `not_found_in_sources` or `background_only`, and the
+  UI shows "Not found in the available text of this paper" first.
+- `background` blocks may not name papers, authors, results or numbers with
+  units unless they resolve to project items.
 
 ## 4. Deterministic services
 
@@ -94,6 +134,12 @@ the Red-Team Reviewer so the critic is independent of the generator.
 | Experiment Resource Resolver | HF/GitHub metadata, link confidence, licences | R4 |
 | Report Builder | Structured reports, exports (Markdown, BibTeX, CSV, LaTeX, PDF) | R1 / R4 |
 | Journey Guide | Stage readiness and next step | R1 |
+| Date Resolver | Store date claims per source; derive first public date and confidence; classify release type (ARCHITECTURE §4.8) | R1 |
+| Latest Scan Planner | Turn the objective + Planner's `LatestScanPlan` into date-bounded source queries (arXiv category sweep + topic queries; S2; OpenAlex; Crossref); window overlap handling | R1 |
+| Related Item Linker | Link recent papers to project items: `cites` (citation data) vs `similar` (embedding similarity, labelled) | R1 |
+| Evidence Retriever | Hybrid retrieval (pgvector + Postgres full-text) over chunks, sections, equations and extractions, scoped to paper → project; returns numbered evidence handles | R1 |
+| Context Builder | Assemble project context, view context and conversation memory within a token budget | R1 |
+| Scope Router | Pick the default scope (anchored view → about_this_paper; project page → about_project; otherwise general); the user can override | R1 |
 
 ## 5. Shared workflow state
 
@@ -172,8 +218,26 @@ resource resolution (datasets, metrics, baselines, models, repos) → RIE assess
 
 ### W7 Monitor (R5)
 ```
-scheduled queries → dedupe against project → assess Stage A
-→ impact check vs open gaps / accepted ideas (overlap judgement) → alerts
+schedule → W8 Latest scan (same workflow) → impact check vs open gaps /
+accepted ideas / running experiments (overlap judgement) → alerts + notifications
+```
+
+### W8 Latest Research scan (R1)
+```
+load objective version → Latest Scan Planner (queries per subtopic, arXiv categories,
+window + 3-day overlap) → search_sources (fan-out, date-bounded) → dedupe (sources + project)
+→ Date Resolver (claims → first public date → release type) → Crossref DOI date confirmation
+→ assess Stage A (all) → Stage B top-K + relation_to_project → Extractor (abstract mode, top-K)
+→ Related Item Linker → store scan + entries → emit latest_scan.completed
+```
+No human checkpoint by default; the scan plan can be reviewed in the scan
+settings. Partial results are stored with per-source coverage.
+
+### Ask & Learn request flow (on demand, not a workflow)
+```
+message → Context Builder → Scope Router → Evidence Retriever
+→ explanation cache lookup (canonical asks only) → Tutor → ClaimValidator
+→ stream → persist message, evidence, claims → (every 12 turns) Tutor summary task
 ```
 
 ## 7. Checkpoints
@@ -197,4 +261,9 @@ Any checkpoint can be set to auto-approve per project.
 - **Workflows:** compiled graphs with an in-memory checkpointer, scripted
   approvals and failure injection (rate limits, a source outage, budget
   exhaustion).
+- **Date Resolver:** table-driven tests for every release-type rule,
+  window boundaries, precision, conflicts and future dates (EVALUATION_FRAMEWORK §3.8).
+- **Tutor:** scripted multi-turn dialogues with the fake gateway (context
+  retention, scope switching, not-found handling, equation-fabrication
+  rejection).
 - **Live evaluation:** EVALUATION_FRAMEWORK.

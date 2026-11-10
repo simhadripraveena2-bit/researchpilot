@@ -49,7 +49,9 @@
 | 7 | **Adversarial validation** | Independent novelty searches + red-team; novelty stated as a dated search record |
 | 8 | **Idea → experiment** | Baselines, datasets, metrics, protocols and repos assessed for the user's constraints; compute only from reported data |
 | 9 | **A project that notices change** | Impact alerts when new work affects open gaps, accepted ideas or experiments |
-| 10 | **Free-source core** | Discovery, filtering, mapping and reading work without paid APIs |
+| 10 | **Honest "what's new"** | Latest Research separates new preprints, new publications, journal versions of older preprints, revisions and newly indexed older papers, with date provenance, so metadata changes never pass as new research |
+| 11 | **A tutor that knows what you're reading** | Ask & Learn answers in the terms of the paper and section on screen, cites the passage, and says when the paper doesn't answer the question |
+| 12 | **Free-source core** | Discovery, filtering, mapping and reading work without paid APIs |
 
 ## 4. Where we are deliberately weaker
 

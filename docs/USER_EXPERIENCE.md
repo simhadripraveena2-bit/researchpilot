@@ -16,7 +16,9 @@
    why relevant, use for, strengths, limitations, priority, missing.
 6. **The user decides.** One-click override with an optional reason. The
    system's suggestion stays visible next to the user's choice.
-7. **Honest gaps.** "Full text not available (publisher blocks downloads).
+7. **Help is always one click away.** Ask & Learn opens from anywhere and
+   already knows what you're looking at.
+8. **Honest gaps.** "Full text not available (publisher blocks downloads).
    Upload the PDF if you have access." — not a spinner, not a guess.
 
 ## 2. The journey bar
@@ -41,6 +43,8 @@ before LEARN and skips the primer by default.
 | Explanations | Expanded, fundamentals first | Expanded, concise | Collapsed, technical |
 | Field map | 3–6 named areas with starter papers | + relations | Communities, counts, authors, signals |
 | Comparison | 4 key columns | Main attributes | All attributes, settings, raw values |
+| Latest Research | "Read first" list with plain reasons; other tabs collapsed | + subtopic, release type, method | + dimension bands, date provenance, source coverage |
+| Ask & Learn | Intuitive style first, fundamentals, glossary links | Concise technical | Technical/mathematical first, notation, references to sections |
 
 Level can be changed per project (Settings) or per explanation ("Explain more
 simply" / "Go deeper").
@@ -70,6 +74,101 @@ simply" / "Go deeper").
 - "How was this ranked?" shows dimension bands, signals with values and
   sources, weights, prompt and model versions.
 
+## 4a. Latest Research page
+
+```
+┌ Latest Research ─────────────────────────────── [Last 7 days ▾] [Refresh] ┐
+│ Nov 3 – Nov 10 · scanned 2 h ago · arXiv ✓ Semantic Scholar ✓ OpenAlex ✓  │
+│ Crossref ⚠ partial (rate limited)                                         │
+├───────────────────────────────────────────────────────────────────────────┤
+│ This week: 23 relevant new papers · 4 Read first · 2 overlap with your     │
+│ direction · 1 challenges a paper you saved          [What's new this week]│
+├───────────────────────────────────────────────────────────────────────────┤
+│ [New research (23)] [Updates (9)] [Newly indexed (5)] [Date uncertain (3)] │
+│ Filters: subtopic ▾  method ▾  source ▾  relevance ▾  open access ▾  new ▾ │
+├───────────────────────────────────────────────────────────────────────────┤
+│ ● NEW PREPRINT · v1 submitted Nov 8 (arXiv) ⓘ          [Essential ▾]      │
+│ Title …  · Authors …  · Open access PDF ✓                                  │
+│ Subtopic: SQ2 Natural distribution shift                                   │
+│ Why it matters: … (AI explanation, quotes abstract ↗)                      │
+│ Main contribution: "…" (Reported, abstract)  Method introduced: … / Not    │
+│ stated in the abstract                                                     │
+│ What's new vs. your saved papers: extends P12 … · ⚠ Challenges P7 (quote)  │
+│ Related in your project: cites P12 · similar to P3                         │
+│ [Save] [Read later] [Dismiss ▾] [Note] [Ask about this] [Full card]        │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Tabs** map to release types. *New research* = new preprints + new
+  publications. *Updates* = revised versions + published versions of earlier
+  preprints, labelled e.g. "Journal version of a preprint from March 2026".
+  *Newly indexed* = older papers that only just appeared in a source.
+  *Date uncertain* = papers whose date couldn't be verified to the day.
+- **ⓘ date provenance** shows every date claim: type, source and retrieval
+  time, plus why the paper is in this tab.
+- **"New since last visit"** dots, and a count on the navigation item.
+- The digest is a short, cited summary (AI explanation, grounded). Each
+  sentence links to the papers it is about.
+- The page answers the user's five questions: what's new (tabs + digest),
+  what's relevant (tiers, "Read first"), what changed vs existing approaches
+  ("What's new vs. your saved papers"), any overlap or challenge (flags with
+  quotes), and what to read first (default sort).
+
+## 4b. Ask & Learn
+
+Opens as a right-hand panel from any page (and from text selection →
+**Ask**). Full history is at `/projects/:id/ask`.
+
+```
+┌ Ask & Learn ──────────────────────────────────────────────┐
+│ Context: [Reading: Paper P17 · §3.1 p.4 ✕] [Project ✕]     │
+│ Scope: (•) About this paper ( ) My project ( ) General     │
+│ Level: [Beginner ▾]                                        │
+├────────────────────────────────────────────────────────────┤
+│ You: What is message passing?                              │
+│                                                            │
+│ In this paper: message passing is the step where each atom │
+│ node updates its features from its neighbours' features    │
+│ (§3.1, p.4 ↗) [Reported]                                   │
+│ Intuition: … [AI explanation · Background — not from your  │
+│ sources]                                                   │
+│ Sources: E1 §3.1 p.4 · E2 Eq. (2) ↗                        │
+│ You may need first: graphs, node features → [Build a       │
+│ learning sequence]                                         │
+│ [Simpler] [Example] [Step by step] [Show the maths]        │
+│ [Compare with…] [How to implement] · 💾 Save · 👍 👎       │
+├────────────────────────────────────────────────────────────┤
+│ Ask a follow-up…                                     [Send]│
+└────────────────────────────────────────────────────────────┘
+```
+
+- **Context chips** show exactly what the tutor is using. Removing a chip
+  removes that context.
+- **Scope** defaults from where the panel was opened. A general question in
+  paper scope is answered from the paper first, and the UI offers "Answer
+  generally instead".
+- **Every block** has its claim badge. Sources open the PDF at the cited page
+  with the passage highlighted.
+- **Style controls** (intuitive, step by step, technical, mathematical,
+  example, code, comparison) live in a "Style" menu. The follow-up chips cover
+  the common requests.
+- **Code** blocks are labelled "AI-generated · not run".
+
+## 4c. Error and uncertainty states
+
+| Situation | What the user sees |
+|---|---|
+| A source failed or was rate-limited during a scan | Coverage line with ⚠ and "results may be incomplete"; Retry button |
+| No relevant new papers in the window | "No relevant new papers between Nov 3 and Nov 10." Plus "Try 14 days" and the scan coverage, never an empty grid without explanation |
+| Paper's date can't be verified to the day | Appears only in *Date uncertain*, with the claims we have (e.g. "Crossref: November 2026 (month only)") |
+| Sources disagree on a date | *Date uncertain* with "Sources disagree", and both claims shown |
+| Paper's release type changed after a later scan | Badge "Reclassified: now Revised version (new data from arXiv)" |
+| Method/dataset not stated in the abstract | "Not stated in the abstract" + "Full text needed" in missing information |
+| Tutor can't find the answer in the paper | First line: "Not found in the available text of this paper (abstract only / section not parsed)." Then optional background, labelled |
+| Paper equation not available | "This paper's equations aren't available as text. Select the equation in the PDF to ask about it." |
+| Tutor question unrelated to research | Short, polite redirect |
+| LLM unavailable or budget reached | Tutor and digest show "Explanations are unavailable right now"; Latest Research still shows date-verified entries with Stage A tiers |
+
 ## 5. User journeys
 
 ### 5.1 Beginner — "I don't know where to start"
@@ -86,11 +185,14 @@ Second-year undergraduate, topic "graph neural networks for drug discovery",
 | 5 | LEARN | Topic primer at beginner level; background parts labelled; main ideas linked to the surveys they come from | R1 |
 | 6 | LEARN | Field map: five named areas, each with two starter and two recent papers and a one-line description | R1 |
 | 7 | LEARN | Learning path: concepts and papers in order, each with "why this now"; progress saved | R1 |
-| 8 | UNDERSTAND | "Read with me": paper sections on the left, explanation on the right; terms underlined with glossary tooltips; "Explain more simply" / "Go deeper" | R1 |
+| 8 | UNDERSTAND | "Read with me": paper sections on the left, Ask & Learn on the right, already explaining the current section; terms underlined with glossary tooltips | R1 |
+| 8a | UNDERSTAND | Asks "What is message passing?" → answer in this paper's terms with §3.1 p.4 linked, then a labelled background intuition; clicks **Give me an example**, then **Show the maths**; Ask & Learn notes "graphs" and "node features" as prerequisites → **Build a learning sequence** adds them to the path | R1 (maths from paper equations: R2) |
+| 8b | UNDERSTAND | Saves the answer to the project as a note on the paper | R1 |
 | 9 | UNDERSTAND | Clicks an equation → symbol-by-symbol explanation quoting the paper's definitions; tiny worked example | R2 |
 | 10 | UNDERSTAND | "Try it" exercise (labelled "AI-generated, not run") | R2 |
 | 11 | COMPARE | Simple four-column table of the papers they read | R2 |
 | 12 | Return visit | "You're on step 5 of 9. Next: read section 4 of survey X." | R1 |
+| 13 | Latest Research | Sees "3 new papers this week · 1 Read first"; the card explains in plain words why it matters and what is new compared with the survey they read; clicks **Ask about this** → "Explain this paper simply" | R1 |
 
 ### 5.2 Experienced researcher — "Is there a defensible gap, and can I test it?"
 
@@ -101,14 +203,17 @@ distribution shift", **Expert**, **Find a research gap**.
 |---|---|---|---|
 | 1 | Start | Topic, Expert, Find a gap; Advanced options: year ≥ 2019, two pinned arXiv IDs, constraint "single GPU" | R1 |
 | 2 | DISCOVER | Edits objective sub-questions and raw queries; adds an exclusion | R1 |
+| 2a | Latest Research | Every Monday opens Latest Research (7 days): 23 new relevant papers; filters subtopic SQ2; one Essential preprint is flagged **Challenges P7** with the abstract passage; one entry sits under *Updates* as a v3 revision of an older baseline, not as new work; saves two, dismisses five ("wrong topic") | R1 |
 | 3 | FILTER | Dense triage table: tiers, five dimension bands, role tags; sorts by methodological usefulness; overrides 12 items with reasons; accepts an objective suggestion ("exclude domain adaptation with target labels?") | R1 |
 | 4 | UNDERSTAND | Field map with communities and relations; starts full-text analysis for the 80 included papers; sees 62 retrieved and 18 unavailable with reasons; uploads 4 PDFs | R1 map / R2 analysis |
+| 4a | UNDERSTAND | In Ask & Learn, technical style: "How does the entropy objective in §3 differ from the one in P7?" → answer grounded in both papers' sections, with equations from LaTeX source (R2); a code-oriented follow-up gives pseudocode labelled "not run" | R1 / R2 |
 | 5 | COMPARE | Comparison table (method family × adaptation signal × datasets × results × limitations); evolution view; conflict flags with comparability checks | R2 |
 | 6 | FILTER (resources) | Dataset and metric cards: usage counts, licences, saturation, known criticisms; marks two benchmarks Essential | R2 |
 | 7 | INVESTIGATE | Gap candidates with signals; each with **evidence for** and **evidence against** (overlap and contradiction probes) | R3 |
 | 8 | VALIDATE | Ideas with falsification criteria, novelty record ("no close match in 14 searches across 3 sources, 2026-11-10"), red-team objections; shortlists two, rejects one with a reason | R3 |
 | 9 | EXPERIMENT | Baselines, datasets, metrics and repos with cards; protocols from papers; suggested ablations (AI-labelled); compute estimate from reported hardware only | R4 |
 | 10 | PROPOSE | Proposal draft with validated citations; LaTeX + BibTeX export | R4 |
+| 10a | Monitoring | Turns on weekly scheduled scans for Latest Research | R5 |
 | 11 | Months later | Impact alert: a new paper overlaps accepted idea H2, with the overlapping passage | R5 |
 
 ### 5.3 Intermediate — master's literature review
@@ -132,6 +237,8 @@ report). The primer is short and the glossary tooltips are on.
 | Saved items & notes | `/saved` | R1 |
 | Project history & decisions | `/projects/:id/history` | R1 |
 | Ad-hoc search | `/search` | R1 |
+| **Latest Research** | `/projects/:id/latest` | R1 |
+| **Ask & Learn** (history; panel available everywhere) | `/projects/:id/ask` | R1 |
 | Compare (tables, evolution, conflicts) | `/projects/:id/compare` | R2 |
 | Datasets, benchmarks, metrics | `/projects/:id/resources` | R2 |
 | Gap explorer | `/projects/:id/gaps` | R3 |
@@ -148,7 +255,23 @@ report). The primer is short and the glossary tooltips are on.
 the page with the quote highlighted), `HowRankedPanel`, `ExplainPanel` (level
 switch, streaming), `GlossaryTooltip`, `LearningPath`, `FieldMap`
 (Cytoscape), `ReadWithMe`, `ComparisonTable`, `CoverageNotice`,
-`MissingInfoList`, `FeedbackControls`, `ExportMenu`.
+`MissingInfoList`, `FeedbackControls`, `ExportMenu`, `LatestHeader` (window
+picker, coverage), `ReleaseTypeTabs`, `ReleaseBadge` + `DateProvenancePopover`,
+`LatestEntryCard`, `RelatedInProject`, `DigestPanel`, `AskPanel`,
+`ContextChips`, `ScopeSwitch`, `FollowUpChips`, `StyleMenu`, `AnswerBlock`,
+`SourcesList`, `PrerequisiteOffer`, `SaveToProject`.
+
+## 7a. Navigation
+
+```
+Home · Projects ▸ [Overview · Latest Research (•3) · Filter · Learn · Map · Papers ·
+                   Compare · Gaps · Ideas · Experiments · Proposal · History]
+Global: Search · Ask & Learn (panel, shortcut "?") · Saved · Settings
+```
+
+Latest Research is project-level navigation, not a journey stage. It feeds
+DISCOVER and, through overlap/challenge flags, VALIDATE. Ask & Learn sits
+across LEARN and UNDERSTAND and is reachable from every stage.
 
 ## 8. Language and accessibility rules
 
@@ -157,6 +280,6 @@ switch, streaming), `GlossaryTooltip`, `LearningPath`, `FieldMap`
   Stage B.
 - Badges and tiers use both text and colour; contrast meets WCAG 2.1 AA.
 - Keyboard: j/k to move, Enter to open, o to override, s to save, x to
-  exclude.
+  exclude, ? to open Ask & Learn, l to mark read later.
 - Long tasks: first progress message within 2 s, then an update at least
   every 10 s.

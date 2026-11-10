@@ -29,6 +29,9 @@ research_items (supertype: id, item_type)
    └── ideas (hypotheses)
 
 assessments (item × objective) ─< assessment_signals, recommendation_cards
+papers ─< paper_dates, paper_versions          (date provenance)
+projects ─< latest_scans ─< latest_scan_entries (Latest Research)
+projects ─< tutor_conversations ─< tutor_messages ─< tutor_message_evidence (Ask & Learn)
 claims ─< claim_evidence, claim_verifications
 domain_events (outbox)
 ```
@@ -65,14 +68,16 @@ real referential integrity across item types.
 |---|---|---|
 | `source_records` | `id, source enum, source_entity_id, endpoint, payload jsonb, payload_sha256, fetched_at, UNIQUE(source, source_entity_id, payload_sha256)` | R1 |
 | `http_cache` | `key PK, source, url, status, headers jsonb, body, fetched_at, expires_at` | R1 |
-| `search_queries` | `id, run_id, source, query_text, params jsonb, origin enum(user, planner, rule_expansion, gap_overlap_probe, gap_contradiction_probe, novelty_probe, monitor), rationale, status, result_count, total_available, cache_hit, error jsonb, executed_at` | R1 |
+| `search_queries` | `id, run_id, source, query_text, params jsonb, origin enum(user, planner, rule_expansion, latest_scan, gap_overlap_probe, gap_contradiction_probe, novelty_probe, monitor), rationale, status, result_count, total_available, cache_hit, error jsonb, executed_at` | R1 |
 | `search_results` | `query_id, item_id (paper), rank, source_record_id, PK(query_id, item_id)` | R1 |
 
 ## 5. Papers, documents and evidence
 
 | Table | Key columns | Rel. |
 |---|---|---|
-| `papers` | `id FK research_items, title, normalized_title (trgm index), abstract, abstract_status enum(available, unavailable, restricted), publication_date, date_precision, first_available_date, year, venue, publication_type, is_survey bool, is_open_access, language, fields_of_study text[], citation_counts jsonb ({source: {count, as_of}}), field_sources jsonb, metadata_level enum(stub, metadata, full_text), embedding vector(n) null` | R1 |
+| `papers` | `id FK research_items, title, normalized_title (trgm index), abstract, abstract_status enum(available, unavailable, restricted), publication_date, date_precision, first_available_date, year, venue, publication_type, is_survey bool, is_open_access, language, fields_of_study text[], citation_counts jsonb ({source: {count, as_of}}), field_sources jsonb, metadata_level enum(stub, metadata, full_text), embedding vector(n) null, first_public_date date null, first_public_date_type text null (e.g. preprint_v1_submitted, published_online), first_public_date_claim_id FK paper_dates null, date_confidence enum(verified, single_source, conflicting, uncertain)` | R1 |
+| `paper_dates` | `id, paper_id, date_type enum(preprint_v1_submitted, version_submitted, latest_version_submitted, published_online, published_print, issued, openalex_publication_date, s2_publication_date, index_created, metadata_created, metadata_deposited, metadata_indexed, metadata_updated, first_seen_by_researchpilot), value timestamptz, precision enum(day, month, year), version int null, authoritative bool, source enum, source_record_id FK, retrieved_at, flags text[] (future_date, conflicting)` — **one row per date claim; never overwritten** | R1 |
+| `paper_versions` | `paper_id, version int, submitted_at, source, source_record_id, PK(paper_id, version)` (arXiv versions) | R1 |
 | `paper_identifiers` | `paper_id, scheme enum(doi, arxiv, s2_paper, s2_corpus, openalex, pmid, pmcid, dblp, acl), value, version, source, UNIQUE(scheme, value)` — **dedup guard** | R1 |
 | `paper_merge_events` | `id, surviving_id, merged_id, method enum(identifier, fuzzy, manual), evidence jsonb, created_at, reverted_at` | R1 |
 | `possible_duplicates` | `paper_a, paper_b, similarity, reason, status enum(open, merged, dismissed)` | R1 |
@@ -110,10 +115,13 @@ real referential integrity across item types.
 
 | Table | Key columns | Rel. |
 |---|---|---|
-| `explanations` | `id, subject enum(item, section, equation, project_topic), item_id null, section_id null, equation_id null, project_id null, level, content jsonb (blocks referencing claim ids), model, prompt_version, input_hash, status, created_at`, CHECK exactly one subject reference, UNIQUE(subject reference, level, prompt_version, input_hash) | R1 |
+| `explanations` | `id, style enum(intuitive, step_by_step, technical, mathematical, practical_example, code, comparison) default intuitive, subject enum(item, section, equation, project_topic), item_id null, section_id null, equation_id null, project_id null, level, content jsonb (blocks referencing claim ids), model, prompt_version, input_hash, status, created_at`, CHECK exactly one subject reference, UNIQUE(subject reference, level, style, prompt_version, input_hash) — the cache for Ask & Learn "canonical asks" | R1 |
 | `glossary_terms` | `id, project_id, entity_id (term/concept), salience, first_paper_id` | R1 |
 | `concept_prerequisites` | `concept_id, prerequisite_id, basis enum(ai_interpretation, paper_evidence), evidence_span_id null, confidence` | R1 |
 | `learning_paths` / `learning_path_items` | `paths(id, project_id, objective_id, level, version)`; `items(path_id, ordinal, item_type enum(concept, paper, section, exercise), item_id null, section_id null, exercise_id null, rationale, status enum(todo, done, skipped))` | R1 |
+| `tutor_conversations` | `id, project_id, title, anchor_item_id null, anchor_section_id null, anchor_equation_id null, anchor_selection jsonb null (text + page + document), level, summary text (rolling summary of older turns), summary_through_message_id, created_at, updated_at, deleted_at` | R1 |
+| `tutor_messages` | `id, conversation_id, ordinal, role enum(user, assistant), text (user) / content jsonb (assistant: blocks referencing claim ids), level, style, intent enum(ask, simpler, example, step_by_step, show_math, compare, implement, prerequisites), scope enum(about_this_paper, about_project, general), view_context jsonb (route, item, section, page, selection), answer_status enum(grounded, partially_grounded, background_only, not_found_in_sources, refused, error), missing_prerequisites jsonb, explanation_id null (if served from cache), model, prompt_version, created_at` | R1 |
+| `tutor_message_evidence` | `message_id, handle (E1…), evidence_span_id null, chunk_id null, equation_id null, item_id null, retrieval_rank, retrieval_score, used bool` | R1 |
 | `exercises` | `id, project_id, item_id, level, language, prompt, starter_code, solution, expected_output, verification_status enum(not_run, passed, failed)` | R2 |
 
 ## 9. Field map
@@ -167,13 +175,25 @@ real referential integrity across item types.
 
 | Table | Key columns | Rel. |
 |---|---|---|
-| `project_items` | `project_id, item_id, inclusion enum(candidate, included, excluded), exclusion_reason, discovered_via enum(search, reference, citation, recommendation, manual, probe, monitor), discovered_in_run_id, discovered_from_item_id, reading_status enum(unread, to_read, reading, read, skipped), last_section_id, is_saved, tags text[], first_seen_at, PK(project_id, item_id)` | R1 |
-| `notes` | `id, project_id, item_id null, section_id null, body, created_at` | R1 |
+| `project_items` | `project_id, item_id, inclusion enum(candidate, included, excluded), exclusion_reason, dismissed_at null, dismiss_reason null, discovered_via enum(search, reference, citation, recommendation, manual, probe, latest_scan, monitor), discovered_in_run_id, discovered_from_item_id, reading_status enum(unread, to_read, reading, read, skipped), last_section_id, is_saved, tags text[], first_seen_at, PK(project_id, item_id)` | R1 |
+| `notes` | `id, project_id, item_id null, section_id null, tutor_message_id null, body, created_at` (saved Ask & Learn answers are notes linked to the message) | R1 |
 | `decisions` | `id, project_id, item_id null, type enum(inclusion, override, idea_status, objective_change, other), summary, rationale, ref_id, created_at` | R1 |
 | `reports` | `id, project_id, run_id, type enum(discovery, literature_review, proposal), version, content jsonb, rendered_markdown, item_set_hash, created_at` | R1 |
 | `domain_events` | `id bigserial, type, item_id null, project_id null, payload jsonb, created_at, processed_at, attempts` | R0 |
 | `monitors` | `id, project_id, schedule, query_ids, last_run_at, enabled` | R5 |
 | `impact_alerts` | `id, project_id, new_item_id, target_item_id (gap/idea/experiment-linked idea), judgement jsonb, evidence_span_ids, status enum(new, dismissed, acknowledged), created_at` | R5 |
+
+## 13a. Latest Research
+
+| Table | Key columns | Rel. |
+|---|---|---|
+| `latest_scans` | `id, project_id, run_id, objective_id, window_start, window_end, fetch_start (window_start − 3 days overlap), sources text[], arxiv_categories text[], status, coverage jsonb (per source: queried, returned, failed, budget_exhausted), counts jsonb (by release type, tier), created_at` | R1 |
+| `latest_scan_entries` | `scan_id, paper_id, release_type enum(new_preprint, new_publication, published_version_of_preprint, revised_version, newly_indexed_older, date_uncertain), release_event_date, release_event_claim_id FK paper_dates, sub_question_keys text[], direction_ids uuid[], matched_query_ids uuid[], related_item_ids jsonb ([{item_id, link: cites \| similar, score}]), relation_to_project jsonb, first_seen_in_scan bool, PK(scan_id, paper_id)` | R1 |
+| `latest_views` | `project_id, user_id, last_viewed_at` (for "new since last visit") | R1 |
+
+User actions on entries (save, dismiss, read later, notes, overrides) are
+stored in the shared tables (`project_items`, `notes`, `overrides`), not on
+the scan. A paper's state is therefore consistent everywhere in the app.
 
 ## 14. Indexes and constraints (main ones)
 
@@ -187,6 +207,10 @@ real referential integrity across item types.
 - `citations(cited_id)`; `evidence_spans(paper_id)`;
   `reported_results(dataset_id, metric_id)`.
 - `domain_events(processed_at) WHERE processed_at IS NULL`.
+- `paper_dates(paper_id, date_type)`; `papers(first_public_date)`.
+- `latest_scan_entries(scan_id, release_type)`; `latest_scans(project_id, created_at DESC)`.
+- `tutor_messages(conversation_id, ordinal)`; `tutor_conversations(project_id, updated_at DESC)`.
+- `papers.first_public_date` is only ever set together with `first_public_date_claim_id`. The claim must be authoritative unless `date_confidence = 'single_source'`, enforced by a trigger. A derived date is never written without a supporting claim.
 
 ## 15. Data retention and reproducibility
 

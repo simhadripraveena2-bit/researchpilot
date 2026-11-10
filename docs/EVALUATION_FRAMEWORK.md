@@ -16,6 +16,8 @@ gates each release must pass.
 | Comparison & conflicts | Are relations and conflicts correct and comparable? | R2 |
 | Gaps & ideas | Are gaps real, probes adequate, ideas defensible? | R3 |
 | Experiment resources | Are baselines, datasets, metrics and compute statements correct? | R4 |
+| **Latest Research** | Correct windows, release types and dates; no duplicates; good recall and relevance; correct provenance | R1 |
+| **Ask & Learn** | Accurate, level-appropriate, context-retaining, grounded, correctly attributed, honest when evidence is missing | R1+ |
 | UX | Can beginners complete the journey; do experts trust it? | R1+ |
 
 ## 2. Gold datasets
@@ -32,6 +34,9 @@ data store (larger). They record annotator, date and guidelines version.
 | **G-EXTRACT** | OA papers with hand-labelled datasets, metrics, results tuples, limitations, assumptions, protocols, compute | ≥ 40 papers | team | R2 |
 | **G-EXPLAIN** | Subjects (sections, equations, concepts) with reference points to cover per level | ~150 subjects × 3 levels | domain experts + educators | R1/R2 |
 | **G-STRUCTURE** | Expert field outlines and prerequisite orderings per topic | per topic | experts | R1 |
+| **G-LATEST-DATES** | Frozen source responses (arXiv, Crossref, OpenAlex, S2) for ≥ 400 papers, covering: new v1 preprints, revisions (v2+) of old papers, journal versions of old preprints, new journal articles without preprints, older papers newly indexed, metadata-only updates (Crossref deposited/indexed, OpenAlex updated), month/year-precision dates, conflicting dates, future dates, window-boundary cases (exact start/end, timezones). Each labelled with true first public date, date type and expected release type for given windows | ≥ 400 papers | team (verified against arXiv abstract pages and publisher pages) | R1 |
+| **G-LATEST-RELEVANCE** | For 5 topics × 2 weeks: all papers in the mapped arXiv categories + other-source candidates for the window, with expert labels (relevant to objective: 0–3; sub-question) | ~5 × 2 × 300 | domain experts | R1 |
+| **G-TUTOR** | Per topic: (a) concept questions at 3 levels; (b) paper-specific questions with gold answer spans; (c) equation questions with gold symbol definitions (arXiv LaTeX papers); (d) algorithm/architecture questions; (e) **unanswerable-from-paper** questions (answer not in the paper or only abstract available); (f) scripted multi-turn dialogues with follow-ups ("simpler", "example", "show the maths", pronoun references, scope switches); (g) anchored questions (e.g. "What is message passing?" while reading a GNN paper) with the expected paper-specific meaning | ≥ 300 questions + 50 dialogues | domain experts + educators | R1 (a,b,d,e,f,g) / R2 (c) |
 | **G-GAPS** | Expert-rated gap candidates and ideas (real / already addressed / weak), with known prior work | ~20 per topic | senior researchers | R3 |
 
 Annotation guidelines are written before annotation. Inter-annotator
@@ -65,6 +70,8 @@ reported. Labels with agreement below 0.6 are revised before use.
 - **Numbers in reports/cards not traceable** to `reported_results`, metadata or computed statistics: 0.
 - **Background explanations containing paper-specific claims:** 0 in the adversarial validator suite.
 - **Banned novelty phrasings** ("novel", "first ever", "guaranteed") in idea outputs: 0, by automated scan.
+- **Fabricated or mis-typed dates** on Latest Research: 0 (§3.8).
+- **Fabricated equations, quotations or paper claims** in Ask & Learn: 0 (§3.9).
 
 ### 3.4 Explanations
 Human rubric (1–5) per explanation, rated by an annotator at the target level
@@ -99,14 +106,57 @@ rate ≥ 0.95 of raw outputs.
 - Red-team usefulness (expert 1–5): ≥ 3.5; at least one substantive objection
   per idea.
 
-### 3.8 UX
+### 3.8 Latest Research
+| Test | Metric / rule | Target |
+|---|---|---|
+| Window filtering | On G-LATEST-DATES, entries in *New research* for a window are exactly those whose true first public date (day precision) falls in `[start, end)` | precision = recall = 1.0 on day-precision cases; boundary cases (exact start/end, UTC vs local) pass |
+| Revisions | Revised versions (vN > 1 in window, v1 before) never appear as New preprint | 0 violations |
+| Metadata-only changes | Papers whose only in-window dates are metadata dates never appear in *New research* or *Updates* | 0 violations |
+| Journal versions | Published versions of earlier preprints are classified as such and show the preprint date | ≥ 0.98 accuracy |
+| Newly indexed | Older papers first indexed in window go to *Newly indexed* | ≥ 0.95 accuracy (depends on OpenAlex created-date availability; fallback measured separately) |
+| Uncertain dates | Month/year-precision or conflicting dates go to *Date uncertain* | 1.0 |
+| **No fabricated dates** | Every displayed date equals a value in a stored source record of the stated type and source (automated audit over all entries) | 0 violations (release-blocking) |
+| Provenance | Every entry shows source(s), date type and retrieval timestamp | 100% |
+| Duplicates | Same work from several providers (incl. arXiv + DOI versions) shows once | 0 duplicate entries; dedup precision ≥ 0.99 |
+| Recall | Share of expert-relevant papers (G-LATEST-RELEVANCE, label ≥ 2) present in the scan | ≥ 0.90 for arXiv-covered fields; reported per field otherwise |
+| Relevance | nDCG@10 of "Read first" ordering vs expert labels; Essential precision | ≥ 0.70; ≥ 0.85 |
+| Recency-not-priority | Shuffling dates within the window does not change "Read first" order (property test) | must pass |
+| Contribution statements | Abstract-mode contribution/method/dataset statements whose quote verifies against the abstract; "not stated" used when absent (expert check) | 100% verified; ≥ 0.9 expert agreement |
+| Related-paper links | "cites" links are backed by citation records; "similar" links are labelled as similarity | 100% |
+| Overlap/challenge flags | Expert agreement on a sample of flags | ≥ 0.8 precision |
+
+### 3.9 Ask & Learn
+| Test | Metric / rule | Target |
+|---|---|---|
+| Explanation accuracy | Expert correctness rubric (1–5) on G-TUTOR (a, b, d) | mean ≥ 4.5; no answer ≤ 2 |
+| Difficulty level | Annotator at the target level rates level fit (1–5); and the same question at 3 levels is ordered correctly by independent raters | ≥ 4.0; correct ordering ≥ 0.9 |
+| Follow-up context retention | Scripted dialogues: follow-ups resolve references to earlier turns and keep the anchor | ≥ 0.9 of turns |
+| Anchored meaning | For anchored questions (g), the answer gives the paper-specific meaning first, citing the paper | ≥ 0.9 |
+| Paper grounding | Share of paper-scope answers whose paper-specific statements are grounded in retrieved evidence | ≥ 0.95 |
+| Source attribution | Cited passage actually supports the statement (expert check) | precision ≥ 0.95 |
+| Uncertainty when evidence is missing | On unanswerable questions (e), the answer states "not found in sources" before any background, and gives no paper-attributed claim | ≥ 0.95; 0 fabricated paper claims |
+| Background labelling | Statements not supported by project sources carry the background label | 100% (validator) + ≥ 0.95 (expert sample) |
+| Mathematical explanations | Expert rubric for correctness and step clarity (G-TUTOR c, R2) | ≥ 4.5 correctness, ≥ 4.0 clarity |
+| **No fabricated equations/quotes** | Paper-attributed equations match extracted equations or user selection; quotes verify | 0 violations (release-blocking) |
+| Technical explanations and pseudocode | Expert rubric (correctness, completeness) | ≥ 4.3 |
+| Style compliance | The requested style is followed (rater check) | ≥ 0.9 |
+| Prerequisite detection | Expert agreement that listed prerequisites are needed and sufficient | ≥ 0.8 |
+| Latency | Time to first streamed token | p50 ≤ 3 s, p95 ≤ 8 s |
+
+### 3.10 UX
 - Beginner task completion without help (R1 journey steps 1–8): ≥ 4 of 5
   participants.
 - Post-task comprehension check (name the field's main areas, explain one
   key concept): ≥ 4 of 5.
 - Expert trust survey (would rely on Essential list; found errors logged).
 - Online metrics (with consent): override rate per tier, "wrong" statement
-  reports per 100 cards, time to first useful paper.
+  reports per 100 cards, time to first useful paper, Latest Research
+  save/dismiss rates per tier, tutor "unclear"/"wrong" rates and follow-up
+  depth.
+- Usability tasks for the two new features: a beginner answers "what's new
+  this week that matters to me?" from Latest Research, and resolves a
+  confusing term while reading using Ask & Learn, both without help (≥ 4 of
+  5).
 
 ## 4. How evaluation runs
 
