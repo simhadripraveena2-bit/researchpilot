@@ -1,8 +1,8 @@
 """PostgreSQL GraphService (R0-R1 backend; degraded fallback from R2).
 
-R0 has no relationship tables yet, so graphs contain nodes only. R1 adds the citation graph,
-paper versions, 1-hop neighbours and basic related papers. Multi-hop paths are an R2
-(Neo4j) capability and are refused with ``capability_unavailable``.
+R0 has no relationship tables yet: it serves only the project's own nodes (``subgraph``) and
+advertises no capabilities. Neighbour traversal (R1) and multi-hop paths (R2, Neo4j) are
+refused with ``capability_unavailable``, never approximated.
 """
 
 from __future__ import annotations
@@ -12,7 +12,7 @@ import uuid
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from researchpilot.core.errors import CapabilityUnavailable, NotFound
+from researchpilot.core.errors import CapabilityUnavailable
 from researchpilot.graph.service import GraphScope
 from researchpilot.graph.view import (
     AVAILABLE_FROM,
@@ -22,8 +22,6 @@ from researchpilot.graph.view import (
     GraphView,
 )
 
-_VISIBLE = "(scope_project_id IS NULL OR scope_project_id = :project)"
-
 
 class PostgresGraphService:
     backend = "postgres"
@@ -32,8 +30,9 @@ class PostgresGraphService:
         self._sessions = sessions
 
     def capabilities(self) -> frozenset[GraphCapability]:
-        # R0: node views only; R1 adds citation graph, versions, neighbours, related papers.
-        return frozenset({GraphCapability.NEIGHBORS})
+        # R0 advertises nothing: only the project subgraph view exists. R1 adds the citation
+        # graph, paper versions, direct (1-hop) neighbours and basic related papers.
+        return frozenset()
 
     def _require(self, capability: GraphCapability) -> None:
         if capability not in self.capabilities():
@@ -66,21 +65,9 @@ class PostgresGraphService:
     async def neighbors(
         self, uid: uuid.UUID, scope: GraphScope, policy: AssertionPolicy
     ) -> GraphView:
+        """Direct-neighbour traversal is an R1 capability (no relationship sources exist in R0)."""
         self._require(GraphCapability.NEIGHBORS)
-        async with self._sessions() as session:
-            row = (
-                await session.execute(
-                    sa.text(
-                        f"SELECT uid, kind, scope_project_id FROM graph_nodes WHERE uid = :uid "  # noqa: S608
-                        f"AND {_VISIBLE}"
-                    ),
-                    {"uid": uid, "project": scope.project_id},
-                )
-            ).first()
-        if row is None:  # missing, or another project's private node: indistinguishable
-            raise NotFound("graph node not found")
-        node = GraphNodeView(uid=row.uid, kind=row.kind, scope=row.scope_project_id)
-        return GraphView(nodes=[node], edges=[], backend=self.backend, assertion_policy=policy)
+        raise AssertionError("unreachable")  # pragma: no cover
 
     async def paths(
         self,

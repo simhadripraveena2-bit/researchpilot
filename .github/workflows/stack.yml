@@ -2,8 +2,7 @@ name: stack
 
 # R0-1: the whole local stack builds and becomes healthy from a clean checkout.
 on:
-  push:
-    branches: [main]
+  push:  # every branch (the repository's development branch is not main)
   pull_request:
   workflow_dispatch:
 

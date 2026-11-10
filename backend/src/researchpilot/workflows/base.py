@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 from researchpilot.db.session import session_scope
 from researchpilot.llm.gateway import LLMGateway
 from researchpilot.runs.events import record_event
+from researchpilot.runs.service import RunCancelled, is_cancelled
 
 
 @dataclass
@@ -21,9 +22,18 @@ class WorkflowDeps:
     sessions: async_sessionmaker[AsyncSession]
     llm: LLMGateway
 
-    async def event(self, type_: str, message: str, **data: Any) -> None:
-        """Progress messages are committed immediately so the UI sees them live."""
+    async def ensure_not_cancelled(self) -> None:
+        """Cooperative cancellation point: stop the workflow if its run was cancelled."""
         async with session_scope(self.sessions) as session:
+            if await is_cancelled(session, self.run_id):
+                raise RunCancelled(str(self.run_id))
+
+    async def event(self, type_: str, message: str, **data: Any) -> None:
+        """Progress messages are committed immediately so the UI sees them live. Every event is
+        also a cancellation point."""
+        async with session_scope(self.sessions) as session:
+            if await is_cancelled(session, self.run_id):
+                raise RunCancelled(str(self.run_id))
             await record_event(session, self.run_id, type_, message, data=data)
 
 

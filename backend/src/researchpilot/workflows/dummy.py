@@ -34,7 +34,8 @@ def build(deps: WorkflowDeps) -> StateGraph[DummyState]:
         await deps.event("step.started", "Preparing a short test run")
         pause = float(deps.config.get("pause_seconds", 0))
         if pause:
-            await asyncio.sleep(pause)  # used by durability tests to interrupt mid-step
+            await asyncio.sleep(pause)  # used by durability and cancellation tests
+        await deps.ensure_not_cancelled()
         result = await deps.llm.generate_structured(
             "dummy_echo", ECHO_PROMPT, {"text": state["text"]}, EchoOutput
         )
@@ -57,6 +58,7 @@ def build(deps: WorkflowDeps) -> StateGraph[DummyState]:
         return {"decision": decision}
 
     async def finish(state: DummyState) -> DummyState:
+        await deps.ensure_not_cancelled()
         rejected = state.get("decision", {}).get("status") == "rejected"
         return {"outcome": "stopped" if rejected else "completed"}
 

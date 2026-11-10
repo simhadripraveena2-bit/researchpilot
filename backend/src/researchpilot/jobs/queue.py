@@ -44,7 +44,9 @@ async def enqueue(
 
 async def claim(session: AsyncSession, worker_id: str, stale_after: timedelta) -> ClaimedJob | None:
     """Claim one runnable job: queued and due, or running with a stale heartbeat (its worker
-    died). Reclaiming a stale job counts as a new attempt."""
+    died) **and attempts left**. Reclaiming a stale job counts as a new attempt, so repeated
+    hard crashes cannot bypass ``max_attempts``; exhausted stale jobs are handled by
+    ``fail_exhausted_stale``."""
     row = (
         await session.execute(
             sa.text(
@@ -54,7 +56,8 @@ async def claim(session: AsyncSession, worker_id: str, stale_after: timedelta) -
                 WHERE id = (
                     SELECT id FROM jobs
                     WHERE (status = 'queued' AND run_after <= now())
-                       OR (status = 'running' AND heartbeat_at < now() - :stale)
+                       OR (status = 'running' AND heartbeat_at < now() - :stale
+                           AND attempts < max_attempts)
                     ORDER BY run_after, created_at
                     FOR UPDATE SKIP LOCKED
                     LIMIT 1
@@ -68,6 +71,34 @@ async def claim(session: AsyncSession, worker_id: str, stale_after: timedelta) -
     if row is None:
         return None
     return ClaimedJob(row.id, row.kind, dict(row.payload), row.attempts, row.max_attempts)
+
+
+async def fail_exhausted_stale(
+    session: AsyncSession, stale_after: timedelta
+) -> list[dict[str, Any]]:
+    """Mark running jobs whose worker died on their last allowed attempt as failed.
+
+    Returns their payloads so the caller can move associated runs to a terminal state.
+    """
+    rows = (
+        await session.execute(
+            sa.text(
+                """
+                UPDATE jobs SET status = 'failed', finished_at = now(), locked_by = NULL,
+                       last_error = 'worker stopped responding; retry limit reached'
+                WHERE id IN (
+                    SELECT id FROM jobs
+                    WHERE status = 'running' AND heartbeat_at < now() - :stale
+                      AND attempts >= max_attempts
+                    FOR UPDATE SKIP LOCKED
+                )
+                RETURNING payload
+                """
+            ),
+            {"stale": stale_after},
+        )
+    ).all()
+    return [dict(r.payload) for r in rows]
 
 
 async def heartbeat(session: AsyncSession, job_id: uuid.UUID, worker_id: str) -> bool:

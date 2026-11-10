@@ -11,7 +11,7 @@ import os
 import socket
 import traceback
 import uuid
-from collections.abc import Awaitable, Callable
+from collections.abc import Awaitable, Callable, Coroutine
 from datetime import timedelta
 from typing import Any
 
@@ -31,7 +31,7 @@ from researchpilot.llm.gateway import LLMGateway
 from researchpilot.runs import service
 from researchpilot.workflows.runner import WorkflowRunner
 
-JobHandler = Callable[[queue.ClaimedJob], Awaitable[Any]]
+JobHandler = Callable[[queue.ClaimedJob], Coroutine[Any, Any, Any]]
 
 
 def libpq_url(sqlalchemy_url: str) -> str:
@@ -91,27 +91,56 @@ class Worker:
                     await asyncio.wait_for(stop.wait(), self._settings.worker_poll_seconds)
 
     async def tick(self) -> bool:
-        """One unit of work: dispatch outbox events, then run at most one job."""
+        """One unit of work: dispatch outbox events, fail exhausted stale jobs, then run at
+        most one job."""
         dispatched = await self._dispatcher.dispatch_once()
+        stale = timedelta(seconds=self._settings.job_stale_after_seconds)
+        failed = await self._fail_exhausted(stale)
         async with session_scope(self._sessions) as session:
-            job = await queue.claim(
-                session, self.id, timedelta(seconds=self._settings.job_stale_after_seconds)
-            )
+            job = await queue.claim(session, self.id, stale)
         if job is None:
-            return dispatched > 0
+            return dispatched > 0 or failed > 0
         await self._process(job)
         return True
+
+    async def _fail_exhausted(self, stale: timedelta) -> int:
+        """Jobs whose worker died on their last attempt become failed, and so do their runs
+        (unless the run already finished, e.g. was cancelled)."""
+        async with session_scope(self._sessions) as session:
+            payloads = await queue.fail_exhausted_stale(session, stale)
+            for payload in payloads:
+                if "run_id" in payload:
+                    await service.finish(
+                        session,
+                        uuid.UUID(payload["run_id"]),
+                        RunStatus.FAILED,
+                        "The run stopped because the worker processing it stopped responding",
+                        error={"type": "WorkerLost", "detail": "retry limit reached"},
+                    )
+        for payload in payloads:
+            self._log.error("job.exhausted_after_worker_loss", payload=payload)
+        return len(payloads)
 
     async def _process(self, job: queue.ClaimedJob) -> None:
         log = self._log.bind(job_id=str(job.id), kind=job.kind, attempt=job.attempts)
         handler = self._handlers.get(job.kind)
-        beat = asyncio.create_task(self._heartbeat(job))
+        cancelled_run = asyncio.Event()
+        work: asyncio.Task[Any] | None = None
+        beat: asyncio.Task[None] | None = None
         try:
             if handler is None:
                 raise RuntimeError(f"no handler for job kind {job.kind!r}")
-            await handler(job)
+            work = asyncio.create_task(handler(job))
+            beat = asyncio.create_task(self._heartbeat(job, work, cancelled_run))
+            try:
+                await asyncio.shield(work)
+            except asyncio.CancelledError:
+                if not cancelled_run.is_set():
+                    work.cancel()  # worker shutting down: the job stays locked and is
+                    raise  # reclaimed by another worker once its heartbeat is stale
+                log.info("job.stopped_because_run_cancelled")
         except asyncio.CancelledError:
-            raise  # worker shutting down: leave the job locked; it is reclaimed when stale
+            raise
         except Exception as exc:
             log.error("job.failed", error=str(exc), trace=traceback.format_exc())
             async with session_scope(self._sessions) as session:
@@ -129,17 +158,26 @@ class Worker:
                 await queue.complete(session, job.id, self.id)
             log.info("job.succeeded")
         finally:
-            beat.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await beat
+            if beat is not None:
+                beat.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await beat
 
-    async def _heartbeat(self, job: queue.ClaimedJob) -> None:
-        while True:
+    async def _heartbeat(
+        self, job: queue.ClaimedJob, work: asyncio.Task[Any], cancelled_run: asyncio.Event
+    ) -> None:
+        """Keeps the job lock alive and stops the job promptly if its run is cancelled."""
+        run_id = uuid.UUID(job.payload["run_id"]) if "run_id" in job.payload else None
+        while not work.done():
             await asyncio.sleep(self._settings.job_heartbeat_seconds)
             async with session_scope(self._sessions) as session:
                 await queue.heartbeat(session, job.id, self.id)
-                if "run_id" in job.payload:
-                    await service.touch(session, uuid.UUID(job.payload["run_id"]))
+                if run_id is not None:
+                    await service.touch(session, run_id)
+                    if await service.is_cancelled(session, run_id):
+                        cancelled_run.set()
+                        work.cancel()
+                        return
 
 
 def register_consumers(dispatcher: Dispatcher) -> None:
