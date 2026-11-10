@@ -98,7 +98,8 @@ services:
 
 secrets:
   extra_ca:
-    file: ${EXTRA_CA_FILE:-/dev/null}
+    # Empty by default; inside the project so the builder may read it without --allow.
+    file: ${EXTRA_CA_FILE:-./docker/no-extra-ca.crt}
 
 volumes:
   pgdata:
