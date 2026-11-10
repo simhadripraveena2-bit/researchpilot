@@ -88,6 +88,11 @@ services:
     # PDF structure extraction, used from R1 (milestone M1d). CPU image, pinned version.
     image: lfoppiano/grobid:0.8.1
     ports: ["127.0.0.1:8070:8070"]
+    environment:
+      # The image's JDK crashes at startup reading some cgroup v2 layouts (e.g. GitHub's
+      # ubuntu runners: NullPointerException in CgroupV2Subsystem). GROBID does not need the
+      # JVM's container detection, so turn it off.
+      JAVA_TOOL_OPTIONS: "-XX:-UseContainerSupport"
     healthcheck:
       # The image has no curl/wget; use bash's /dev/tcp to call the isalive endpoint.
       test: ["CMD", "bash", "-c", "exec 3<>/dev/tcp/127.0.0.1/8070 && printf 'GET /api/isalive HTTP/1.0\\r\\n\\r\\n' >&3 && grep -q true <&3"]
