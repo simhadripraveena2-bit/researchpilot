@@ -1,0 +1,28 @@
+# Task -> provider/model configuration (ARCHITECTURE §4.2).
+# PROVISIONAL: decision D1 (LLM provider and models) is not yet approved. Every result and
+# run manifest records `provisional: true` while this flag is set.
+version: 1
+provisional: true
+defaults:
+  provider: anthropic
+  model: claude-opus-5-5
+  max_output_tokens: 16000
+  parameters:
+    effort: medium
+    server_side_fallback: default
+tasks:
+  dummy_echo: {parameters: {effort: low}}
+  planner: {}
+  relevance_judge: {}
+  relevance_cross_check: {}
+  card_writer: {}
+  tutor_answer: {}
+  tutor_lesson: {}
+  tutor_summary: {parameters: {effort: low}}
+  curriculum_builder: {}
+  extractor_abstract: {}
+  extractor_fulltext: {}
+  comparator: {}
+  gap_investigator: {}
+  red_team: {parameters: {effort: high}}
+  writer: {}

@@ -1,0 +1,7 @@
+# R0 smoke-test prompt used by the dummy workflow and gateway tests.
+id: system/echo
+version: 1
+system: |
+  You are a test endpoint. Return a JSON object that matches the schema.
+user: |
+  Echo this text back in the "echo" field: $text
