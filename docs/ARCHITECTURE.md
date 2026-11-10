@@ -853,26 +853,26 @@ table + code, §12.4.3) records this, and R1-65 tests it.
 
 #### 12.4.1 Registry
 
-| Type | Class | Endpoints (validated, §12.4.2) | Single PostgreSQL source | Typical assertions |
-|---|---|---|---|---|
-| `CITES` | research | Paper → Paper | `citations` | `source_metadata` |
-| `AUTHORED_BY` | research | Paper → Author | `paper_authors` | `source_metadata` |
-| `AFFILIATED_WITH` | research | Author → ResearchGroup (property: paper uid, period) | `author_affiliations` | `source_metadata` |
-| `INTRODUCES` | research | Paper → Method/Dataset/Benchmark/Metric | `entity_links` (role `introduces`) | `author_reported`, `extracted` |
-| `USES_METHOD` | research | Paper/Proposal/Experiment → Method | `entity_links` (role `uses_method`) | `extracted`, `user_asserted` |
-| `EVALUATES_ON` | research | Paper/Method/Proposal/Experiment → Dataset/Benchmark | `entity_links` (role `evaluates_on`) | `extracted`, `author_reported`, `user_asserted` |
-| `REPORTS_LIMITATION` | research | Paper → Limitation | `limitations.paper_id` (one row = the Limitation node and its edge) | `author_reported`, `extracted`, `inferred` |
-| `EXTENDS` | research | Paper → Paper, Method → Method (property `subtype`: improves_on, extends) | `research_relations` | `author_reported`, `extracted`, `inferred` |
-| `CONTRADICTS` | research | Paper ↔ Paper, Result ↔ Result, Paper → Paper/Hypothesis in project (challenges) | `research_relations` | `computed` (result conflicts), `extracted`, `inferred` |
-| `RELATED_TO` | research | any → any (property `basis`: similarity, co_citation, direction_membership, cluster_membership, overlap, alternative, reproduces, compares_with, topic) | `research_relations` | `computed`, `inferred` |
-| `ADDRESSES` | research | Paper → Gap/Topic, Proposal → Hypothesis, Experiment → Hypothesis | `research_relations` | `inferred`, `user_asserted`, `user_confirmed` |
-| `DERIVED_FROM` | research | Gap → Limitation/LimitationCluster/Paper, Hypothesis → Gap, Proposal → Hypothesis | `research_relations` | `computed`, `hypothesized`, `user_asserted` |
-| `VALIDATED_BY` | research | Hypothesis → Result/Experiment (property `outcome`) | `research_relations` | `user_asserted`, `computed` |
-| `IMPLEMENTED_BY` (R4) | research | Paper/Method/Model → Repository (properties: link_source, is_official) | `item_code_links` | `extracted` (URL in paper text), `source_metadata` (HF paper page), `inferred` (name search: "possible") |
-| `HAS_VERSION` | structural | Paper → PaperVersion | `paper_manifestations.paper_id` | `structural` |
-| `IN_PROJECT` | structural | Paper → Project (properties: inclusion, reading status) | `project_items` | `structural` |
-| `PART_OF` | structural | Topic(sub_question) → Objective; Experiment → Proposal; Result(user_reported) → Experiment | **`structural_relations`** | `structural` |
-| `RESULT_FOR` | structural | Result → Paper (role `reported_in`), Result → Method/Dataset/Benchmark/Metric (role `method`/`dataset`/`benchmark`/`metric`) | **`structural_relations`** | `structural` (the claim and its evidence belong to the Result node) |
+| Type | Class | Endpoints (validated, §12.4.2) | Single PostgreSQL source | Typical assertions | Scope policy |
+|---|---|---|---|---|---|
+| `CITES` | research | Paper → Paper | `citations` | `source_metadata` | global only |
+| `AUTHORED_BY` | research | Paper → Author | `paper_authors` | `source_metadata` | global only |
+| `AFFILIATED_WITH` | research | Author → ResearchGroup (property: paper uid, period) | `author_affiliations` | `source_metadata` | global only |
+| `INTRODUCES` | research | Paper → Method/Dataset/Benchmark/Metric | `entity_links` (role `introduces`) | `author_reported`, `extracted` | project or global |
+| `USES_METHOD` | research | Paper/Proposal/Experiment → Method | `entity_links` (role `uses_method`) | `extracted`, `user_asserted` | project or global |
+| `EVALUATES_ON` | research | Paper/Method/Proposal/Experiment → Dataset/Benchmark | `entity_links` (role `evaluates_on`) | `extracted`, `author_reported`, `user_asserted` | project or global |
+| `REPORTS_LIMITATION` | research | Paper → Limitation | `limitations.paper_id` (one row = the Limitation node and its edge) | `author_reported`, `extracted`, `inferred` | global only |
+| `EXTENDS` | research | Paper → Paper, Method → Method (property `subtype`: improves_on, extends) | `research_relations` | `author_reported`, `extracted`, `inferred` | project or global |
+| `CONTRADICTS` | research | Paper ↔ Paper, Result ↔ Result, Paper → Paper/Hypothesis in project (challenges) | `research_relations` | `computed` (result conflicts), `extracted`, `inferred` | project or global |
+| `RELATED_TO` | research | any → any (property `basis`: similarity, co_citation, direction_membership, cluster_membership, overlap, alternative, reproduces, compares_with, topic) | `research_relations` | `computed`, `inferred` | project or global |
+| `ADDRESSES` | research | Paper → Gap/Topic, Proposal → Hypothesis, Experiment → Hypothesis | `research_relations` | `inferred`, `user_asserted`, `user_confirmed` | project or global |
+| `DERIVED_FROM` | research | Gap → Limitation/LimitationCluster/Paper, Hypothesis → Gap, Proposal → Hypothesis | `research_relations` | `computed`, `hypothesized`, `user_asserted` | project or global |
+| `VALIDATED_BY` | research | Hypothesis → Result/Experiment (property `outcome`) | `research_relations` | `user_asserted`, `computed` | project only |
+| `IMPLEMENTED_BY` (R4) | research | Paper/Method/Model → Repository (properties: link_source, is_official) | `item_code_links` | `extracted` (URL in paper text), `source_metadata` (HF paper page), `inferred` (name search: "possible") | project or global |
+| `HAS_VERSION` | structural | Paper → PaperVersion | `paper_manifestations.paper_id` | `structural` | **global only** (no scope column) |
+| `IN_PROJECT` | structural | Paper → Project (properties: inclusion, reading status) | `project_items` | `structural` | project only (scope = the project endpoint) |
+| `PART_OF` | structural | Topic(sub_question) → Objective; Experiment → Proposal; Result(user_reported) → Experiment | **`structural_relations`** | `structural` | project only |
+| `RESULT_FOR` | structural | Result → Paper (role `reported_in`), Result → Method/Dataset/Benchmark/Metric (role `method`/`dataset`/`benchmark`/`metric`) | **`structural_relations`** | `structural` (the claim and its evidence belong to the Result node) | project or global |
 
 `research_relations` accepts only its six types, and `structural_relations`
 only `PART_OF` and `RESULT_FOR`. Both are enforced by CHECK constraints and
@@ -944,19 +944,35 @@ verification (failed quote verification, source retraction). Sticky
 rejection (§12.5) applies per scope.
 
 **Where it is enforced (three layers; the database is authoritative):**
-1. **Database:** one trigger function, `enforce_relation_scope()`, runs
-   `BEFORE INSERT OR UPDATE` on **every** relationship source table
-   (`research_relations`, `structural_relations`, `entity_links`,
-   `citations`, `paper_authors`, `author_affiliations`, `limitations`,
-   `item_code_links`, `project_items`). It reads both endpoint scopes from
-   `graph_nodes` and rejects any row that violates the table above or the
-   global-scope rule. Tables whose endpoints are always global (`citations`,
-   `paper_authors`, `author_affiliations`, `limitations`) also have
-   `CHECK (scope_project_id IS NULL)`. The project-scope column references
-   `projects(id) ON DELETE CASCADE`, so deleting a project removes its
-   scoped relationships between global nodes too, writing deletion markers.
-   A CI test checks that the trigger is attached to every table in the
-   relation registry.
+1. **Database:** one generic trigger function, `enforce_relation_scope()`,
+   runs `BEFORE INSERT OR UPDATE` on **every relationship source registered
+   in `relation_registry`**, structural sources included. Each registry row
+   records the source table, the endpoint columns (`from_column`,
+   `to_column`), the scope column (or none) and the **scope policy**
+   (`global_only`, `project_only`, `project_or_global`; column "Scope
+   policy" in §12.4.1). The trigger reads these from the registry, looks up
+   both endpoint scopes in `graph_nodes`, and rejects any row that violates
+   the table above, the global-scope rule or the type's policy. The current
+   sources are:
+   - `research_relations`, `structural_relations`, `entity_links` and
+     `item_code_links` (scope column `scope_project_id`);
+   - `project_items` (scope = its `project_id` endpoint);
+   - `citations`, `paper_authors`, `author_affiliations` and `limitations`
+     (global only; also `CHECK (scope_project_id IS NULL)`);
+   - **`paper_manifestations` (HAS_VERSION)**, which has **no scope column**:
+     the relationship is global by construction, and the trigger checks
+     that both endpoints (the manifestation and its `paper_id`) are global
+     nodes, so a version can never link to or from a project-scoped node.
+
+   Every project-scope column references `projects(id) ON DELETE CASCADE`,
+   so deleting a project removes its scoped relationships between global
+   nodes too, writing deletion markers. **The CI check is derived from the
+   registry, not from a hand-maintained list.** For every
+   `relation_registry` row, it verifies in the live schema that the source
+   table has the trigger, that the endpoint and scope columns exist with the
+   declared foreign keys, and that a source without a scope column has
+   policy `global_only`. Adding a relationship type without enforcement
+   therefore fails the build.
 2. **`RelationWriter`:** validates scope before writing, so callers get a
    clear error instead of a database exception. It never decides scope
    implicitly: callers pass the `ProjectScope` they act in.

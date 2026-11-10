@@ -86,7 +86,7 @@ real referential integrity across item types.
 | Table | Key columns | Rel. |
 |---|---|---|
 | `papers` | `id FK research_items, title, normalized_title (trgm index), abstract, abstract_status enum(available, unavailable, restricted), abstract_manifestation_id null, year, venue, publication_type, is_survey bool, is_open_access, language, fields_of_study text[], citation_counts jsonb ({source: {count, as_of}}), field_sources jsonb, metadata_level enum(stub, metadata, full_text), embedding vector(n) null, first_public_appearance timestamptz null (set only when date_confidence is verified or corroborated), first_public_basis enum(announced, posted, published_online, issue, issued, submission_only) null, first_public_precision enum(timestamp, day), first_public_manifestation_id null, first_public_event_id FK paper_dates null, candidate_public_date date null (best unconfirmed date, displayed only as "unconfirmed"), date_confidence enum(verified, corroborated, source_agreement, single_source, conflicting, uncertain) (D28)` — the **work** | R1 |
-| `paper_manifestations` | `id, paper_id, kind enum(preprint, published, other), server_or_venue (arxiv, biorxiv, medrxiv, journal/proceedings name), primary_identifier_scheme, primary_identifier_value, peer_review_label enum(preprint_not_peer_reviewed, journal_version, unknown), url, license, is_open_access, created_from_source_record_id, created_at` — preprint and published versions stay distinct | R1 |
+| `paper_manifestations` | `id, paper_id, kind enum(preprint, published, other), server_or_venue (arxiv, biorxiv, medrxiv, journal/proceedings name), primary_identifier_scheme, primary_identifier_value, peer_review_label enum(preprint_not_peer_reviewed, journal_version, unknown), url, license, is_open_access, created_from_source_record_id, created_at` — preprint and published versions stay distinct — also the single source of `HAS_VERSION` (via `paper_id`): global by construction (no scope column), with `enforce_relation_scope()` attached to check that both endpoints are global nodes | R1 |
 | `paper_dates` | `id, paper_id, manifestation_id FK paper_manifestations, event enum(preprint_submitted, preprint_announced, preprint_posted, version_submitted, version_announced, version_posted, accepted, published_online, issue_published, issued, reported_publication_date, index_created, metadata_updated, metadata_deposited, metadata_indexed, first_seen_by_researchpilot), value timestamptz (UTC; date-only values at 00:00 UTC with precision=day), precision enum(timestamp, day, month, year), version int null, is_primary bool (read directly from the system of record for this manifestation), reporting_source enum(arxiv_api, arxiv_announcement_feed, biorxiv_api, medrxiv_api, crossref, openalex, semantic_scholar, researchpilot), upstream_source enum(arxiv, biorxiv, medrxiv, crossref, pubmed, publisher, datacite, unknown) default unknown, upstream_evidence jsonb null (field path showing where the source got it; null if not exposed), source_record_id FK, retrieved_at, flags text[] (future_date, disagrees_with_primary, boundary_day)` — **one row per date event; never overwritten or deleted by matching; upstream provenance never guessed** | R1 |
 | `paper_versions` | `paper_id, version int, submitted_at, source, source_record_id, PK(paper_id, version)` (arXiv versions) | R1 |
 | `arxiv_announcement_log` | `id, category, arxiv_id, version, announce_type (new, cross, replace, replace_cross, as reported by the feed), announcement_day date, feed_fetched_at, source_record_id` — written by the daily capture job; produces `preprint_announced`/`version_announced` events when the paper is in the record | R1 |
@@ -277,14 +277,27 @@ graph-ready from R0, so Neo4j can be added in R2 without changing models.
   (`project_id`, `scope_project_id`), derived pointers, node data, derived
   analytics (`direction_relations`), learning data, decision logs, snapshots
   and project memory (full list: ARCHITECTURE §12.4.3).
-- **Project-scope invariant** (ARCHITECTURE §12.4.2a): the trigger
-  `enforce_relation_scope()` is attached to every relationship source table
-  and rejects relationships that connect different projects' nodes, carry a
-  scope different from their project-scoped endpoint, or are global (`null`)
-  while touching a project-scoped node or produced in a project context.
-  Global-only tables (`citations`, `paper_authors`, `author_affiliations`,
-  `limitations`) also have `CHECK (scope_project_id IS NULL)`.
-  `scope_project_id` references `projects(id) ON DELETE CASCADE` everywhere.
+- **Project-scope invariant** (ARCHITECTURE §12.4.2a): the generic trigger
+  `enforce_relation_scope()` is attached to **every source registered in
+  `relation_registry`**, structural sources included (`research_relations`,
+  `structural_relations`, `entity_links`, `item_code_links`,
+  `project_items`, `citations`, `paper_authors`, `author_affiliations`,
+  `limitations`, `paper_manifestations`). It reads each type's endpoint
+  columns, scope column and scope policy from the registry, and rejects
+  relationships that:
+  - connect different projects' nodes;
+  - carry a scope different from their project-scoped endpoint;
+  - are global (`null`) while touching a project-scoped node or being
+    produced in a project context;
+  - violate the type's scope policy.
+
+  Global-only tables with a scope column (`citations`, `paper_authors`,
+  `author_affiliations`, `limitations`) also have `CHECK (scope_project_id
+  IS NULL)`. `paper_manifestations` has no scope column, so HAS_VERSION is
+  global by construction, and the trigger requires both endpoints to be
+  global nodes. Every scope column references `projects(id) ON DELETE
+  CASCADE`. The CI enforcement check is generated from `relation_registry`
+  (R1-65 (m)), so no source can be missed.
 - **Common relationship columns** on every **research** relationship table listed above (structural sources carry only `assertion = structural`, scope and `row_version`):
   - `assertion enum(source_metadata, author_reported, extracted, computed, inferred, hypothesized, user_asserted, user_confirmed, rejected, structural)`
   - `confidence numeric null`
@@ -315,7 +328,7 @@ graph-ready from R0, so Neo4j can be added in R2 without changing models.
 |---|---|---|
 | `graph_nodes` | `uid PK, kind (node label), scope_project_id null FK projects ON DELETE CASCADE, UNIQUE(uid, kind)` — node identity registry. Rows are written only by the registration triggers of tables in `node_source_registry`, under their conditions; `scope_project_id` equals the source row's project (null for global) and is **immutable** (trigger) | R0 |
 | `node_source_registry` | `source_table PK, label, registration_condition, scope_rule enum(global, own_project_id, parent_project), introduced_in` — the complete node-source inventory (§16.3, ARCHITECTURE §12.3). Conditions: reports only where type is proposal; entities only where type is not term. Tables not listed (e.g. `experiment_plans`) have no registration trigger | R0 |
-| `relation_registry` | `type PK, class enum(research, structural), source_table, source_column null, projected bool, required_evidence_policy, introduced_in` — exactly one row per type, so a type cannot have two sources (UNIQUE on `type`); mirrored by the code registry and checked against it in CI | R1 |
+| `relation_registry` | `type PK, class enum(research, structural), source_table, source_column null, type_discriminator null (e.g. `role` for `entity_links`), from_column, to_column, scope_column null (null only for sources without a scope column, e.g. `paper_manifestations`), scope_policy enum(global_only, project_only, project_or_global), projected bool, required_evidence_policy, introduced_in` — exactly one row per type, so a type cannot have two sources (UNIQUE on `type`). It drives `enforce_relation_scope()` and the CI enforcement check, and is mirrored by the code registry and checked against it in CI | R1 |
 | `relation_endpoint_rules` | `type FK relation_registry, from_kind, to_kind, role null, cardinality (e.g. exactly_one_per_child), on_parent_delete enum(cascade_child, detach), PK(type, from_kind, to_kind, role)` | R1 |
 | `structural_relations` | `id (uid), type enum(PART_OF, RESULT_FOR)` (**only these two**; CHECK + registry), `child_uid, child_kind, parent_uid, parent_kind` (composite FKs to `graph_nodes(uid, kind)`), `role null` (RESULT_FOR: reported_in, method, dataset, benchmark, metric), `assertion = structural` (CHECK), `scope_project_id null, row_version, created_at, UNIQUE(type, child_uid, parent_uid, role)` — the only owner of PART_OF and RESULT_FOR; endpoint, cardinality and delete rules from `relation_endpoint_rules` | R1 (PART_OF for sub-questions) / R2 (results) / R4 (experiments) |
 | `research_relations` | `id (uid), type enum(EXTENDS, CONTRADICTS, RELATED_TO, ADDRESSES, DERIVED_FROM, VALIDATED_BY)` (**only these six types**; CHECK constraint), `from_uid, from_kind, to_uid, to_kind` (composite FKs to `graph_nodes(uid, kind)`; allowed combinations in `relation_endpoint_rules`), properties jsonb (e.g. subtype, basis, outcome, membership_score, qualifier), assertion, confidence, evidence, provenance, scope_project_id, status, row_version, created_at, updated_at, UNIQUE(type, from_uid, to_uid, (properties->>'qualifier'), scope_project_id)` — the single source for these six types (including direction membership, paper-to-paper relations, relevance-judge relations to project items, gap probe matches, hypothesis/proposal/experiment links) | R1 |
