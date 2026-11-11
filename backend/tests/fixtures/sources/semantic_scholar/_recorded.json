@@ -1,0 +1,16 @@
+{
+ "paper_arxiv_1512.03385_CONSTRUCTED.json": {
+  "constructed": true,
+  "headers": {},
+  "note": "NOT a recorded response: no API key was available (unauthenticated requests are refused with 429). Built from the published Graph API schema to test parsing and strong-evidence matching; replace with a recording when a key is available.",
+  "recorded": "2026-11-11",
+  "status": 200,
+  "url": "https://api.semanticscholar.org/graph/v1/paper/ARXIV:1512.03385?fields=paperId,corpusId,externalIds,title,year,publicationDate,venue,publicationTypes,authors"
+ },
+ "paper_arxiv_1512.03385_unauthenticated.json": {
+  "headers": {},
+  "recorded": "2026-11-11",
+  "status": 429,
+  "url": "https://api.semanticscholar.org/graph/v1/paper/arXiv:1512.03385?fields=paperId%2CcorpusId%2CexternalIds%2Ctitle%2CpublicationDate%2Cauthors"
+ }
+}

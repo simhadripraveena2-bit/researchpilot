@@ -21,6 +21,7 @@ from researchpilot.integrations.base import SourceError, SourceNotFound
 from researchpilot.integrations.biorxiv import is_server_preprint_doi, likely_server
 from researchpilot.integrations.registry import Sources
 from researchpilot.services.matching.store import match_work
+from researchpilot.services.papers.enrich import enrich_work
 from researchpilot.services.papers.ingest import ingest_arxiv
 from researchpilot.services.papers.ingest_biorxiv import ingest_preprint_server
 from researchpilot.services.papers.ingest_crossref import ingest_crossref
@@ -33,8 +34,8 @@ MAX_FOLLOWED_LINKS = 3
 
 async def add_paper_by_identifier(
     session: AsyncSession, sources: Sources, project_id: uuid.UUID, text: str
-) -> tuple[uuid.UUID, bool]:
-    """Returns (paper id, whether it was newly added to the project).
+) -> tuple[uuid.UUID, bool, dict[str, str]]:
+    """Returns (paper id, whether it was newly added to the project, enrichment coverage).
 
     New works: ingest from the identifier's system of record, follow the work's decisive
     version links (fetching the other version), then run the Version Matcher; the project
@@ -44,11 +45,14 @@ async def add_paper_by_identifier(
     if identifier.scheme is IdentifierScheme.DOI and (arxiv := arxiv_id_from_doi(identifier.value)):
         identifier = Identifier(IdentifierScheme.ARXIV, arxiv)
 
+    coverage: dict[str, str] = {}
     paper_id = await _known_paper(session, identifier)
     if paper_id is None:
         paper_id = await ingest_identifier(session, sources, identifier)
         await follow_version_links(session, sources, paper_id)
         paper_id = await match_work(session, paper_id)
+        coverage = await enrich_work(session, sources, paper_id)
+        paper_id = await match_work(session, paper_id)  # strong evidence may now match
 
     added = (
         await session.execute(
@@ -59,7 +63,7 @@ async def add_paper_by_identifier(
             {"p": project_id, "i": paper_id, "v": DiscoveredVia.MANUAL.value},
         )
     ).scalar_one_or_none()
-    return paper_id, added is not None
+    return paper_id, added is not None, coverage
 
 
 async def ingest_identifier(
@@ -73,9 +77,33 @@ async def ingest_identifier(
     if identifier.scheme is IdentifierScheme.DOI:
         fetched = await sources.crossref.fetch(identifier.value)
         return (await ingest_crossref(session, fetched)).paper_id
+    if identifier.scheme in (
+        IdentifierScheme.OPENALEX,
+        IdentifierScheme.S2_PAPER,
+        IdentifierScheme.S2_CORPUS,
+    ):
+        # Aggregator IDs are resolved to the identifier of a system of record.
+        return await ingest_identifier(
+            session, sources, await _system_of_record_identifier(sources, identifier)
+        )
     raise CapabilityUnavailable(
         f"Adding papers by {identifier.scheme.value} identifier is not available yet; "
         "use a DOI or an arXiv ID",
+        scheme=identifier.scheme.value,
+    )
+
+
+async def _system_of_record_identifier(sources: Sources, identifier: Identifier) -> Identifier:
+    if identifier.scheme is IdentifierScheme.OPENALEX:
+        listed = (await sources.openalex.fetch(identifier)).work.listed_identifiers
+    else:
+        listed = (await sources.semantic_scholar.fetch(identifier)).paper.listed_identifiers
+    for scheme in (IdentifierScheme.DOI, IdentifierScheme.ARXIV):
+        for found in listed:
+            if found.scheme is scheme:
+                return found
+    raise CapabilityUnavailable(
+        f"{identifier} lists no DOI or arXiv ID, so its system of record is unknown",
         scheme=identifier.scheme.value,
     )
 

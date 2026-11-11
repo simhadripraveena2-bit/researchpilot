@@ -61,6 +61,22 @@ class SourceDegraded(SourceError):
     code = "source_degraded"
 
 
+class SourceBudgetExhausted(SourceError):
+    """A metered source's usage budget is used up; not retried until it resets."""
+
+    code = "source_budget_exhausted"
+
+
+class UsageBudget(Protocol):
+    """Usage accounting for a metered source (e.g. OpenAlex, D24)."""
+
+    def check(self, endpoint_class: str) -> None:
+        """Raises ``SourceBudgetExhausted`` if a request of this class must not be sent."""
+
+    def observe(self, endpoint_class: str, response: httpx.Response) -> None:
+        """Reads the source's usage headers from every response."""
+
+
 class SourceNotFound(SourceError):
     """The source has no such entity (404 or an empty lookup result)."""
 
@@ -335,8 +351,12 @@ class SourceClient:
         clock: Clock | None = None,
         sleep: Sleep = asyncio.sleep,
         rng: random.Random | None = None,
+        headers: Mapping[str, str] | None = None,
+        budget: UsageBudget | None = None,
     ) -> None:
         self.policy = policy
+        self._headers = dict(headers or {})  # e.g. an optional API key header
+        self.budget = budget
         self.source = policy.source
         self._http = http
         self._limiter = limiter
@@ -369,8 +389,10 @@ class SourceClient:
                 return cached
         if self.degraded:
             raise SourceDegraded(self.source, f"{self.source.value} is temporarily unavailable")
+        if self.budget is not None:
+            self.budget.check(endpoint_class)
 
-        response = await self._request_with_retries(url, params)
+        response = await self._request_with_retries(url, params, endpoint_class)
         result = SourceResponse(
             source=self.source,
             url=str(response.request.url),
@@ -394,7 +416,7 @@ class SourceClient:
         return result
 
     async def _request_with_retries(
-        self, url: str, params: Mapping[str, Any] | None
+        self, url: str, params: Mapping[str, Any] | None, endpoint_class: str = "default"
     ) -> httpx.Response:
         last_error = "no attempt made"
         status: int | None = None
@@ -404,11 +426,18 @@ class SourceClient:
             try:
                 self.requests_made += 1
                 response = await self._http.get(
-                    url, params=params, timeout=self.policy.timeout_seconds
+                    url,
+                    params=params,
+                    headers=self._headers or None,
+                    timeout=self.policy.timeout_seconds,
                 )
             except httpx.TransportError as exc:
                 last_error, status = f"connection error: {type(exc).__name__}", None
             else:
+                if self.budget is not None:
+                    self.budget.observe(endpoint_class, response)
+                    if response.status_code == 429:
+                        self.budget.check(endpoint_class)  # budget, not load: do not retry
                 if response.status_code not in RETRYABLE_STATUS:
                     if response.status_code < 400 or response.status_code == 404:
                         self._consecutive_failures = 0

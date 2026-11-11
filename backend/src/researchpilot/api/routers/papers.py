@@ -40,6 +40,8 @@ class PaperAdd(BaseModel):
 class PaperAdded(BaseModel):
     id: uuid.UUID
     added_to_project: bool
+    # Enrichment sources and their outcome: ok, not_found, unavailable, budget_exhausted.
+    coverage: dict[str, str] = Field(default_factory=dict)
 
 
 class ResolvedDate(BaseModel):
@@ -131,12 +133,12 @@ async def add_paper(
     """Add a paper by identifier (arXiv ID, arXiv URL or arXiv DOI in this release slice)."""
     if scope.role is ProjectRole.VIEWER:
         raise Forbidden("viewers cannot add papers")
-    paper_id, added = await add_paper_by_identifier(
+    paper_id, added, coverage = await add_paper_by_identifier(
         session, request.app.state.sources, scope.project_id, body.identifier
     )
     if not added:
         response.status_code = status.HTTP_200_OK
-    return PaperAdded(id=paper_id, added_to_project=added)
+    return PaperAdded(id=paper_id, added_to_project=added, coverage=coverage)
 
 
 @router.get("/projects/{project_id}/papers")

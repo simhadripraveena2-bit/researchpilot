@@ -9,6 +9,7 @@ from __future__ import annotations
 from enum import StrEnum
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from pydantic import Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -61,6 +62,10 @@ class Settings(BaseSettings):
     job_heartbeat_seconds: float = 5.0
     job_stale_after_seconds: float = 30.0
     git_sha: str = "dev"
+    # OpenAlex (D24): "basic" uses only free/basic features; "premium" also enables the
+    # created-date filters for newly indexed works. Daily spend cap in USD for metered calls.
+    openalex_capabilities: Literal["basic", "premium"] = "basic"
+    openalex_daily_budget_usd: float = 0.10
 
     # Polite-pool contact address for scholarly APIs (OpenAlex, Crossref, Unpaywall).
     contact_email: str | None = None

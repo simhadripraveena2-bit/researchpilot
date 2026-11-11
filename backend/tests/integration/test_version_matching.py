@@ -244,3 +244,48 @@ async def test_preprint_journal_pair_merges_in_either_order(
         (work,),
     ).fetchone()
     assert resolved == ("posted", "2022-10-22")
+
+
+async def test_semantic_scholar_strong_evidence_merges_resnet_versions(
+    client: httpx.AsyncClient, sources_transport: Any, db: psycopg.Connection
+) -> None:
+    """With a Semantic Scholar record listing both the arXiv ID and the CVPR DOI (strong),
+    plus matching title and authors, the arXiv preprint and the CVPR paper are one work.
+    Uses the constructed (not recorded) S2 fixture - see its note."""
+    sources_transport.serve_constructed(
+        "semantic_scholar", "paper_arxiv_1512.03385_CONSTRUCTED.json"
+    )
+    project_id = await create_project(client)
+    cvpr = await add(client, project_id, "10.1109/cvpr.2016.90")
+    resp = await client.post(
+        f"{API}/projects/{project_id}/papers", json={"identifier": "1512.03385"}
+    )
+    assert resp.json()["coverage"]["semantic_scholar"] == "ok"
+    assert resp.json()["id"] == cvpr
+    decision = next(
+        d for d in await matches(client, project_id, cvpr) if d["outcome"] == "auto_match"
+    )
+    assert decision["features"]["strong_links"][0]["source"] == "semantic_scholar"
+    assert decision["features"]["explicit_relation"] == []
+    kinds = {
+        r[0]
+        for r in db.execute(
+            "SELECT kind FROM paper_manifestations WHERE paper_id = %s", (cvpr,)
+        ).fetchall()
+    }
+    assert kinds == {"preprint", "published"}
+
+
+async def test_add_by_openalex_id_resolves_to_the_system_of_record(
+    client: httpx.AsyncClient, db: psycopg.Connection
+) -> None:
+    project_id = await create_project(client)
+    paper_id = await add(client, project_id, "https://openalex.org/W2194775991")
+    assert db.execute(
+        "SELECT scheme, value FROM paper_identifiers WHERE paper_id = %s ORDER BY scheme",
+        (paper_id,),
+    ).fetchall() == [("doi", "10.1109/cvpr.2016.90"), ("openalex", "W2194775991")]
+    assert db.execute(
+        "SELECT DISTINCT reporting_source FROM paper_dates WHERE paper_id = %s AND is_primary",
+        (paper_id,),
+    ).fetchall() == [("crossref",)]

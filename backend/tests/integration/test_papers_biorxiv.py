@@ -72,10 +72,10 @@ async def test_medrxiv_preprint_is_looked_up_on_medrxiv_first(
     assert {m["server_or_venue"] for m in d["manifestations"]} == {"medrxiv", "JAMA Pediatrics"}
     assert d["resolved_date"]["basis"] == "posted"
     assert d["resolved_date"]["first_public_appearance"].startswith("2023-12-15")
-    assert [str(r.url) for r in sources_transport.requests] == [
+    assert [str(r.url) for r in sources_transport.requests][:2] == [
         "https://api.biorxiv.org/details/medrxiv/10.1101/2023.12.14.23299828",
         "https://api.crossref.org/works/10.1001/jamapediatrics.2024.1379",
-    ]
+    ]  # then enrichment: OpenAlex and Semantic Scholar
 
 
 async def test_crossref_record_of_the_same_preprint_adds_secondary_events(
@@ -124,3 +124,28 @@ async def test_api_outage_never_promotes_the_later_journal_date(
         "2022-10-22",
     )
     assert sources_transport.count("api.biorxiv.org") == 4  # retried, then gave up
+
+
+async def test_openalex_merged_record_adds_secondary_claims_only(
+    client: httpx.AsyncClient, db: psycopg.Connection
+) -> None:
+    """OpenAlex merges the preprint and eLife into W4372330081 dated 2023-05-05: its ID and
+    date are added as secondary data; the verified preprint posting still decides."""
+    project_id = await create_project(client)
+    resp = await add(client, project_id, "10.1101/2022.10.22.513336")
+    assert resp.json()["coverage"]["openalex"] == "ok"
+    d = await detail(client, project_id, resp.json()["id"])
+    oa = next(
+        e
+        for e in d["dates"]
+        if e["reporting_source"] == "openalex" and e["event"] == "reported_publication_date"
+    )
+    assert (oa["value"][:10], oa["is_primary"], oa["upstream_source"]) == (
+        "2023-05-05",
+        False,
+        "unknown",
+    )
+    assert "disagrees_with_primary" in oa["flags"]
+    assert d["resolved_date"]["basis"] == "posted"
+    assert d["resolved_date"]["first_public_appearance"].startswith("2022-10-22")
+    assert ("openalex", "W4372330081") in {(i["scheme"], i["value"]) for i in d["identifiers"]}

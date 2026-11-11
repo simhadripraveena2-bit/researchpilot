@@ -93,6 +93,16 @@ Real recorded cases (all in `test_version_matching.py`, `test_papers_biorxiv.py`
 | Comment `10.3390/insects17070712` ↔ reply `10.3390/insects17070713` | Related, not same; cannot be merged (422) |
 | ResNet arXiv `1512.03385` ↔ CVPR `10.1109/cvpr.2016.90` (no identifier link yet) | Possible match until Semantic Scholar/OpenAlex evidence (step 4) |
 
+## Step 4: Semantic Scholar and OpenAlex
+
+| Part | Where | Tests |
+|---|---|---|
+| OpenAlex client: free work lookups, budgeted search, usage headers, budget-429 stop without retries, own daily cap, `basic`/`premium` capability switch (D24) | `integrations/openalex.py`, [integration doc](integrations/OPENALEX.md) | `tests/unit/test_aggregators.py` |
+| Semantic Scholar client: Graph API lookup, optional `x-api-key`; without a key one attempt (429 has no `Retry-After`) | `integrations/semantic_scholar.py`, [integration doc](integrations/SEMANTIC_SCHOLAR.md) | same |
+| `SourceClient`: per-source headers (API keys) and a provider-neutral `UsageBudget` hook | `integrations/base.py` | same |
+| Enrichment after adding a paper: aggregator IDs, secondary `reported_publication_date` (upstream unknown), OpenAlex `index_created`/`metadata_updated`, "same record lists these identifiers" links (strong evidence); outcome per source returned as `coverage` | `services/papers/enrich.py`, `services/papers/service.py` | `test_papers_arxiv_slice.py`, `test_papers_biorxiv.py`, `test_version_matching.py` |
+| Add by OpenAlex / Semantic Scholar ID (resolved to the DOI or arXiv ID of a system of record) | `services/papers/service.py` | `test_version_matching.py`, `test_papers_arxiv_slice.py` |
+
 ## Decisions and deviations
 
 | # | Topic | What was done | Why |
@@ -120,6 +130,11 @@ Real recorded cases (all in `test_version_matching.py`, `test_papers_biorxiv.py`
 | 22 | Following links | After adding a paper, the targets of its decisive links are fetched (one level, at most 3, failures only reduce coverage) | Makes preprint ↔ journal pairs appear without a separate search |
 | 23 | Earlier unconfirmed version (resolver) | If another manifestation has a secondary public claim > 2 days before every primary event, the date is `conflicting` (ARCHITECTURE §4.8.3 updated) | Found with the bioRxiv-outage case: otherwise the 2024 journal date would have been "verified" for a work public since 2022 |
 | 24 | Strong links | Crossref `is-same-as` / `is-version-of` / `has-version` and (step 4) "both identifiers on one S2/OpenAlex record" are strong, not decisive | ARCHITECTURE §4.8a lists only preprint relations as decisive |
+| 25 | Semantic Scholar without a key | One attempt, reported `unavailable`; success parsing tested on a fixture marked **constructed** | The key request was declined; keyless requests always got 429 without `Retry-After` |
+| 26 | OpenAlex without a key | Entity lookups (free) used; metered queries stop on the budget 429 and are refused until the reset; never retried | The keyless budget is shared per IP and was already used up |
+| 27 | OpenAlex filled-in dates | `YYYY-MM-01` → month precision, `YYYY-01-01` → year precision | Verified: missing parts are filled with 01 |
+| 28 | Aggregator IDs and dates | Attached to the looked-up manifestation (published DOI first); an ID already held by another work is not duplicated - the listing link lets the matcher compare the works | Both aggregators merge versions; their data is never primary |
+| 29 | Effect on arXiv papers | OpenAlex reports a publication date for almost every arXiv paper; under the approved rule (a public claim of any kind rules out `submission_only`) such papers are `single_source` / unconfirmed until a primary event exists - which announcement capture (step 5) provides | Consequence of the corrected `submission_only` rule, now visible |
 | 12 | Network access | A personal `researchpilot` cloud environment allows only the six source hosts | Required to verify source behaviour; CI uses recorded responses only |
 
 ## Corrections after review of 7f447bc

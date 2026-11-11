@@ -23,6 +23,11 @@ V1_SUBMITTED = "2017-06-12T17:57:34Z"
 V7_SUBMITTED = "2023-08-02T00:41:18Z"
 
 
+def openalex_unknown(transport: FixtureTransport) -> None:
+    """Simulates a paper OpenAlex does not have (real 404 shape: HTML body)."""
+    transport.overrides["api.openalex.org"] = lambda r: httpx.Response(404, text="Not Found")
+
+
 async def add(client: httpx.AsyncClient, project_id: str, identifier: str) -> httpx.Response:
     return await client.post(f"{API}/projects/{project_id}/papers", json={"identifier": identifier})
 
@@ -30,10 +35,15 @@ async def add(client: httpx.AsyncClient, project_id: str, identifier: str) -> ht
 async def test_add_arxiv_paper_end_to_end(
     client: httpx.AsyncClient, sources_transport: FixtureTransport
 ) -> None:
+    openalex_unknown(sources_transport)  # no secondary date: the submission-only path
     project_id = await create_project(client)
     created = await add(client, project_id, "https://arxiv.org/abs/1706.03762v2")
     assert created.status_code == 201, created.text
     paper_id = created.json()["id"]
+    assert created.json()["coverage"] == {
+        "openalex": "not_found",
+        "semantic_scholar": "unavailable",
+    }
 
     detail = (await client.get(f"{API}/projects/{project_id}/papers/{paper_id}")).json()
     assert detail["title"] == "Attention Is All You Need"
@@ -93,7 +103,8 @@ async def test_same_work_is_reused_and_not_refetched(
     paper_id = (await add(client, first_project, "1706.03762")).json()["id"]
 
     again = await add(client, first_project, "arXiv:1706.03762v7")
-    assert (again.status_code, again.json()) == (200, {"id": paper_id, "added_to_project": False})
+    assert again.status_code == 200
+    assert (again.json()["id"], again.json()["added_to_project"]) == (paper_id, False)
     # The arXiv-assigned DataCite DOI identifies the same work.
     second_project = await create_project(client)
     via_doi = await add(client, second_project, "https://doi.org/10.48550/arXiv.1706.03762")
@@ -121,14 +132,12 @@ async def test_old_style_identifier_with_journal_link(
     # the Version Matcher attached to the same work.
     by_manifestation = {m["id"]: m for m in detail["manifestations"]}
     arxiv_m = next(m for m in by_manifestation.values() if m["server_or_venue"] == "arxiv")
-    assert {(i["scheme"], i["value"], i["manifestation_id"]) for i in detail["identifiers"]} == {
-        ("arxiv", "hep-th/9711200", arxiv_m["id"]),
-        (
-            "doi",
-            "10.1023/a:1026654312961",
-            next(m["id"] for m in by_manifestation.values() if m["kind"] == "published"),
-        ),
-    }
+    published_m = next(m["id"] for m in by_manifestation.values() if m["kind"] == "published")
+    found = {(i["scheme"], i["value"], i["manifestation_id"]) for i in detail["identifiers"]}
+    assert ("arxiv", "hep-th/9711200", arxiv_m["id"]) in found
+    assert ("doi", "10.1023/a:1026654312961", published_m) in found
+    # OpenAlex has one work for both (W2166248051); its ID sits on the looked-up version.
+    assert ("openalex", "W2166248051", published_m) in found
     # Only a month is known for the journal version, so no date can be confirmed (the
     # submission-only fallback does not apply once a public-availability claim exists).
     assert detail["resolved_date"]["confidence"] == "uncertain"
@@ -146,9 +155,12 @@ async def test_unknown_and_unsupported_identifiers(client: httpx.AsyncClient) ->
     assert missing.headers["content-type"].startswith("application/problem+json")
     assert missing.json()["code"] == "source_not_found"
 
-    doi = await add(client, project_id, "CorpusId:13756489")
-    assert doi.status_code == 501
-    assert doi.json()["code"] == "capability_unavailable"
+    pmid = await add(client, project_id, "PMID:32511466")
+    assert pmid.status_code == 501
+    assert pmid.json()["code"] == "capability_unavailable"
+    # Semantic Scholar IDs resolve through Semantic Scholar, which refuses keyless requests.
+    corpus = await add(client, project_id, "CorpusId:13756489")
+    assert (corpus.status_code, corpus.json()["code"]) == (503, "source_unavailable")
 
     invalid = await add(client, project_id, "not a paper")
     assert invalid.status_code == 422
@@ -187,8 +199,9 @@ async def test_source_records_are_stored_once_per_content(
 
 
 async def test_first_public_invariants_are_enforced(
-    client: httpx.AsyncClient, db: psycopg.Connection
+    client: httpx.AsyncClient, db: psycopg.Connection, sources_transport: FixtureTransport
 ) -> None:
+    openalex_unknown(sources_transport)  # keeps the paper on the submission-only path
     project_id = await create_project(client)
     paper_id = (await add(client, project_id, "1706.03762")).json()["id"]
     v7 = db.execute(
@@ -239,7 +252,10 @@ async def test_postgres_rate_limiter_spaces_requests_across_processes(
 
 
 async def test_real_public_event_replaces_submission_only_in_the_database(
-    client: httpx.AsyncClient, db: psycopg.Connection, settings: Settings
+    client: httpx.AsyncClient,
+    db: psycopg.Connection,
+    settings: Settings,
+    sources_transport: FixtureTransport,
 ) -> None:
     """arXiv v1 submitted 2017-06-12 (no announcement captured), then a journal version
     published online later: the trigger refuses submission_only, the resolver picks the
@@ -249,6 +265,7 @@ async def test_real_public_event_replaces_submission_only_in_the_database(
     from researchpilot.core.ids import uuid7
     from researchpilot.services.dates.store import resolve_paper_dates
 
+    openalex_unknown(sources_transport)
     project_id = await create_project(client)
     paper_id = (await add(client, project_id, "1706.03762")).json()["id"]
     submission_before = db.execute(
@@ -306,4 +323,31 @@ async def test_real_public_event_replaces_submission_only_in_the_database(
             (paper_id,),
         ).fetchone()
         == submission_before
+    )
+
+
+async def test_openalex_date_makes_an_unannounced_arxiv_paper_unconfirmed(
+    client: httpx.AsyncClient,
+) -> None:
+    """With OpenAlex's (secondary) publication date, the approved rule applies: a public
+    claim exists, so submission_only is not used; the date is single-source, unconfirmed,
+    until a primary event (e.g. a captured announcement) arrives. The submission is kept."""
+    project_id = await create_project(client)
+    created = await add(client, project_id, "1706.03762")
+    assert created.json()["coverage"]["openalex"] == "ok"
+    d = (await client.get(f"{API}/projects/{project_id}/papers/{created.json()['id']}")).json()
+    reported = next(e for e in d["dates"] if e["event"] == "reported_publication_date")
+    assert (reported["reporting_source"], reported["upstream_source"], reported["is_primary"]) == (
+        "openalex",
+        "unknown",
+        False,
+    )
+    assert {"index_created", "metadata_updated", "preprint_submitted"} <= {
+        e["event"] for e in d["dates"]
+    }
+    r = d["resolved_date"]
+    assert (r["confidence"], r["first_public_appearance"], r["candidate_public_date"]) == (
+        "single_source",
+        None,
+        "2017-06-12",
     )
