@@ -53,6 +53,15 @@ PUBLIC_EVENTS: dict[DateEvent, FirstPublicBasis] = {
     DateEvent.ISSUE_PUBLISHED: FirstPublicBasis.ISSUE,
     DateEvent.ISSUED: FirstPublicBasis.ISSUED,
 }
+# On equal values the more specific event wins; Crossref's ``issued`` is derived from the
+# others, so it is used only when nothing more specific has that date.
+_TIE_ORDER = {event: rank for rank, event in enumerate(PUBLIC_EVENTS)}
+
+
+def _earliest(claims: list[DateClaim]) -> DateClaim:
+    return min(claims, key=lambda c: (c.value, _TIE_ORDER.get(c.event, len(_TIE_ORDER))))
+
+
 DAY_OR_BETTER = frozenset({DatePrecision.TIMESTAMP, DatePrecision.DAY})
 
 FLAG_FUTURE = "future_date"
@@ -120,7 +129,7 @@ def resolve(claims: list[DateClaim], retrieved_at: datetime) -> DateResolution:
                     reason=conflict,
                 )
             )
-        first = min(primary_public, key=lambda c: c.value)
+        first = _earliest(primary_public)
         reason = f"{first.event.value} from the system of record ({first.reporting_source.value})"
         if submission is not None and submission.value < first.value:
             reason += "; an earlier arXiv submission exists, but its announcement was not captured"
@@ -162,7 +171,7 @@ def resolve(claims: list[DateClaim], retrieved_at: datetime) -> DateResolution:
         )
     independent = _independent_pair(secondary)
     if independent is not None:
-        first = min(independent, key=lambda c: c.value)
+        first = _earliest(list(independent))
         return done(
             DateResolution(
                 DateConfidence.CORROBORATED,

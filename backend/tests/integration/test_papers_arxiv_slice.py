@@ -134,7 +134,7 @@ async def test_unknown_and_unsupported_identifiers(client: httpx.AsyncClient) ->
     assert missing.headers["content-type"].startswith("application/problem+json")
     assert missing.json()["code"] == "source_not_found"
 
-    doi = await add(client, project_id, "10.1038/nature14539")
+    doi = await add(client, project_id, "CorpusId:13756489")
     assert doi.status_code == 501
     assert doi.json()["code"] == "capability_unavailable"
 

@@ -1,0 +1,14 @@
+{
+ "api_1512.03385.xml": {
+  "headers": {
+   "x-cache": "MISS, HIT, HIT",
+   "x-cache-hits": "0, 2, 0",
+   "x-cloud-trace-context": "427082d2993c94b28362d57e79eadf79",
+   "x-served-by": "cache-lga-kjfk8660038-LGA, cache-lga-kjfk8660038-LGA, cache-lga-kjfk8660058-LGA, cache-iad-kiad7000120-IAD",
+   "x-timer": "S1794362090.456230,VS0,VE1"
+  },
+  "recorded": "2026-11-11",
+  "status": 200,
+  "url": "https://export.arxiv.org/api/query?id_list=1512.03385"
+ }
+}

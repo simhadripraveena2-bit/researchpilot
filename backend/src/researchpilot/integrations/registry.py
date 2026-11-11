@@ -18,6 +18,7 @@ from researchpilot.integrations.base import (
     SourceClient,
     SourceRecordStore,
 )
+from researchpilot.integrations.crossref import CROSSREF_POLICY, CrossrefClient
 
 
 class _NoWait:
@@ -30,6 +31,7 @@ class Sources:
     http: httpx.AsyncClient
     records: SourceRecordStore
     arxiv: ArxivClient
+    crossref: CrossrefClient
 
     async def aclose(self) -> None:
         await self.http.aclose()
@@ -61,4 +63,5 @@ def build_sources(
         http=http,
         records=records,
         arxiv=ArxivClient(SourceClient(ARXIV_POLICY, http, limiter, cache), records),
+        crossref=CrossrefClient(SourceClient(CROSSREF_POLICY, http, limiter, cache), records),
     )

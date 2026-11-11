@@ -61,8 +61,8 @@ async def ingest_arxiv(session: AsyncSession, fetched: FetchedEntry) -> IngestRe
     ).first()
     created = existing is None
     if existing is None:
-        paper_id = await _create_work(session, entry.title, entry.abstract, record_id)
-        manifestation_id = await _create_manifestation(
+        paper_id = await create_work(session, entry.title, entry.abstract, record_id)
+        manifestation_id = await create_manifestation(
             session,
             paper_id,
             kind=ManifestationKind.PREPRINT,
@@ -89,7 +89,7 @@ async def ingest_arxiv(session: AsyncSession, fetched: FetchedEntry) -> IngestRe
                 "p": paper_id,
             },
         )
-        await _add_identifier(
+        await add_identifier(
             session,
             paper_id,
             manifestation_id,
@@ -130,7 +130,7 @@ async def ingest_arxiv(session: AsyncSession, fetched: FetchedEntry) -> IngestRe
         ),
         {"p": paper_id, "r": record_id, "m": manifestation_id},
     )
-    await _replace_authors(
+    await replace_authors(
         session, paper_id, manifestation_id, [(a.name, list(a.affiliations)) for a in entry.authors]
     )
 
@@ -150,7 +150,7 @@ async def ingest_arxiv(session: AsyncSession, fetched: FetchedEntry) -> IngestRe
         record_id=record_id,
         retrieved_at=retrieved_at,
     )
-    await _add_version(session, paper_id, manifestation_id, 1, entry.submitted_v1, record_id)
+    await add_version(session, paper_id, manifestation_id, 1, entry.submitted_v1, record_id)
     if entry.latest_version > 1:
         await add_date(
             session,
@@ -170,7 +170,7 @@ async def ingest_arxiv(session: AsyncSession, fetched: FetchedEntry) -> IngestRe
             record_id=record_id,
             retrieved_at=retrieved_at,
         )
-        await _add_version(
+        await add_version(
             session,
             paper_id,
             manifestation_id,
@@ -183,7 +183,7 @@ async def ingest_arxiv(session: AsyncSession, fetched: FetchedEntry) -> IngestRe
     return IngestResult(paper_id, manifestation_id, created)
 
 
-async def _create_work(
+async def create_work(
     session: AsyncSession, title: str, abstract: str | None, record_id: uuid.UUID
 ) -> uuid.UUID:
     paper_id = uuid7()
@@ -207,7 +207,7 @@ async def _create_work(
     return paper_id
 
 
-async def _create_manifestation(
+async def create_manifestation(
     session: AsyncSession,
     paper_id: uuid.UUID,
     *,
@@ -244,7 +244,7 @@ async def _create_manifestation(
     return manifestation_id
 
 
-async def _add_identifier(
+async def add_identifier(
     session: AsyncSession,
     paper_id: uuid.UUID,
     manifestation_id: uuid.UUID,
@@ -316,25 +316,33 @@ async def add_date(
     )
 
 
-async def _add_version(
+async def add_version(
     session: AsyncSession,
     paper_id: uuid.UUID,
     manifestation_id: uuid.UUID,
     version: int,
     submitted_at: datetime,
     record_id: uuid.UUID,
+    source: SourceName = SourceName.ARXIV_API,
 ) -> None:
     await session.execute(
         sa.text(
             "INSERT INTO paper_versions (manifestation_id, version, paper_id, submitted_at, "
-            "source, source_record_id) VALUES (:m, :v, :p, :s, 'arxiv_api', :r) "
+            "source, source_record_id) VALUES (:m, :v, :p, :s, :src, :r) "
             "ON CONFLICT (manifestation_id, version) DO NOTHING"
         ),
-        {"m": manifestation_id, "v": version, "p": paper_id, "s": submitted_at, "r": record_id},
+        {
+            "m": manifestation_id,
+            "v": version,
+            "p": paper_id,
+            "s": submitted_at,
+            "src": source.value,
+            "r": record_id,
+        },
     )
 
 
-async def _replace_authors(
+async def replace_authors(
     session: AsyncSession,
     paper_id: uuid.UUID,
     manifestation_id: uuid.UUID,

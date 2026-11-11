@@ -18,6 +18,7 @@ from researchpilot.domain.identifiers import (
 )
 from researchpilot.integrations.registry import Sources
 from researchpilot.services.papers.ingest import ingest_arxiv
+from researchpilot.services.papers.ingest_crossref import ingest_crossref
 
 
 async def add_paper_by_identifier(
@@ -30,14 +31,17 @@ async def add_paper_by_identifier(
 
     paper_id = await _known_paper(session, identifier)
     if paper_id is None:
-        if identifier.scheme is not IdentifierScheme.ARXIV:
+        if identifier.scheme is IdentifierScheme.ARXIV:
+            paper_id = (await ingest_arxiv(session, await sources.arxiv.fetch(identifier))).paper_id
+        elif identifier.scheme is IdentifierScheme.DOI:
+            fetched = await sources.crossref.fetch(identifier.value)
+            paper_id = (await ingest_crossref(session, fetched)).paper_id
+        else:
             raise CapabilityUnavailable(
                 f"Adding papers by {identifier.scheme.value} identifier is not available yet; "
-                "use an arXiv ID",
+                "use a DOI or an arXiv ID",
                 scheme=identifier.scheme.value,
             )
-        fetched = await sources.arxiv.fetch(identifier)
-        paper_id = (await ingest_arxiv(session, fetched)).paper_id
 
     added = (
         await session.execute(

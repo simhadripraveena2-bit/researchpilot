@@ -302,3 +302,13 @@ def test_metadata_dates_do_not_rule_out_the_fallback() -> None:
     deposited = claim(E.METADATA_DEPOSITED, "2026-11-09", m=JOURNAL_M, source=R.CROSSREF)
     r = resolve([NOV8_SUBMITTED, deposited], NOW)
     assert (r.basis, r.first_public) == (B.SUBMISSION_ONLY, NOV8_SUBMITTED)
+
+
+def test_on_equal_dates_the_specific_event_beats_derived_issued() -> None:
+    issued = claim(E.ISSUED, "2024-06-03", m=JOURNAL_M, source=R.CROSSREF, upstream=U.CROSSREF)
+    online = claim(
+        E.PUBLISHED_ONLINE, "2024-06-03", m=JOURNAL_M, source=R.CROSSREF, upstream=U.CROSSREF
+    )
+    for order in ([issued, online], [online, issued]):
+        r = resolve(order, NOW)
+        assert (r.basis, r.first_public) == (B.PUBLISHED_ONLINE, online)

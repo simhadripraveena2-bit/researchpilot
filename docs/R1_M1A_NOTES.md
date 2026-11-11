@@ -52,6 +52,15 @@ Status: implemented and tested (see below).
 | Date Resolver (confidence rules, flags) | `services/dates/resolver.py`, `store.py` | `tests/unit/test_date_resolver.py` |
 | Ingestion and API | `services/papers/`, `api/routers/papers.py` | `tests/integration/test_papers_arxiv_slice.py` |
 
+## Step 1: Crossref
+
+| Part | Where | Tests |
+|---|---|---|
+| Crossref client: DOI lookup, cursor-paginated search, JATS stripping, partial dates, relations | `integrations/crossref.py`, [integration doc](integrations/CROSSREF.md) | `tests/unit/test_crossref.py` |
+| Ingestion: published / preprint / other manifestations, one event per Crossref date field with field-path evidence; bioRxiv/medRxiv records secondary with upstream from `institution` | `services/papers/ingest_crossref.py` | `tests/integration/test_papers_crossref.py` |
+| Add by DOI (non-arXiv DOIs go to Crossref) | `services/papers/service.py` | same |
+| Resolver tie-break: on equal dates, the specific event beats Crossref's derived `issued` | `services/dates/resolver.py` | `test_date_resolver.py` |
+
 ## Decisions and deviations
 
 | # | Topic | What was done | Why |
@@ -67,6 +76,9 @@ Status: implemented and tested (see below).
 | 9 | Retries | Implemented in `SourceClient` (no `tenacity` dependency) | Small, fully tested, deterministic with an injected clock |
 | 10 | Adding a paper | Synchronous in the API request (one source call, rate-limited) | Manual add is a single lookup; discovery runs go through the worker (W1) |
 | 11 | Capability errors | New `GraphCapabilityUnavailable` keeps the code `graph_capability_unavailable`; other features use `capability_unavailable` | R0 mapped every capability error to the graph code |
+| 13 | Crossref `accepted` on preprints | Not recorded as `accepted` for `posted-content` | It is the latest preprint version's date (verified), not a journal acceptance |
+| 14 | Crossref `created` | Stored as `index_created` | Registration of the DOI record in Crossref; never a public-availability event |
+| 15 | Upstream of Crossref dates | `crossref` for DOIs it registers; `biorxiv`/`medrxiv` for those servers' preprints (from `institution`) | Crossref exposes the depositing server; agreement with the server's own API is therefore not independent corroboration |
 | 12 | Network access | A personal `researchpilot` cloud environment allows only the six source hosts | Required to verify source behaviour; CI uses recorded responses only |
 
 ## Corrections after review of 7f447bc
