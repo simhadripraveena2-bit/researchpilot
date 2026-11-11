@@ -239,3 +239,66 @@ def test_tomorrow_is_within_tolerance() -> None:
 
 def test_no_claims_is_uncertain() -> None:
     assert resolve([], NOW).confidence is C.UNCERTAIN
+
+
+# --- regression: submission_only never competes with a real public event -----------------
+
+NOV8_SUBMITTED = claim(E.PREPRINT_SUBMITTED, "2026-11-08T21:14:00+00:00", version=1)
+
+
+def test_journal_publication_beats_an_earlier_unannounced_arxiv_submission() -> None:
+    """arXiv v1 submitted Nov 8, journal online Nov 15, no announcement captured: the
+    journal's public event decides; the submission is not used as the first appearance."""
+    journal = claim(
+        E.PUBLISHED_ONLINE, "2026-11-15", m=JOURNAL_M, source=R.CROSSREF, upstream=U.CROSSREF
+    )
+    r = resolve([NOV8_SUBMITTED, journal], datetime(2026, 11, 16, tzinfo=UTC))
+    assert (r.confidence, r.basis, r.first_public) == (C.VERIFIED, B.PUBLISHED_ONLINE, journal)
+    assert "earlier arXiv submission" in r.reason
+    assert NOV8_SUBMITTED.id not in r.flags  # the submission event is untouched
+
+
+def test_secondary_public_claim_beats_the_submission_fallback() -> None:
+    """arXiv v1 submitted Nov 8, then only OpenAlex reports a publication date: the normal
+    secondary rules apply (single source -> unconfirmed), not submission_only."""
+    openalex = claim(
+        E.REPORTED_PUBLICATION_DATE, "2026-11-12", m=JOURNAL_M, primary=False, source=R.OPENALEX
+    )
+    r = resolve([NOV8_SUBMITTED, openalex], NOW)
+    assert (r.confidence, r.basis, r.first_public) == (C.SINGLE_SOURCE, None, None)
+    assert r.candidate_public_date == date(2026, 11, 12)
+
+
+def test_secondary_agreement_also_beats_the_submission_fallback() -> None:
+    oa = claim(
+        E.REPORTED_PUBLICATION_DATE, "2026-11-10", m=JOURNAL_M, primary=False, source=R.OPENALEX
+    )
+    s2 = claim(
+        E.REPORTED_PUBLICATION_DATE,
+        "2026-11-10",
+        m=JOURNAL_M,
+        primary=False,
+        source=R.SEMANTIC_SCHOLAR,
+    )
+    assert resolve([NOV8_SUBMITTED, oa, s2], NOW).confidence is C.SOURCE_AGREEMENT
+
+
+def test_month_precision_public_claim_also_rules_out_the_fallback() -> None:
+    """A public event that cannot be dated to the day still exists: date uncertain."""
+    issue = claim(
+        E.ISSUE_PUBLISHED, "2026-11-01", m=JOURNAL_M, source=R.CROSSREF, precision=P.MONTH
+    )
+    r = resolve([NOV8_SUBMITTED, issue], NOW)
+    assert (r.confidence, r.first_public, r.candidate_public_date) == (C.UNCERTAIN, None, None)
+
+
+def test_future_public_claim_does_not_rule_out_the_fallback() -> None:
+    future = claim(E.PUBLISHED_ONLINE, "2027-03-01", m=JOURNAL_M, source=R.CROSSREF)
+    r = resolve([NOV8_SUBMITTED, future], NOW)
+    assert (r.basis, r.first_public) == (B.SUBMISSION_ONLY, NOV8_SUBMITTED)
+
+
+def test_metadata_dates_do_not_rule_out_the_fallback() -> None:
+    deposited = claim(E.METADATA_DEPOSITED, "2026-11-09", m=JOURNAL_M, source=R.CROSSREF)
+    r = resolve([NOV8_SUBMITTED, deposited], NOW)
+    assert (r.basis, r.first_public) == (B.SUBMISSION_ONLY, NOV8_SUBMITTED)

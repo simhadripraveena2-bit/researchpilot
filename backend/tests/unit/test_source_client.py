@@ -18,6 +18,7 @@ from researchpilot.integrations.base import (
     SourceError,
     SourceNotFound,
     SourcePolicy,
+    cache_key,
     parse_retry_after,
 )
 
@@ -187,3 +188,40 @@ def test_parse_retry_after() -> None:
     assert parse_retry_after("soon", time) is None
     past = format_datetime(T0 - timedelta(seconds=30), usegmt=True)
     assert parse_retry_after(past, time) == 0.0
+
+
+async def test_endpoint_classes_do_not_share_cache_entries() -> None:
+    """Same URL and parameters under two endpoint classes with different TTLs: each class
+    has its own entry, so a short-lived search entry never serves (or expires) an entity
+    lookup, and vice versa. Within one class the cache behaves as before."""
+    time = FakeTime()
+    bodies = iter(["as search", "as entity", "search again"])
+    client, _, seen = make_client(
+        lambda r: httpx.Response(200, text=next(bodies)),
+        time,
+        cache_ttl={"search": timedelta(hours=1), "entity": timedelta(hours=12)},
+    )
+    url, params = "https://export.arxiv.org/api/query", {"id_list": "1706.03762"}
+
+    search = await client.get(url, params=params, endpoint_class="search")
+    entity = await client.get(url, params=params, endpoint_class="entity")
+    assert (search.cache_hit, entity.cache_hit) == (False, False)  # no cross-class hit
+    assert (search.text, entity.text) == ("as search", "as entity")
+    assert len(seen) == 2
+
+    time.at += timedelta(hours=2)  # the search entry has expired, the entity entry has not
+    entity_again = await client.get(url, params=params, endpoint_class="entity")
+    assert (entity_again.cache_hit, entity_again.text) == (True, "as entity")
+    search_again = await client.get(url, params=params, endpoint_class="search")
+    assert (search_again.cache_hit, search_again.text) == (False, "search again")
+    assert len(seen) == 3
+
+
+def test_cache_key_depends_on_endpoint_class() -> None:
+    url, params = "https://api.crossref.org/works", {"query": "graph"}
+    assert cache_key(SourceName.CROSSREF, "search", url, params) != cache_key(
+        SourceName.CROSSREF, "entity", url, params
+    )
+    assert cache_key(SourceName.CROSSREF, "search", url, params) == cache_key(
+        SourceName.CROSSREF, "search", url, dict(reversed(list(params.items())))
+    )

@@ -57,7 +57,7 @@ Status: implemented and tested (see below).
 | # | Topic | What was done | Why |
 |---|---|---|---|
 | 1 | arXiv `updated` | Stored as `version_submitted` of the latest version, not `metadata_updated` | Verified: it is the latest version's submission time (integration doc) |
-| 2 | `submission_only` vs. "`preprint_submitted` can never be the first public event" (DATABASE_SCHEMA §14) | The trigger allows `preprint_submitted` as the first public event **only** with basis `submission_only`, from the arXiv API, when no announcement is captured | The two rules contradict each other; this keeps §4.8.4's labelled fallback and forbids every other use |
+| 2 | `submission_only` vs. "`preprint_submitted` can never be the first public event" (DATABASE_SCHEMA §14) | The trigger allows `preprint_submitted` as the first public event **only** with basis `submission_only`, from the arXiv API v1, when the work has no public-availability claim at all (correction 1 below) | The two rules contradicted each other; §14 now states this rule |
 | 3 | `paper_versions` key | `(manifestation_id, version)` plus `paper_id` | Versions belong to a manifestation; a work can have arXiv and bioRxiv versions |
 | 4 | Authors | `paper_authors` per manifestation with raw names; `author_id` empty until author resolution; `authors` table not created yet | Author identity needs S2/OpenAlex author IDs or ORCID; creating author nodes from raw names would create false identities |
 | 5 | `papers.embedding` | Not created yet | The embedding model is chosen with M1b signals |
@@ -69,7 +69,21 @@ Status: implemented and tested (see below).
 | 11 | Capability errors | New `GraphCapabilityUnavailable` keeps the code `graph_capability_unavailable`; other features use `capability_unavailable` | R0 mapped every capability error to the graph code |
 | 12 | Network access | A personal `researchpilot` cloud environment allows only the six source hosts | Required to verify source behaviour; CI uses recorded responses only |
 
-## Doc issues found
+## Corrections after review of 7f447bc
 
-* ARCHITECTURE §4.8.2 lists arXiv `updated` as a metadata date (deviation 1).
-* DATABASE_SCHEMA §14 contradicts §4.8.4 on `preprint_submitted` (deviation 2).
+| # | Issue | Fix | Tests |
+|---|---|---|---|
+| 1 | The Date Resolver put the `submission_only` fallback in the same pool as real public events and took the earliest, so an unannounced arXiv submission (Nov 8) beat a journal's online publication (Nov 15) | The fallback applies only when the work has **no public-availability claim** of any kind: no primary or secondary announcement, posting, online, issue or issued v1 event and no reported publication date, at any precision, on any manifestation (claims more than a day in the future are ignored). Otherwise primary events decide, then the normal secondary rules (`corroborated`, `source_agreement`, `single_source`, `conflicting`); a public claim known only to the month or year gives `uncertain`. When a primary public event wins over an earlier submission, the reason says that an earlier arXiv submission exists. The submission event is never changed or deleted. Migration `0004` aligns the first-public trigger (`submission_only` refused whenever such a claim exists); its downgrade restores the 0003 rule | `test_date_resolver.py`: journal after unannounced submission; OpenAlex-only date after submission (`single_source`); two secondary sources (`source_agreement`); month-precision issue (`uncertain`); future and metadata dates do not block the fallback. `test_papers_arxiv_slice.py`: the trigger refuses `submission_only` once a journal `published_online` event exists, re-resolving selects the journal event, and the submission row is byte-for-byte unchanged |
+| 2 | `cache_key()` ignored the endpoint class, so the same URL and parameters requested as a search (1 h TTL) and an entity lookup (12 h TTL) shared one entry and one expiry | The key is now (source, endpoint class, URL, sorted parameters); behaviour within one endpoint class is unchanged. Existing entries under the old key format simply stop matching and expire | `test_source_client.py`: same URL under `search` and `entity` gives two entries; after 2 h the entity entry still hits and the search entry is refetched; key is independent of parameter order |
+
+Both regression suites fail on 7f447bc and pass after the fix.
+
+## Doc issues found (resolved)
+
+* ARCHITECTURE §4.8.2 listed arXiv `updated` as a metadata date (deviation 1): corrected;
+  `version_submitted` now names arXiv `updated` as its source.
+* DATABASE_SCHEMA §14 contradicted §4.8.4 on `preprint_submitted` (deviation 2): §14 now
+  allows it only as the `submission_only` event under the rule above, and lists the
+  basis/event pairs the trigger enforces.
+* ARCHITECTURE §4.8.4 (and §4.8.5, §10) now state that `submission_only` applies only when no
+  other public-availability event is known, with the Nov 8 / Nov 15 example.

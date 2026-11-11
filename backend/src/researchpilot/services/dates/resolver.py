@@ -4,9 +4,13 @@ Pure function of a work's date events (all manifestations). It never overstates:
 
 * ``verified`` - a **primary** public-availability event (from the manifestation's system
   of record) at day/timestamp precision, with no primary event of the same kind disagreeing
-  by more than 2 days. For arXiv works without a captured announcement, the v1 submission
-  timestamp is used with the labelled basis ``submission_only`` (verified *as a submission*,
-  never presented as the release date).
+  by more than 2 days.
+* ``verified`` with basis ``submission_only`` - only when the work has **no**
+  public-availability claim at all (primary or secondary, any precision, on any
+  manifestation) and an arXiv v1 submission without a captured announcement: the submission
+  timestamp, verified *as a submission* and never presented as the release date. When a real
+  public event exists it decides under the normal rules, even if it is later than the
+  submission; the submission event itself is kept unchanged.
 * ``corroborated`` - no primary event, but two public-availability claims with known,
   different upstream sources agree within +-1 day.
 * ``source_agreement`` - several reporting sources agree (+-1 day) but independence cannot be
@@ -81,11 +85,17 @@ class DateResolution:
 def resolve(claims: list[DateClaim], retrieved_at: datetime) -> DateResolution:
     flags: dict[uuid.UUID, list[str]] = defaultdict(list)
     usable: list[DateClaim] = []
+    current: list[DateClaim] = []  # not in the future, any precision
     for claim in claims:
         if claim.value > retrieved_at + FUTURE_TOLERANCE:
             flags[claim.id].append(FLAG_FUTURE)
-        elif claim.precision in DAY_OR_BETTER:
+            continue
+        current.append(claim)
+        if claim.precision in DAY_OR_BETTER:
             usable.append(claim)
+    # Any public-availability claim (primary or secondary, any precision) rules out the
+    # submission-only fallback: a real public event exists, even if it cannot be dated here.
+    public_claim_known = any(_counts_as_secondary(c) for c in current)
 
     primary_public = [c for c in usable if c.is_primary and _is_public(c)]
     submission = _submission_only_fallback(usable)
@@ -96,45 +106,47 @@ def resolve(claims: list[DateClaim], retrieved_at: datetime) -> DateResolution:
             **{**result.__dict__, "flags": {k: tuple(v) for k, v in flags.items() if v}}
         )
 
-    if primary_public or submission:
-        if primary_public:
-            for claim in secondary:
-                if all(abs(claim.value - p.value) > PRIMARY_CONFLICT for p in primary_public):
-                    flags[claim.id].append(FLAG_DISAGREES)
-            conflict = _primary_conflict(primary_public)
-            if conflict:
-                return done(
-                    DateResolution(
-                        DateConfidence.CONFLICTING,
-                        candidate_public_date=min(c.value for c in primary_public).date(),
-                        reason=conflict,
-                    )
-                )
-        options = [*primary_public, *([submission] if submission else [])]
-        first = min(options, key=lambda c: c.value)
-        if first is submission:
+    # 1. Primary public-availability events (system of record) decide.
+    if primary_public:
+        for claim in secondary:
+            if all(abs(claim.value - p.value) > PRIMARY_CONFLICT for p in primary_public):
+                flags[claim.id].append(FLAG_DISAGREES)
+        conflict = _primary_conflict(primary_public)
+        if conflict:
             return done(
                 DateResolution(
-                    DateConfidence.VERIFIED,
-                    first,
-                    FirstPublicBasis.SUBMISSION_ONLY,
-                    reason="arXiv submission time; the public announcement date was not captured",
+                    DateConfidence.CONFLICTING,
+                    candidate_public_date=min(c.value for c in primary_public).date(),
+                    reason=conflict,
                 )
             )
+        first = min(primary_public, key=lambda c: c.value)
+        reason = f"{first.event.value} from the system of record ({first.reporting_source.value})"
+        if submission is not None and submission.value < first.value:
+            reason += "; an earlier arXiv submission exists, but its announcement was not captured"
         return done(
             DateResolution(
-                DateConfidence.VERIFIED,
-                first,
-                PUBLIC_EVENTS[first.event],
-                reason=f"{first.event.value} from the system of record "
-                f"({first.reporting_source.value})",
+                DateConfidence.VERIFIED, first, PUBLIC_EVENTS[first.event], reason=reason
             )
         )
 
+    # 2. The submission-only fallback applies only when no public-availability claim of any
+    #    kind exists for the work; otherwise the normal secondary rules below decide.
     if not secondary:
+        if submission is not None and not public_claim_known:
+            return done(
+                DateResolution(
+                    DateConfidence.VERIFIED,
+                    submission,
+                    FirstPublicBasis.SUBMISSION_ONLY,
+                    reason="arXiv submission time; no public-availability event is known "
+                    "(the announcement was not captured)",
+                )
+            )
         return done(
             DateResolution(
-                DateConfidence.UNCERTAIN, reason="no day-precision public date from any source"
+                DateConfidence.UNCERTAIN,
+                reason="no day-precision public date from any source",
             )
         )
 
@@ -188,7 +200,9 @@ def _counts_as_secondary(claim: DateClaim) -> bool:
 
 
 def _submission_only_fallback(usable: list[DateClaim]) -> DateClaim | None:
-    """The arXiv v1 submission, for arXiv manifestations without a captured announcement."""
+    """The arXiv v1 submission of an arXiv manifestation without a captured announcement.
+    Used as the first appearance only when no public-availability claim exists (see
+    ``resolve``)."""
     announced = {c.manifestation_id for c in usable if c.event is DateEvent.PREPRINT_ANNOUNCED}
     submissions = [
         c

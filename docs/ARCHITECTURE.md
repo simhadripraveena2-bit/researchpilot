@@ -217,17 +217,17 @@ text came from ("arXiv v2", "journal version").
 
 | Event | Meaning | Typical source | Counts as public availability? |
 |---|---|---|---|
-| `preprint_submitted` | Authors submitted the preprint (arXiv v1 timestamp, UTC). **Not** the moment it became public | arXiv API `published` | ❌. Used only as a labelled fallback (below) |
+| `preprint_submitted` | Authors submitted the preprint (arXiv v1 timestamp, UTC). **Not** the moment it became public | arXiv API `published` | ❌. Used only as a labelled fallback when the work has no public-availability claim at all (below) |
 | `preprint_announced` | The preprint was publicly announced/listed (arXiv daily announcement) | arXiv daily announcement feeds, captured by our daily job (§4.8.5) | ✅ |
 | `preprint_posted` | The preprint was posted publicly (bioRxiv/medRxiv posting date; Crossref `posted` for preprints with DOIs) | bioRxiv/medRxiv API, Crossref | ✅ |
-| `version_submitted` / `version_announced` / `version_posted` | A revision (v2+) | arXiv, bioRxiv/medRxiv | ✅ for that version only; never the work's first appearance |
+| `version_submitted` / `version_announced` / `version_posted` | A revision (v2+) | arXiv API `updated` (submission of the latest or requested version, verified 2026-11-11), bioRxiv/medRxiv | ✅ for that version only; never the work's first appearance |
 | `accepted` | Accepted by a journal (when deposited) | Crossref | ❌ |
 | `published_online` | Version of record first available online | Crossref `published-online` | ✅ |
 | `issue_published` | Final issue (print/issue) publication | Crossref `published-print`, issue date | ✅ but usually later than online; never earlier evidence of novelty |
 | `issued` | Crossref's derived earliest publication date | Crossref `issued` | ✅ (precision checked; recorded as derived) |
 | `reported_publication_date` | A secondary source's "publication date" | OpenAlex `publication_date`, Semantic Scholar `publicationDate` | Supporting only (§4.8.3) |
 | `index_created` | First appeared in an index | OpenAlex `created_date` (premium filter), our `first_seen` | ❌. "Newly indexed" detection only |
-| `metadata_updated` / `metadata_deposited` / `metadata_indexed` | Metadata changed | Crossref `deposited`/`indexed`, OpenAlex `updated_date`, arXiv `updated` | ❌ never |
+| `metadata_updated` / `metadata_deposited` / `metadata_indexed` | Metadata changed | Crossref `deposited`/`indexed`, OpenAlex `updated_date` (arXiv `updated` is a version submission, not a metadata date) | ❌ never |
 
 Every event row records: value (UTC), precision (timestamp/day/month/year),
 manifestation, identifier, version, **reporting source**, **upstream
@@ -276,11 +276,18 @@ labelled with its basis:
 
 - `announced` / `posted` / `published_online` / `issue` — the event itself.
 - `submission_only` — for arXiv papers whose announcement date wasn't
-  captured. The **v1 submission timestamp** is used as a stand-in and always
-  displayed with its meaning: "Submitted to arXiv Nov 8, 21:14 CET — public
-  announcement date not verified (usually 1–3 days later)". This basis is
-  verified as a *submission* date, never presented as the public release
-  date.
+  captured **and** for which no other public-availability claim is known
+  (no announcement, posting, online, issue or issued event and no reported
+  publication date, at any precision, on any manifestation). The **v1
+  submission timestamp** is used as a stand-in and always displayed with its
+  meaning: "Submitted to arXiv Nov 8, 21:14 CET — public announcement date
+  not verified (usually 1–3 days later)". This basis is verified as a
+  *submission* date, never presented as the public release date. When a real
+  public event exists, it decides under the normal confidence rules (§4.8.3),
+  even if it is later than the submission: e.g. arXiv v1 submitted Nov 8,
+  journal published online Nov 15, no announcement captured → first public
+  appearance Nov 15 (`published_online`), with a note that an earlier arXiv
+  submission exists. The submission event itself is kept unchanged.
 
 The 3-day fetch overlap before the window start is **only a retrieval
 tactic**, so that late-announced papers are fetched. It is never evidence
@@ -310,7 +317,8 @@ papers at announcement time, and keep no history. A small **daily worker
 job** reads the feeds for every category mapped in any project. It records
 `preprint_announced` / `version_announced` events, with the feed as reporting
 source and arXiv as system of record. Papers announced before capture
-started, or in unmapped categories, keep `submission_only`. The exact feed
+started, or in unmapped categories, keep `submission_only` (unless another
+public-availability event is known). The exact feed
 field semantics (which element carries the announcement date and type) must
 be verified at implementation and recorded in the integration doc. Until
 then, the job only records the announcement day the feed was fetched for.
@@ -715,7 +723,8 @@ evaluation gates first.
   by design.
 - arXiv announcement dates exist only from when the daily capture job
   started, and only for mapped categories. Other arXiv papers are dated by
-  their labelled v1 submission time (`submission_only`).
+  their labelled v1 submission time (`submission_only`) when no other
+  public-availability event is known.
 - Upstream provenance is rarely exposed by aggregators, so "corroborated"
   dates will be uncommon.
 - Version matching without identifier links is conservative. Some true

@@ -164,9 +164,20 @@ class InProcessRateLimiter:
 # --- HTTP cache ------------------------------------------------------------------------------
 
 
-def cache_key(source: SourceName, url: str, params: Mapping[str, Any] | None) -> str:
+def cache_key(
+    source: SourceName, endpoint_class: str, url: str, params: Mapping[str, Any] | None
+) -> str:
+    """One cache entry per (source, endpoint class, URL, parameters): the endpoint class
+    decides the TTL, so the same request made as an entity lookup and as a search never
+    shares an entry (and its expiry)."""
     canonical = json.dumps(
-        {"s": source.value, "u": url, "p": sorted((params or {}).items())}, default=str
+        {
+            "s": source.value,
+            "c": endpoint_class,
+            "u": url,
+            "p": sorted((params or {}).items()),
+        },
+        default=str,
     )
     return hashlib.sha256(canonical.encode()).hexdigest()
 
@@ -344,7 +355,7 @@ class SourceClient:
         use_cache: bool = True,
         not_found_ok: bool = False,
     ) -> SourceResponse:
-        key = cache_key(self.source, url, params)
+        key = cache_key(self.source, endpoint_class, url, params)
         if use_cache:
             cached = await self._cache.get(key)
             if cached is not None:

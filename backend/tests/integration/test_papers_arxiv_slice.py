@@ -224,3 +224,74 @@ async def test_postgres_rate_limiter_spaces_requests_across_processes(
     assert len(waits) == 2  # the first request goes immediately
     assert 2.5 < waits[0] <= 3.0 and 5.5 < waits[1] <= 6.0
     assert 8.5 < next_slot.total_seconds() <= 9.0
+
+
+async def test_real_public_event_replaces_submission_only_in_the_database(
+    client: httpx.AsyncClient, db: psycopg.Connection, settings: Settings
+) -> None:
+    """arXiv v1 submitted 2017-06-12 (no announcement captured), then a journal version
+    published online later: the trigger refuses submission_only, the resolver picks the
+    journal event, and the submission event is kept unchanged."""
+    from datetime import UTC, datetime
+
+    from researchpilot.core.ids import uuid7
+    from researchpilot.services.dates.store import resolve_paper_dates
+
+    project_id = await create_project(client)
+    paper_id = (await add(client, project_id, "1706.03762")).json()["id"]
+    submission_before = db.execute(
+        "SELECT id, value, flags FROM paper_dates WHERE paper_id = %s "
+        "AND event = 'preprint_submitted'",
+        (paper_id,),
+    ).fetchone()
+    journal_m, online_id = uuid7(), uuid7()
+    online = datetime(2017, 12, 4, tzinfo=UTC)
+    db.execute(
+        "INSERT INTO paper_manifestations (id, paper_id, kind, server_or_venue, "
+        "primary_identifier_scheme, primary_identifier_value, peer_review_label) "
+        "VALUES (%s, %s, 'published', 'NeurIPS', 'doi', '10.5555/example', 'journal_version')",
+        (journal_m, paper_id),
+    )
+    db.execute(
+        "INSERT INTO paper_dates (id, paper_id, manifestation_id, event, value, precision, "
+        "is_primary, reporting_source, upstream_source, retrieved_at) VALUES "
+        "(%s, %s, %s, 'published_online', %s, 'day', true, 'crossref', 'crossref', now())",
+        (online_id, paper_id, journal_m, online),
+    )
+    with pytest.raises(psycopg.errors.CheckViolation, match="without any public-availability"):
+        db.execute("UPDATE papers SET row_version = row_version WHERE id = %s", (paper_id,))
+    db.rollback()
+
+    # Same situation through the resolver (committed data, application session).
+    db.execute(
+        "INSERT INTO paper_manifestations (id, paper_id, kind, server_or_venue, "
+        "primary_identifier_scheme, primary_identifier_value, peer_review_label) "
+        "VALUES (%s, %s, 'published', 'NeurIPS', 'doi', '10.5555/example', 'journal_version')",
+        (journal_m, paper_id),
+    )
+    db.execute(
+        "INSERT INTO paper_dates (id, paper_id, manifestation_id, event, value, precision, "
+        "is_primary, reporting_source, upstream_source, retrieved_at) VALUES "
+        "(%s, %s, %s, 'published_online', %s, 'day', true, 'crossref', 'crossref', now())",
+        (online_id, paper_id, journal_m, online),
+    )
+    db.commit()
+    engine = make_engine(settings.database_url)
+    try:
+        async with make_sessionmaker(engine)() as session, session.begin():
+            await resolve_paper_dates(session, paper_id, datetime.now(UTC))
+    finally:
+        await engine.dispose()
+
+    resolved = (await client.get(f"{API}/projects/{project_id}/papers/{paper_id}")).json()
+    assert resolved["resolved_date"]["basis"] == "published_online"
+    assert resolved["resolved_date"]["event_id"] == str(online_id)
+    assert resolved["resolved_date"]["confidence"] == "verified"
+    assert (
+        db.execute(
+            "SELECT id, value, flags FROM paper_dates WHERE paper_id = %s "
+            "AND event = 'preprint_submitted'",
+            (paper_id,),
+        ).fetchone()
+        == submission_before
+    )
