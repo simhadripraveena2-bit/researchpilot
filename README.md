@@ -32,8 +32,9 @@ Two recurring tools sit across the journey:
   concepts step by step with short understanding checks, tracks learning
   progress per project, and cites passages or labels background knowledge.
 
-**Status:** R0 (foundation) implemented and awaiting review; R1 has not started. See
-[R0 implementation notes](docs/R0_IMPLEMENTATION_NOTES.md). Local development runs
+**Status:** R0 (foundation) approved. R1 milestone M1a (Discover) in progress: source
+integrations, version matching and date provenance - see
+[M1a notes](docs/R1_M1A_NOTES.md) and [R0 implementation notes](docs/R0_IMPLEMENTATION_NOTES.md). Local development runs
 without sign-in (localhost only); any hosted deployment is blocked until the security
 gate (gate H) passes.
 

@@ -42,6 +42,39 @@ async def enqueue(
     return job_id
 
 
+async def enqueue_once(
+    session: AsyncSession,
+    kind: str,
+    payload: dict[str, Any],
+    dedupe_key: str,
+    *,
+    max_attempts: int = 3,
+) -> uuid.UUID | None:
+    """Insert a periodic job unless one with the same key exists (any status)."""
+    job_id = uuid7()
+    inserted = (
+        await session.execute(
+            sa.text(
+                "INSERT INTO jobs (id, kind, payload, max_attempts, dedupe_key) "
+                "VALUES (:id, :kind, CAST(:payload AS jsonb), :m, :k) "
+                "ON CONFLICT (dedupe_key) DO NOTHING RETURNING id"
+            ),
+            {
+                "id": job_id,
+                "kind": kind,
+                "payload": _json(payload),
+                "m": max_attempts,
+                "k": dedupe_key,
+            },
+        )
+    ).scalar_one_or_none()
+    if inserted is not None:
+        await session.execute(
+            sa.text("SELECT pg_notify(:ch, :id)"), {"ch": NOTIFY_CHANNEL, "id": str(job_id)}
+        )
+    return job_id if inserted is not None else None
+
+
 async def claim(session: AsyncSession, worker_id: str, stale_after: timedelta) -> ClaimedJob | None:
     """Claim one runnable job: queued and due, or running with a stale heartbeat (its worker
     died) **and attempts left**. Reclaiming a stale job counts as a new attempt, so repeated

@@ -12,6 +12,7 @@ from researchpilot import __version__
 from researchpilot.core.settings import Settings
 from researchpilot.domain.enums import SourceName
 from researchpilot.integrations.arxiv import ARXIV_POLICY, ArxivClient
+from researchpilot.integrations.arxiv_feed import FEED_POLICY, ArxivFeedClient
 from researchpilot.integrations.base import (
     PostgresHttpCache,
     PostgresRateLimiter,
@@ -39,6 +40,7 @@ class Sources:
     http: httpx.AsyncClient
     records: SourceRecordStore
     arxiv: ArxivClient
+    arxiv_feed: ArxivFeedClient
     crossref: CrossrefClient
     biorxiv: PreprintServerClient
     medrxiv: PreprintServerClient
@@ -75,6 +77,7 @@ def build_sources(
         http=http,
         records=records,
         arxiv=ArxivClient(SourceClient(ARXIV_POLICY, http, limiter, cache), records),
+        arxiv_feed=ArxivFeedClient(SourceClient(FEED_POLICY, http, limiter, cache), records),
         crossref=CrossrefClient(SourceClient(CROSSREF_POLICY, http, limiter, cache), records),
         biorxiv=PreprintServerClient(SourceClient(BIORXIV_POLICY, http, limiter, cache), records),
         medrxiv=PreprintServerClient(SourceClient(MEDRXIV_POLICY, http, limiter, cache), records),

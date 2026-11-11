@@ -1,0 +1,37 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/5vWDB6IyIydNK1zR2YwM3DQt0ew</id>
+  <title>arXiv Query: search_query=&amp;id_list=2604.22997&amp;start=0&amp;max_results=10</title>
+  <updated>2026-11-11T13:34:14Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=10&amp;id_list=2604.22997" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>10</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2604.22997v2</id>
+    <title>Learning Deep Phylogeny Through Epistasis-Aware Geometry</title>
+    <updated>2026-11-10T18:10:49Z</updated>
+    <link href="https://arxiv.org/abs/2604.22997v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2604.22997v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Epistasis shapes protein evolution because the effect of a substitution depends on its sequence background. Site-independent substitution models can recover phylogeny accurately, but their resolution declines as substitutions accumulate and reshape mutational constraints. Potts models describe family-specific epistatic landscapes but leave the histories traversed through them unresolved. We introduce a generative framework that learns family-specific evolutionary structure directly from sequences evolving on such landscapes. Our variational autoencoder uses a covariance-matching loss to target epistatic dependencies and a correlation loss to align latent distance with sequence divergence before p-distance saturates. We compare two implementations that differ only in latent geometry. EucEvoGen uses Euclidean space, and HyperEvoGen uses a Poincaré ball. Trained on natural protein alignments, both reproduce family-level sequence diversity and recover higher-order sequence statistics beyond pairwise marginals more accurately than a Potts-model generator. In simulations of sequence evolution along Yule trees under a Potts Hamiltonian, HyperEvoGen recovers the known topologies at least as accurately as maximum-likelihood inference, improving on it for four of five tree-distance metrics. Its ancestral sequence reconstructions trail maximum likelihood for closely related sequences, overtake it beyond roughly 0.3 p-distance, and retain that advantage as divergence increases. EucEvoGen matches HyperEvoGen in sequence generation but yields less accurate phylogenetic inference. This comparison links the accuracy of deep phylogenetic inference to the global organization of the latent space. These results suggest that family-specific representations of epistatically constrained sequence space can extend phylogenetic inference into the regime where stationary site-independent models lose resolution.</summary>
+    <category term="q-bio.QM" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-04-24T20:31:36Z</published>
+    <arxiv:comment>28 pages, 7 figures, 1 Table</arxiv:comment>
+    <arxiv:primary_category term="q-bio.QM"/>
+    <author>
+      <name>Jason Lamanna</name>
+    </author>
+    <author>
+      <name>Erfan Mowlaei</name>
+    </author>
+    <author>
+      <name>Xinghua Shi</name>
+    </author>
+    <author>
+      <name>Sudhir Kumar</name>
+    </author>
+    <author>
+      <name>Vincenzo Carnevale</name>
+    </author>
+  </entry>
+</feed>

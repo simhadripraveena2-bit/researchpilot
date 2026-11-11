@@ -38,7 +38,7 @@ manifestation + identifier + versions + author list + date events (each with rep
 source, upstream provenance, field path and source record) → Date Resolver → resolved date
 on the work → `GET /projects/{id}/papers/{paper_id}` returns every event with its provenance.
 
-Status: implemented and tested (see below).
+Status: implemented and tested (see below). Steps 1–5 of the approved order are done; remaining M1a tasks are listed under Known limitations.
 
 ## What exists
 
@@ -103,6 +103,19 @@ Real recorded cases (all in `test_version_matching.py`, `test_papers_biorxiv.py`
 | Enrichment after adding a paper: aggregator IDs, secondary `reported_publication_date` (upstream unknown), OpenAlex `index_created`/`metadata_updated`, "same record lists these identifiers" links (strong evidence); outcome per source returned as `coverage` | `services/papers/enrich.py`, `services/papers/service.py` | `test_papers_arxiv_slice.py`, `test_papers_biorxiv.py`, `test_version_matching.py` |
 | Add by OpenAlex / Semantic Scholar ID (resolved to the DOI or arXiv ID of a system of record) | `services/papers/service.py` | `test_version_matching.py`, `test_papers_arxiv_slice.py` |
 
+## Step 5: arXiv announcement capture and date resolution
+
+| Part | Where | Tests |
+|---|---|---|
+| Feed client: announcement day from `pubDate` (US Eastern date), types and versions from `announce_type` / `guid`, empty feeds | `integrations/arxiv_feed.py`, [integration doc](integrations/ARXIV.md) | `tests/unit/test_arxiv_feed.py` |
+| `arxiv_announcement_log` (as listed); `new` → primary `preprint_announced`, `replace` → `version_announced`; applied at capture and when a paper is ingested later; affected works re-resolved | migration `0006`, `services/dates/announcements.py`, `services/papers/ingest.py` | `tests/integration/test_arxiv_announcements.py` |
+| Daily worker job, once per UTC day (`jobs.dedupe_key`, `enqueue_once`), categories from settings plus projects' arXiv works | `worker/main.py`, `jobs/queue.py` | same |
+
+Real cases: `2611.13190` goes from `submission_only` (2026-11-09) to verified `announced`
+(2026-11-11) with the submission event unchanged; `2604.22997`'s v2 replacement is a version
+event and does not make the paper new; capture is idempotent; a failing feed is reported per
+category and logs nothing.
+
 ## Decisions and deviations
 
 | # | Topic | What was done | Why |
@@ -135,6 +148,10 @@ Real recorded cases (all in `test_version_matching.py`, `test_papers_biorxiv.py`
 | 27 | OpenAlex filled-in dates | `YYYY-MM-01` → month precision, `YYYY-01-01` → year precision | Verified: missing parts are filled with 01 |
 | 28 | Aggregator IDs and dates | Attached to the looked-up manifestation (published DOI first); an ID already held by another work is not duplicated - the listing link lets the matcher compare the works | Both aggregators merge versions; their data is never primary |
 | 29 | Effect on arXiv papers | OpenAlex reports a publication date for almost every arXiv paper; under the approved rule (a public claim of any kind rules out `submission_only`) such papers are `single_source` / unconfirmed until a primary event exists - which announcement capture (step 5) provides | Consequence of the corrected `submission_only` rule, now visible |
+| 30 | Cross-listings | `cross` / `replace-cross` never produce announcement events | Verified: they can list old papers |
+| 31 | `new` with a version > 1 | `preprint_announced` (version recorded in the evidence) | The first announcement of a paper replaced before it was announced |
+| 32 | Capture schedule | Once per UTC day after 06:00 UTC via the job queue (`jobs.dedupe_key`), not a separate scheduler | The feed is rebuilt ~05:00 UTC and keeps no history; no new infrastructure (§4.8.5) |
+| 33 | Categories | Configured list plus primary categories of projects' arXiv works | Objective-based category mapping arrives with M1c |
 | 12 | Network access | A personal `researchpilot` cloud environment allows only the six source hosts | Required to verify source behaviour; CI uses recorded responses only |
 
 ## Corrections after review of 7f447bc
@@ -155,3 +172,21 @@ Both regression suites fail on 7f447bc and pass after the fix.
   basis/event pairs the trigger enforces.
 * ARCHITECTURE §4.8.4 (and §4.8.5, §10) now state that `submission_only` applies only when no
   other public-availability event is known, with the Nov 8 / Nov 15 example.
+
+## Known limitations (after steps 1–5)
+
+* **Semantic Scholar** success responses are not verified live (no API key); keyless requests
+  are always refused with 429, so S2 enrichment is reported `unavailable`. The success parser
+  is tested on a fixture marked as constructed.
+* **OpenAlex** keyless budget is shared per IP and was used up from this environment: list
+  queries stop until midnight UTC; single-work lookups still work.
+* **Unannounced arXiv papers** with an OpenAlex date are `single_source` (unconfirmed), not
+  `submission_only`, under the approved rule; announcement capture fixes this only from the day
+  capture runs (feeds keep no history).
+* The no-identifier auto-match needs abstract embeddings (M1b); such pairs are possible matches.
+* Announcement capture categories come from settings and projects' arXiv works until M1c.
+* Release types, window logic, `boundary_day` flags and time-zone display (D23) are not built
+  yet; they belong to M1a task 4a's remaining part and M1c.
+* Not started (outside this round): research objective + Planner (task 5), discovery workflow
+  W1 with search log (task 6), graph-compatible relationship tables (task 6a), G-MATCH and
+  G-LATEST-DATES benchmark sets (D19 evaluation roles).

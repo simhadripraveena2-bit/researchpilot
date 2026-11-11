@@ -31,6 +31,19 @@ API and worker processes by `source_rate_limits` (shared slot reservation).
 
 ## Announcement feeds (`https://rss.arxiv.org/rss/<category>`)
 
-Reachable (2026-11-11). Field semantics are verified when the announcement-capture job is
-built (M1a step 8); until then no announcement events are recorded, and arXiv works use the
-labelled `submission_only` basis.
+Client: `integrations/arxiv_feed.py`; capture job: `services/dates/announcements.py`.
+Recorded feeds: `backend/tests/fixtures/sources/arxiv_rss/`. Verified on 2026-11-11:
+
+| Behaviour | Evidence | Consequence |
+|---|---|---|
+| One RSS 2.0 feed per category, rebuilt once per announcement (`lastBuildDate` ~05:00 UTC), `skipDays` Saturday and Sunday, `Cache-Control: max-age` ~24 h, `ETag` | cs.DL, cs.LG, q-bio.QM | Daily worker job after 06:00 UTC (`ARXIV_CAPTURE_AFTER_UTC_HOUR`), once per UTC day (`jobs.dedupe_key`) |
+| **No history**: only the latest announcement day | — | Days the job misses are lost; those papers keep their submission time or secondary dates |
+| Channel and item `pubDate` = the announcement day at **midnight US Eastern** (`Wed, 11 Nov 2026 00:00:00 -0500`) | all items of a feed share it | The calendar date is the announcement day; stored as a date-only value (00:00 UTC, day precision, D23) |
+| `arxiv:announce_type` ∈ `new`, `cross`, `replace`, `replace-cross`; `guid` = `oai:arXiv.org:<id>v<version>` | cs.LG: 134 new, 101 cross, 78 replace, 70 replace-cross | Logged exactly as listed in `arxiv_announcement_log` |
+| `cross` / `replace-cross` can list **old** papers cross-listed later | `2109.05627v2` listed as `cross` on 2026-11-11 | Only `new` → `preprint_announced` (the work's first announcement) and `replace` → `version_announced` (that version); cross listings stay in the log |
+| Submission and announcement differ | `2611.13190`: submitted 2026-11-09 20:10 UTC, announced 2026-11-11 | The announcement replaces the `submission_only` basis as the verified first appearance |
+| Empty feeds exist on announcement days | math.HO: 0 items, `pubDate` 2026-11-11 | Recorded as fetched; nothing logged |
+
+Categories captured: configured `ARXIV_ANNOUNCEMENT_CATEGORIES` plus the primary category of
+every arXiv work in a project (until M1c maps categories from research objectives). Papers
+ingested later receive announcements already in the log.

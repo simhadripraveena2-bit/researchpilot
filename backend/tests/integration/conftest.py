@@ -27,6 +27,7 @@ def settings(migrated_db: str) -> Settings:
         _env_file=None,
         database_url=_sqlalchemy_url(migrated_db),
         llm_force_fake=True,
+        arxiv_capture_enabled=False,  # tests opt in; never reaches the network
         worker_poll_seconds=0.05,
         job_heartbeat_seconds=0.2,
         job_stale_after_seconds=1.0,
@@ -44,6 +45,8 @@ def _clean_global_paper_data(migrated_db: str) -> None:
         conn.execute("DELETE FROM source_records")
         conn.execute("DELETE FROM http_cache")
         conn.execute("DELETE FROM source_rate_limits")
+        conn.execute("DELETE FROM arxiv_announcement_log")
+        conn.execute("DELETE FROM jobs WHERE dedupe_key IS NOT NULL")
 
 
 @pytest.fixture

@@ -287,6 +287,38 @@
   "status": 200,
   "url": "https://api.openalex.org/works/doi:10.48550/arxiv.2411.00001"
  },
+ "works_doi_10.48550_arxiv.2604.22997.json": {
+  "headers": {
+   "x-ratelimit-cost-usd": "0",
+   "x-ratelimit-credits-used": "0",
+   "x-ratelimit-limit": "1000",
+   "x-ratelimit-limit-usd": "0.1",
+   "x-ratelimit-onetime-remaining": "0",
+   "x-ratelimit-prepaid-remaining-usd": "0",
+   "x-ratelimit-remaining": "0",
+   "x-ratelimit-remaining-usd": "0",
+   "x-ratelimit-reset": "37534"
+  },
+  "recorded": "2026-11-11",
+  "status": 200,
+  "url": "https://api.openalex.org/works/doi:10.48550/arxiv.2604.22997"
+ },
+ "works_doi_10.48550_arxiv.2611.13190.json": {
+  "headers": {
+   "x-ratelimit-cost-usd": "0",
+   "x-ratelimit-credits-used": "0",
+   "x-ratelimit-limit": "1000",
+   "x-ratelimit-limit-usd": "0.1",
+   "x-ratelimit-onetime-remaining": "0",
+   "x-ratelimit-prepaid-remaining-usd": "0",
+   "x-ratelimit-remaining": "0",
+   "x-ratelimit-remaining-usd": "0",
+   "x-ratelimit-reset": "37535"
+  },
+  "recorded": "2026-11-11",
+  "status": 404,
+  "url": "https://api.openalex.org/works/doi:10.48550/arxiv.2611.13190"
+ },
  "works_doi_10.48550_arxiv.hep-th_9711200.json": {
   "headers": {
    "x-ratelimit-cost-usd": "0",

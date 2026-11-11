@@ -11,6 +11,7 @@ from researchpilot.db.models.matching import (
     PaperVersionLink,
 )
 from researchpilot.db.models.papers import (
+    ArxivAnnouncementLog,
     Paper,
     PaperAuthor,
     PaperDate,
@@ -24,6 +25,7 @@ from researchpilot.db.models.runs import Checkpoint, ResearchRun, RunEvent, Task
 from researchpilot.db.models.sources import HttpCacheEntry, SourceRateLimit, SourceRecord
 
 __all__ = [
+    "ArxivAnnouncementLog",
     "Checkpoint",
     "Claim",
     "ClaimEvidence",

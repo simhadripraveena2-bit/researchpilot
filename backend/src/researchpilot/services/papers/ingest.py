@@ -197,6 +197,10 @@ async def ingest_arxiv(session: AsyncSession, fetched: FetchedEntry) -> IngestRe
             record_id,
         )
     await resolve_paper_dates(session, paper_id, retrieved_at)
+    # Announcements captured before this paper entered the record.
+    from researchpilot.services.dates.announcements import apply_announcements
+
+    await apply_announcements(session, [entry.arxiv_id])
     return IngestResult(paper_id, manifestation_id, created)
 
 

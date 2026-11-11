@@ -1,0 +1,32 @@
+{
+ "rss_cs.DL.xml": {
+  "headers": {
+   "cache-control": "max-age=86376",
+   "content-type": "application/rss+xml",
+   "etag": "e4d4320fd506c70fef096267feb67ef0d78b66067f6859557a1e74a03e2567d1"
+  },
+  "recorded": "2026-11-11",
+  "status": 200,
+  "url": "https://rss.arxiv.org/rss/cs.DL"
+ },
+ "rss_math.HO.xml": {
+  "headers": {
+   "cache-control": "max-age=86393",
+   "content-type": "application/rss+xml",
+   "etag": "d4949f5ec17d8d2f7413b5db720a9730ede343d7e9ae071bc561814409e284ba"
+  },
+  "recorded": "2026-11-11",
+  "status": 200,
+  "url": "https://rss.arxiv.org/rss/math.HO"
+ },
+ "rss_q-bio.QM.xml": {
+  "headers": {
+   "cache-control": "max-age=86386",
+   "content-type": "application/rss+xml",
+   "etag": "58abf4b54713cd7904540b40debad7e817e4d4f5b75157e7a257724112c0bbef"
+  },
+  "recorded": "2026-11-11",
+  "status": 200,
+  "url": "https://rss.arxiv.org/rss/q-bio.QM"
+ }
+}

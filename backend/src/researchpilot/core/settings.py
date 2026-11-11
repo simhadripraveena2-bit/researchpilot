@@ -66,6 +66,10 @@ class Settings(BaseSettings):
     # created-date filters for newly indexed works. Daily spend cap in USD for metered calls.
     openalex_capabilities: Literal["basic", "premium"] = "basic"
     openalex_daily_budget_usd: float = 0.10
+    # arXiv Announcement Capture (D31): daily job after the feeds are rebuilt (~05:00 UTC).
+    arxiv_capture_enabled: bool = True
+    arxiv_capture_after_utc_hour: int = 6
+    arxiv_announcement_categories: list[str] = Field(default_factory=list)
 
     # Polite-pool contact address for scholarly APIs (OpenAlex, Crossref, Unpaywall).
     contact_email: str | None = None

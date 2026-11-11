@@ -1,0 +1,32 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/T1kZb9HMXcQJDpgkSY1ygtDryAc</id>
+  <title>arXiv Query: search_query=&amp;id_list=2611.13190&amp;start=0&amp;max_results=10</title>
+  <updated>2026-11-11T13:34:11Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=10&amp;id_list=2611.13190" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>10</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2611.13190v1</id>
+    <title>EvoSurv: Evolution-Aware Multimodal Survival Modeling Reveals Complementary Prognostic Signals</title>
+    <updated>2026-11-09T20:10:37Z</updated>
+    <link href="https://arxiv.org/abs/2611.13190v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2611.13190v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Accurate cancer survival prediction remains challenging due to tumor heterogeneity. Although multimodal survival models integrate clinical and molecular data, they often overlook evolutionary information encoded in genomic alterations. To address this gap, we developed eTime, a 38-dimensional evolutionary representation comprising eight feature groups that characterize clonal and subclonal mutation burden, mutational spectra, functional consequences, copy-number alterations, and anoikis-related genomic changes. We further developed EvoSurv, a multimodal survival framework integrating eTime with clinical variables and RNA expression. Across six TCGA cancer cohorts comprising 2,782 patients, EvoSurv achieved the highest mean concordance index (C-index) in all six cancers, averaging 0.663 and outperforming three state-of-the-art survival prediction methods. More importantly, we assessed whether evolutionary features provide additional prognostic information beyond clinical and transcriptomic predictors. eTime remained significantly associated with survival in head and neck squamous cell carcinoma (HNSC) and liver hepatocellular carcinoma (LIHC) after adjustment for clinical variables and RNA-derived risk scores. Feature-group analyses further revealed cancer-specific prognostic patterns. In HNSC, T&gt;G substitutions were associated with increased mortality risk after clinical and molecular adjustment, including in HPV-negative patients, with supporting evidence from an independent CPTAC-HNSCC cohort. Overall, these findings demonstrate that eTime captures survival-associated evolutionary information and highlight its potential to provide prognostic value beyond clinical and transcriptomic predictors.</summary>
+    <category term="q-bio.QM" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-11-09T20:10:37Z</published>
+    <arxiv:comment>11 pages, 3 figures</arxiv:comment>
+    <arxiv:primary_category term="q-bio.QM"/>
+    <author>
+      <name>Wei Wang</name>
+    </author>
+    <author>
+      <name>Po-Yu Liang</name>
+    </author>
+    <author>
+      <name>Jun Bai</name>
+    </author>
+  </entry>
+</feed>

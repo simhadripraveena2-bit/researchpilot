@@ -14,6 +14,7 @@ from datetime import date, datetime
 import sqlalchemy as sa
 from sqlalchemy.dialects.postgresql import ARRAY, JSONB, UUID
 from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.sql.elements import conv
 
 from researchpilot.db.base import Base, created_at, enum_type, row_version, updated_at, uuid_pk
 from researchpilot.domain.enums import (
@@ -344,3 +345,32 @@ class ProjectItem(Base):
         ARRAY(sa.Text), server_default=sa.text("'{}'::text[]"), nullable=False
     )
     first_seen_at: Mapped[datetime] = created_at()
+
+
+class ArxivAnnouncementLog(Base):
+    """What arXiv's daily announcement feed listed, as listed (ARCHITECTURE §4.8.5)."""
+
+    __tablename__ = "arxiv_announcement_log"
+    __table_args__ = (
+        sa.UniqueConstraint(
+            "category",
+            "arxiv_id",
+            "version",
+            "announce_type",
+            "announcement_day",
+            name=conv("uq_arxiv_announcement_log_entry"),  # under the 63-character limit
+        ),
+        sa.Index("ix_arxiv_announcement_log_arxiv_id_day", "arxiv_id", "announcement_day"),
+    )
+
+    id: Mapped[uuid.UUID] = uuid_pk()
+    category: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    arxiv_id: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    version: Mapped[int | None] = mapped_column(sa.Integer)
+    # new, cross, replace, replace-cross - exactly as reported by the feed
+    announce_type: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    announcement_day: Mapped[date] = mapped_column(sa.Date, nullable=False)
+    feed_fetched_at: Mapped[datetime] = mapped_column(sa.DateTime(timezone=True), nullable=False)
+    source_record_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey(_SOURCE_RECORD_FK, ondelete="SET NULL")
+    )

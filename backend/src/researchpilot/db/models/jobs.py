@@ -38,3 +38,5 @@ class Job(Base):
     last_error: Mapped[str | None] = mapped_column(sa.Text)
     created_at: Mapped[datetime] = created_at()
     finished_at: Mapped[datetime | None] = mapped_column(sa.DateTime(timezone=True))
+    # Periodic jobs: one job per key (e.g. "arxiv-announcements:2026-11-11").
+    dedupe_key: Mapped[str | None] = mapped_column(sa.Text, unique=True)

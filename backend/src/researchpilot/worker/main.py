@@ -12,9 +12,10 @@ import socket
 import traceback
 import uuid
 from collections.abc import Awaitable, Callable, Coroutine
-from datetime import timedelta
+from datetime import UTC, datetime, timedelta
 from typing import Any
 
+import httpx
 from langgraph.checkpoint.postgres.aio import AsyncPostgresSaver
 from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
@@ -25,10 +26,12 @@ from researchpilot.core.settings import Settings, get_settings
 from researchpilot.db.session import make_engine, make_sessionmaker, session_scope
 from researchpilot.domain.enums import RunStatus
 from researchpilot.events.outbox import Dispatcher
+from researchpilot.integrations.registry import Sources, build_sources
 from researchpilot.jobs import queue
 from researchpilot.llm.factory import build_runtime_gateway
 from researchpilot.llm.gateway import LLMGateway
 from researchpilot.runs import service
+from researchpilot.services.dates.announcements import capture, categories_to_capture
 from researchpilot.workflows.runner import WorkflowRunner
 
 JobHandler = Callable[[queue.ClaimedJob], Coroutine[Any, Any, Any]]
@@ -58,6 +61,9 @@ async def open_checkpointer(settings: Settings) -> tuple[AsyncPostgresSaver, Asy
     return saver, pool
 
 
+ARXIV_CAPTURE_JOB = "arxiv_announcement_capture"
+
+
 class Worker:
     def __init__(
         self,
@@ -65,21 +71,55 @@ class Worker:
         sessions: async_sessionmaker[AsyncSession],
         runner: WorkflowRunner,
         dispatcher: Dispatcher,
+        sources: Sources | None = None,
     ) -> None:
         self.id = f"{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().hex[:6]}"
         self._settings = settings
         self._sessions = sessions
         self._runner = runner
         self._dispatcher = dispatcher
+        self._sources = sources
         self._log = get_logger(component="worker", worker=self.id)
         self._handlers: dict[str, JobHandler] = {
             "run_workflow": self._run_workflow,
             "resume_workflow": self._run_workflow,
+            ARXIV_CAPTURE_JOB: self._capture_announcements,
         }
 
     async def _run_workflow(self, job: queue.ClaimedJob) -> None:
         run_id = uuid.UUID(job.payload["run_id"])
         await self._runner.execute(run_id, resume=job.payload.get("resume"))
+
+    async def _capture_announcements(self, job: queue.ClaimedJob) -> None:
+        if self._sources is None:
+            raise RuntimeError("the worker has no source clients")
+        async with session_scope(self._sessions) as session:
+            categories = await categories_to_capture(
+                session, self._settings.arxiv_announcement_categories
+            )
+        report = await capture(self._sessions, self._sources.arxiv_feed, categories)
+        self._log.info(
+            "arxiv.capture_job_done",
+            categories=report.categories,
+            logged=report.logged,
+            events=report.events_added,
+        )
+
+    async def schedule_periodic(self, now: datetime | None = None) -> bool:
+        """Enqueues today's announcement capture once, after the feeds are rebuilt."""
+        if not self._settings.arxiv_capture_enabled or self._sources is None:
+            return False
+        now = now or datetime.now(UTC)
+        if now.hour < self._settings.arxiv_capture_after_utc_hour:
+            return False
+        async with session_scope(self._sessions) as session:
+            job = await queue.enqueue_once(
+                session,
+                ARXIV_CAPTURE_JOB,
+                {"day": now.date().isoformat()},
+                dedupe_key=f"{ARXIV_CAPTURE_JOB}:{now.date().isoformat()}",
+            )
+        return job is not None
 
     async def run_forever(self, stop: asyncio.Event | None = None) -> None:
         stop = stop or asyncio.Event()
@@ -94,6 +134,7 @@ class Worker:
         """One unit of work: dispatch outbox events, fail exhausted stale jobs, then run at
         most one job."""
         dispatched = await self._dispatcher.dispatch_once()
+        await self.schedule_periodic()
         stale = timedelta(seconds=self._settings.job_stale_after_seconds)
         failed = await self._fail_exhausted(stale)
         async with session_scope(self._sessions) as session:
@@ -185,7 +226,11 @@ def register_consumers(dispatcher: Dispatcher) -> None:
 
 
 async def build_worker(
-    settings: Settings, llm: LLMGateway | None = None
+    settings: Settings,
+    llm: LLMGateway | None = None,
+    source_transport: httpx.AsyncBaseTransport | None = None,
+    *,
+    source_rate_limits: bool = True,
 ) -> tuple[Worker, Callable[[], Awaitable[None]]]:
     engine = make_engine(settings.database_url)
     sessions = make_sessionmaker(engine)
@@ -193,12 +238,14 @@ async def build_worker(
     runner = WorkflowRunner(sessions, llm or build_runtime_gateway(settings), saver)
     dispatcher = Dispatcher(sessions)
     register_consumers(dispatcher)
+    sources = build_sources(settings, sessions, source_transport, rate_limits=source_rate_limits)
 
     async def close() -> None:
+        await sources.aclose()
         await pool.close()
         await engine.dispose()
 
-    return Worker(settings, sessions, runner, dispatcher), close
+    return Worker(settings, sessions, runner, dispatcher, sources), close
 
 
 async def main() -> None:
