@@ -67,4 +67,7 @@ make frontend-test
 | [Implementation roadmap](docs/IMPLEMENTATION_ROADMAP.md) | Audit, dependency graph, releases R0–R5, tasks, acceptance tests, risks, decisions |
 | [Evaluation framework](docs/EVALUATION_FRAMEWORK.md) | Gold sets, metrics, release gates |
 
+Data sources and their attribution requirements: [ATTRIBUTION.md](docs/ATTRIBUTION.md)
+(data from Semantic Scholar, arXiv, bioRxiv/medRxiv, Crossref and OpenAlex).
+
 Earlier planning rounds are kept for history in [docs/plan/](docs/plan/00-index.md).

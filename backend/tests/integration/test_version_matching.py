@@ -247,14 +247,12 @@ async def test_preprint_journal_pair_merges_in_either_order(
 
 
 async def test_semantic_scholar_strong_evidence_merges_resnet_versions(
-    client: httpx.AsyncClient, sources_transport: Any, db: psycopg.Connection
+    authenticated_client: httpx.AsyncClient, db: psycopg.Connection
 ) -> None:
-    """With a Semantic Scholar record listing both the arXiv ID and the CVPR DOI (strong),
-    plus matching title and authors, the arXiv preprint and the CVPR paper are one work.
-    Uses the constructed (not recorded) S2 fixture - see its note."""
-    sources_transport.serve_constructed(
-        "semantic_scholar", "paper_arxiv_1512.03385_CONSTRUCTED.json"
-    )
+    """With a key, Semantic Scholar's real record for the CVPR DOI lists the arXiv ID too
+    (strong evidence); with matching title and authors the arXiv preprint and the CVPR paper
+    become one work. Recorded authenticated response (2026-11-11)."""
+    client = authenticated_client
     project_id = await create_project(client)
     cvpr = await add(client, project_id, "10.1109/cvpr.2016.90")
     resp = await client.post(

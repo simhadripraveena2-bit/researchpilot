@@ -120,7 +120,12 @@ class SourceResponse:
 
 
 class RateLimiter(Protocol):
-    async def acquire(self, source: SourceName, interval_seconds: float) -> None: ...
+    async def acquire(self, source: SourceName, interval_seconds: float) -> None:
+        """Waits for this caller's request slot."""
+
+    async def defer(self, source: SourceName, seconds: float) -> None:
+        """Pushes the next free slot at least ``seconds`` into the future, for every caller
+        (after a 429, the whole source backs off - not just the request that got it)."""
 
 
 class HttpCache(Protocol):
@@ -161,6 +166,18 @@ class PostgresRateLimiter:
         if wait and float(wait) > 0:
             await self._sleep(float(wait))
 
+    async def defer(self, source: SourceName, seconds: float) -> None:
+        async with self._sessions() as session, session.begin():
+            await session.execute(
+                sa.text(
+                    "INSERT INTO source_rate_limits AS l (source, next_slot_at) "
+                    "VALUES (:s, now() + make_interval(secs => :w)) "
+                    "ON CONFLICT (source) DO UPDATE SET next_slot_at = "
+                    "greatest(l.next_slot_at, now() + make_interval(secs => :w))"
+                ),
+                {"s": source.value, "w": seconds},
+            )
+
 
 class InProcessRateLimiter:
     """Single-process limiter on an injectable clock (unit tests, scripts)."""
@@ -181,6 +198,11 @@ class InProcessRateLimiter:
         self.waits.append(wait)
         if wait > 0:
             await self._sleep(wait)
+
+    async def defer(self, source: SourceName, seconds: float) -> None:
+        async with self._lock:
+            now = self._clock.now()
+            self._next[source] = max(self._next.get(source, now), now + timedelta(seconds=seconds))
 
 
 # --- HTTP cache ------------------------------------------------------------------------------
@@ -458,11 +480,19 @@ class SourceClient:
                 error=last_error,
                 retry_after=retry_after,
             )
+            wait = retry_after if retry_after is not None else self._backoff(attempt)
+            if status == 429:
+                # Rate limited: the shared slot moves for every process using this source;
+                # the next acquire() waits for it (no extra local sleep).
+                await self._limiter.defer(
+                    self.policy.limit_key, min(wait, self.policy.retry_after_cap_seconds)
+                )
             if attempt == self.policy.max_attempts:
                 break
             if retry_after is not None and retry_after > self.policy.retry_after_cap_seconds:
                 break  # the source asks us to wait longer than a run should block
-            await self._sleep(retry_after if retry_after is not None else self._backoff(attempt))
+            if status != 429:
+                await self._sleep(wait)
         self._record_failure()
         raise SourceError(
             self.source,

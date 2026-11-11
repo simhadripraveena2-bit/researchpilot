@@ -34,6 +34,9 @@ class _NoWait:
     async def acquire(self, source: SourceName, interval_seconds: float) -> None:
         return None
 
+    async def defer(self, source: SourceName, seconds: float) -> None:
+        return None
+
 
 @dataclass
 class Sources:

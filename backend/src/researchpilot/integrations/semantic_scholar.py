@@ -2,23 +2,28 @@
 
 Verified behaviour (2026-11-11; see docs/integrations/SEMANTIC_SCHOLAR.md):
 
-* Without an API key, requests from this environment were refused every time with HTTP 429,
-  JSON ``{"message": "Too Many Requests. ...", "code": "429"}`` and **no** ``Retry-After``
-  (``x-amzn-errortype: TooManyRequestsException``). The unauthenticated pool is shared by
-  all clients. The client retries with jittered backoff and then reports the source as
-  unavailable; adding a paper never depends on it.
-* With a key (``S2_API_KEY``), the key is sent as ``x-api-key``; keys default to one request
-  per second.
+* **With an API key** (``S2_API_KEY``, sent as ``x-api-key``): the approved limit is
+  1 request per second **cumulative across all endpoints**. Requests closer than that get
+  HTTP 429 ``{"message": "Too Many Requests...", "code": "429"}``,
+  ``x-amzn-errortype: TooManyRequestsException`` and **no** ``Retry-After``; occasional 429s
+  also occurred with 1.5-3 s spacing, and requests recovered after a few seconds.
+* **Without a key**: every request from this environment got the same 429.
+* Unknown paper: HTTP 404 ``{"error": "Paper with id ... not found"}``.
+* ``/paper/search`` and ``/paper/{id}/references`` page with ``offset`` / ``limit`` and return
+  ``next`` (absent on the last page); search also returns ``total``.
 
-Not verified live (no key available): the success responses. The parser follows the
-published Graph API schema (``paperId``, ``corpusId``, ``externalIds`` with ``DOI``,
-``ArXiv``, ``PubMed``, ``PubMedCentral``, ``CorpusId``, ``publicationDate`` as
-``YYYY-MM-DD`` or null, ``authors[].name``), and the test fixture for it is marked as
-constructed, not recorded.
+Every endpoint goes through one ``SourceClient`` whose limiter key is
+``semantic_scholar``: a single slot sequence, shared by the API and worker processes through
+Postgres, with a conservative minimum interval of 1.25 s. A 429 defers that shared slot for
+every process (``RateLimiter.defer``) by ``Retry-After`` when sent, else by jittered
+exponential backoff.
 
 ``externalIds`` listing a DOI and an arXiv ID on one record is *strong* Version Matcher
 evidence (S2 merges versions), never decisive. ``publicationDate`` is a secondary claim with
 unknown upstream.
+
+The API key is never logged or put in error messages: it is a ``SecretStr`` setting, sent
+only as a request header, and ``SourceClient`` logs URLs and statuses only.
 """
 
 from __future__ import annotations
@@ -47,13 +52,23 @@ from researchpilot.integrations.base import (
 API_URL = "https://api.semanticscholar.org/graph/v1"
 FIELDS = "paperId,corpusId,externalIds,title,year,publicationDate,venue,publicationTypes,authors"
 
+S2_MIN_INTERVAL_SECONDS = 1.25  # approved: 1 request/s across all endpoints; kept below it
+
 S2_POLICY = SourcePolicy(
     source=SourceName.SEMANTIC_SCHOLAR,
-    min_interval_seconds=1.0,  # API-key default: 1 request per second
-    max_attempts=3,
+    min_interval_seconds=S2_MIN_INTERVAL_SECONDS,
+    rate_limit_key=SourceName.SEMANTIC_SCHOLAR,  # one budget for every endpoint
+    max_attempts=4,
     backoff_base_seconds=2.0,
-    cache_ttl={"entity": timedelta(days=7), "search": timedelta(hours=1)},
+    backoff_max_seconds=30.0,
+    breaker_threshold=3,
+    cache_ttl={
+        "entity": timedelta(days=7),
+        "search": timedelta(hours=1),
+        "references": timedelta(days=1),
+    },
 )
+REFERENCE_FIELDS = "paperId,externalIds,title,year"
 
 _EXTERNAL = {
     "DOI": "doi",
@@ -112,6 +127,58 @@ class SemanticScholarClient:
             response.fetched_at,
         )
         return FetchedS2Paper(paper, record_id, response.fetched_at, response.cache_hit)
+
+    async def search(self, query: str, *, limit: int = 20, offset: int = 0) -> S2Page:
+        """One page of relevance search (``/paper/search``)."""
+        response = await self._client.get(
+            f"{API_URL}/paper/search",
+            params={
+                "query": query,
+                "limit": str(min(max(limit, 1), 100)),
+                "offset": str(offset),
+                "fields": FIELDS,
+            },
+            endpoint_class="search",
+        )
+        body = _json(response.text)
+        rows, nxt = _page(body, None)
+        return S2Page(
+            [await self._store(r, response.fetched_at) for r in rows], body.get("total"), nxt
+        )
+
+    async def references(self, paper_id: str, *, limit: int = 100, offset: int = 0) -> S2Page:
+        """One page of the papers a paper cites (``/paper/{id}/references``)."""
+        response = await self._client.get(
+            f"{API_URL}/paper/{paper_id}/references",
+            params={
+                "fields": REFERENCE_FIELDS,
+                "limit": str(min(max(limit, 1), 1000)),
+                "offset": str(offset),
+            },
+            endpoint_class="references",
+        )
+        rows, nxt = _page(_json(response.text), "citedPaper")
+        return S2Page([parse_paper(r) for r in rows], None, nxt)
+
+    async def _store(self, raw: Mapping[str, Any], fetched_at: datetime) -> S2Paper:
+        paper = parse_paper(raw)
+        await self._records.save(
+            SourceName.SEMANTIC_SCHOLAR, paper.paper_id, "paper/search", dict(raw), fetched_at
+        )
+        return paper
+
+
+@dataclass(frozen=True)
+class S2Page:
+    papers: list[S2Paper]
+    total: int | None
+    next_offset: int | None
+
+
+def _page(body: Mapping[str, Any], key: str | None) -> tuple[list[Mapping[str, Any]], int | None]:
+    items = [(row.get(key) if key else row) for row in body.get("data") or []]
+    nxt = body.get("next")
+    return [i for i in items if i and i.get("paperId")], int(nxt) if nxt is not None else None
 
 
 def paper_ref(identifier: Identifier) -> str:

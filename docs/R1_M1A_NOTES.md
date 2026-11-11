@@ -116,6 +116,18 @@ Real cases: `2611.13190` goes from `submission_only` (2026-11-09) to verified `a
 event and does not make the paper new; capture is idempotent; a failing feed is reported per
 category and logs nothing.
 
+## Semantic Scholar with the approved API key
+
+| Part | Where | Tests |
+|---|---|---|
+| Key from `S2_API_KEY` (`SecretStr`), sent only as `x-api-key`; redacted from logs; never in errors, fixtures or Git | `core/settings.py`, `integrations/registry.py` | `test_semantic_scholar.py::test_the_key_never_appears_in_logs_or_errors` |
+| One global limiter for every Semantic Scholar endpoint (`rate_limit_key = semantic_scholar`), 1.25 s minimum interval, shared by API and worker via Postgres | `integrations/semantic_scholar.py`, `integrations/base.py` | `test_semantic_scholar.py`, `test_s2_global_rate_limit.py` (two processes, three endpoints, real timing) |
+| 429 handling: `Retry-After` honoured, otherwise jittered exponential backoff; the deferral applies to **all** processes (`RateLimiter.defer`); retries, cache, circuit breaker and graceful degradation kept | `integrations/base.py` | same |
+| New endpoints: `/paper/search`, `/paper/{id}/references` (offset pagination) | `integrations/semantic_scholar.py` | `test_semantic_scholar.py` |
+| Authenticated and unauthenticated modes | fixture transport serves authenticated recordings only when the header is sent | unit + `authenticated_client` integration tests |
+| Real authenticated recordings replace the constructed fixture | `tests/fixtures/sources/semantic_scholar/` | ResNet arXiv ↔ CVPR merge test |
+| Attribution requirements and website placement | [ATTRIBUTION.md](ATTRIBUTION.md) | — |
+
 ## Decisions and deviations
 
 | # | Topic | What was done | Why |
@@ -143,7 +155,9 @@ category and logs nothing.
 | 22 | Following links | After adding a paper, the targets of its decisive links are fetched (one level, at most 3, failures only reduce coverage) | Makes preprint ↔ journal pairs appear without a separate search |
 | 23 | Earlier unconfirmed version (resolver) | If another manifestation has a secondary public claim > 2 days before every primary event, the date is `conflicting` (ARCHITECTURE §4.8.3 updated) | Found with the bioRxiv-outage case: otherwise the 2024 journal date would have been "verified" for a work public since 2022 |
 | 24 | Strong links | Crossref `is-same-as` / `is-version-of` / `has-version` and (step 4) "both identifiers on one S2/OpenAlex record" are strong, not decisive | ARCHITECTURE §4.8a lists only preprint relations as decisive |
-| 25 | Semantic Scholar without a key | One attempt, reported `unavailable`; success parsing tested on a fixture marked **constructed** | The key request was declined; keyless requests always got 429 without `Retry-After` |
+| 25 | Semantic Scholar without a key | One attempt, reported `unavailable` | Keyless requests always got 429 without `Retry-After` (with the approved key, see the section above) |
+| 34 | Global 429 deferral | A 429 from any source pushes back the shared slot for every process, by `Retry-After` or by backoff (capped at 120 s) | Retrying processes must not each keep hitting a limited source |
+| 35 | S2 minimum interval | 1.25 s (approved limit 1 request/s across all endpoints) | Margin for clock and network jitter; 429s still occur occasionally and are handled |
 | 26 | OpenAlex without a key | Entity lookups (free) used; metered queries stop on the budget 429 and are refused until the reset; never retried | The keyless budget is shared per IP and was already used up |
 | 27 | OpenAlex filled-in dates | `YYYY-MM-01` → month precision, `YYYY-01-01` → year precision | Verified: missing parts are filled with 01 |
 | 28 | Aggregator IDs and dates | Attached to the looked-up manifestation (published DOI first); an ID already held by another work is not duplicated - the listing link lets the matcher compare the works | Both aggregators merge versions; their data is never primary |
@@ -175,9 +189,11 @@ Both regression suites fail on 7f447bc and pass after the fix.
 
 ## Known limitations (after steps 1–5)
 
-* **Semantic Scholar** success responses are not verified live (no API key); keyless requests
-  are always refused with 429, so S2 enrichment is reported `unavailable`. The success parser
-  is tested on a fixture marked as constructed.
+* **Semantic Scholar** works with the approved key; without `S2_API_KEY` it is reported
+  `unavailable`. Even with the key, occasional 429s occur at 1.25 s spacing; they are retried
+  with a global backoff and can make a call report `unavailable`. The standard API licence
+  covers internal non-commercial research/education; a public site may need an expanded
+  licence (see ATTRIBUTION.md).
 * **OpenAlex** keyless budget is shared per IP and was used up from this environment: list
   queries stop until midnight UTC; single-work lookups still work.
 * **Unannounced arXiv papers** with an OpenAlex date are `single_source` (unconfirmed), not

@@ -11,6 +11,7 @@ import psycopg
 import pytest
 import uvicorn
 from fastapi import FastAPI
+from pydantic import SecretStr
 
 from researchpilot.api.app import create_app
 from researchpilot.core.settings import Settings
@@ -60,6 +61,26 @@ async def app(settings: Settings, sources_transport: FixtureTransport) -> AsyncI
     application = create_app(settings, source_transport=sources_transport, source_rate_limits=False)
     async with application.router.lifespan_context(application):
         yield application
+
+
+TEST_S2_KEY = "test-placeholder-not-a-real-key"
+
+
+@pytest.fixture
+async def authenticated_client(
+    settings: Settings, sources_transport: FixtureTransport
+) -> AsyncIterator[httpx.AsyncClient]:
+    """The API with a Semantic Scholar key configured (a placeholder: tests never call S2;
+    the fixture transport only checks that the x-api-key header is sent)."""
+    application = create_app(
+        settings.model_copy(update={"s2_api_key": SecretStr(TEST_S2_KEY)}),
+        source_transport=sources_transport,
+        source_rate_limits=False,
+    )
+    async with application.router.lifespan_context(application):
+        transport = httpx.ASGITransport(app=application)
+        async with httpx.AsyncClient(transport=transport, base_url="http://test") as c:
+            yield c
 
 
 @pytest.fixture
