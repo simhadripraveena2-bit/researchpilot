@@ -178,3 +178,133 @@ class StageState(StrEnum):
     IN_PROGRESS = "in_progress"
     READY = "ready"
     NOT_READY = "not_ready"
+
+
+# --- R1 M1a: sources, papers, manifestations and date provenance (DATABASE_SCHEMA §4-§5) ---
+
+
+class SourceName(StrEnum):
+    """An external API we read from (the reporting source of a source record)."""
+
+    ARXIV_API = "arxiv_api"
+    ARXIV_ANNOUNCEMENT_FEED = "arxiv_announcement_feed"
+    SEMANTIC_SCHOLAR = "semantic_scholar"
+    OPENALEX = "openalex"
+    CROSSREF = "crossref"
+    BIORXIV_API = "biorxiv_api"
+    MEDRXIV_API = "medrxiv_api"
+
+
+class AbstractStatus(StrEnum):
+    AVAILABLE = "available"
+    UNAVAILABLE = "unavailable"
+    RESTRICTED = "restricted"
+
+
+class MetadataLevel(StrEnum):
+    STUB = "stub"
+    METADATA = "metadata"
+    FULL_TEXT = "full_text"
+
+
+class ManifestationKind(StrEnum):
+    PREPRINT = "preprint"
+    PUBLISHED = "published"
+    OTHER = "other"
+
+
+class PeerReviewLabel(StrEnum):
+    PREPRINT_NOT_PEER_REVIEWED = "preprint_not_peer_reviewed"
+    JOURNAL_VERSION = "journal_version"
+    UNKNOWN = "unknown"
+
+
+class DateEvent(StrEnum):
+    PREPRINT_SUBMITTED = "preprint_submitted"
+    PREPRINT_ANNOUNCED = "preprint_announced"
+    PREPRINT_POSTED = "preprint_posted"
+    VERSION_SUBMITTED = "version_submitted"
+    VERSION_ANNOUNCED = "version_announced"
+    VERSION_POSTED = "version_posted"
+    ACCEPTED = "accepted"
+    PUBLISHED_ONLINE = "published_online"
+    ISSUE_PUBLISHED = "issue_published"
+    ISSUED = "issued"
+    REPORTED_PUBLICATION_DATE = "reported_publication_date"
+    INDEX_CREATED = "index_created"
+    METADATA_UPDATED = "metadata_updated"
+    METADATA_DEPOSITED = "metadata_deposited"
+    METADATA_INDEXED = "metadata_indexed"
+    FIRST_SEEN_BY_RESEARCHPILOT = "first_seen_by_researchpilot"
+
+
+class DatePrecision(StrEnum):
+    TIMESTAMP = "timestamp"
+    DAY = "day"
+    MONTH = "month"
+    YEAR = "year"
+
+
+class ReportingSource(StrEnum):
+    ARXIV_API = "arxiv_api"
+    ARXIV_ANNOUNCEMENT_FEED = "arxiv_announcement_feed"
+    BIORXIV_API = "biorxiv_api"
+    MEDRXIV_API = "medrxiv_api"
+    CROSSREF = "crossref"
+    OPENALEX = "openalex"
+    SEMANTIC_SCHOLAR = "semantic_scholar"
+    RESEARCHPILOT = "researchpilot"
+
+
+class UpstreamSource(StrEnum):
+    ARXIV = "arxiv"
+    BIORXIV = "biorxiv"
+    MEDRXIV = "medrxiv"
+    CROSSREF = "crossref"
+    PUBMED = "pubmed"
+    PUBLISHER = "publisher"
+    DATACITE = "datacite"
+    UNKNOWN = "unknown"
+
+
+class DateConfidence(StrEnum):
+    VERIFIED = "verified"
+    CORROBORATED = "corroborated"
+    SOURCE_AGREEMENT = "source_agreement"
+    SINGLE_SOURCE = "single_source"
+    CONFLICTING = "conflicting"
+    UNCERTAIN = "uncertain"
+
+
+class FirstPublicBasis(StrEnum):
+    ANNOUNCED = "announced"
+    POSTED = "posted"
+    PUBLISHED_ONLINE = "published_online"
+    ISSUE = "issue"
+    ISSUED = "issued"
+    SUBMISSION_ONLY = "submission_only"
+
+
+class Inclusion(StrEnum):
+    CANDIDATE = "candidate"
+    INCLUDED = "included"
+    EXCLUDED = "excluded"
+
+
+class DiscoveredVia(StrEnum):
+    SEARCH = "search"
+    REFERENCE = "reference"
+    CITATION = "citation"
+    RECOMMENDATION = "recommendation"
+    MANUAL = "manual"
+    PROBE = "probe"
+    LATEST_SCAN = "latest_scan"
+    MONITOR = "monitor"
+
+
+class ReadingStatus(StrEnum):
+    UNREAD = "unread"
+    TO_READ = "to_read"
+    READING = "reading"
+    READ = "read"
+    SKIPPED = "skipped"

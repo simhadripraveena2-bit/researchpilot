@@ -33,10 +33,7 @@ def problem(
 def install_error_handlers(app: FastAPI) -> None:
     @app.exception_handler(ResearchPilotError)
     async def _domain(_: Request, exc: ResearchPilotError) -> JSONResponse:
-        code = exc.code
-        if code == "capability_unavailable":
-            code = "graph_capability_unavailable"
-        return problem(exc.status, code, exc.title, exc.detail, **exc.extra)
+        return problem(exc.status, exc.code, exc.title, exc.detail, **exc.extra)
 
     @app.exception_handler(RequestValidationError)
     async def _validation(_: Request, exc: RequestValidationError) -> JSONResponse:

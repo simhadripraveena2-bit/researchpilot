@@ -42,5 +42,9 @@ class CapabilityUnavailable(ResearchPilotError):
     code, status, title = "capability_unavailable", 501, "Capability unavailable"
 
 
+class GraphCapabilityUnavailable(CapabilityUnavailable):
+    code = "graph_capability_unavailable"
+
+
 class InsecureConfiguration(ResearchPilotError):
     code, status, title = "insecure_configuration", 500, "Insecure configuration"

@@ -12,7 +12,7 @@ import uuid
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
-from researchpilot.core.errors import CapabilityUnavailable
+from researchpilot.core.errors import GraphCapabilityUnavailable
 from researchpilot.graph.service import GraphScope
 from researchpilot.graph.view import (
     AVAILABLE_FROM,
@@ -36,7 +36,7 @@ class PostgresGraphService:
 
     def _require(self, capability: GraphCapability) -> None:
         if capability not in self.capabilities():
-            raise CapabilityUnavailable(
+            raise GraphCapabilityUnavailable(
                 f"graph capability {capability.value!r} is not available on the "
                 f"{self.backend} backend",
                 capability=capability.value,

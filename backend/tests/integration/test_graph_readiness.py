@@ -51,7 +51,8 @@ def test_exactly_registered_tables_have_registration_trigger(db: psycopg.Connect
             "WHERE t.tgname = 'rp_bump_row_version' AND NOT t.tgisinternal"
         )
     }
-    assert registry == {"projects"}  # the only node source that exists in R0
+    # The node sources that exist so far (DATABASE_SCHEMA §16.3 lists the full inventory).
+    assert registry == {"projects", "papers", "paper_manifestations"}
     assert triggered == registry
     assert versioned == registry
     # Non-node tables never register nodes.

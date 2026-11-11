@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/kc5m+iMhWjq8iDl7vUk25HD7EcY</id>
+  <title>arXiv Query: search_query=&amp;id_list=2411.00001&amp;start=0&amp;max_results=10</title>
+  <updated>2026-11-11T00:44:12Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=10&amp;id_list=2411.00001" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>10</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2411.00001v2</id>
+    <title>Some Diophantine Equations involving associated Pell numbers and repdigits</title>
+    <updated>2026-05-19T14:46:59Z</updated>
+    <link href="https://arxiv.org/abs/2411.00001v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2411.00001v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>In this paper, we explore the relationship between repdigits and associated Pell numbers, specifically focusing on two main aspects: expressing repdigits as the difference of two associated Pell numbers, and identifying which associated Pell numbers can be represented as the difference of two repdigits. Additionally, we investigate all associated Pell numbers which are the concatenation of three repdigits. Our proof utilizes Baker's theory on linear forms in logarithms of algebraic numbers, along with the Baker-Davenport reduction technique. The computations were carried out with the help of a simple computer program in {\it Mathematica}.</summary>
+    <category term="math.GM" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-10-08T07:21:19Z</published>
+    <arxiv:comment>19 pages</arxiv:comment>
+    <arxiv:primary_category term="math.GM"/>
+    <author>
+      <name>Monalisa Mohapatra</name>
+    </author>
+    <author>
+      <name>Pritam Kumar Bhoi</name>
+    </author>
+    <author>
+      <name>Gopal Krishna Panda</name>
+    </author>
+  </entry>
+</feed>

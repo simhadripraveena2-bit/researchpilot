@@ -18,6 +18,7 @@ dependencies = [
     "anthropic>=0.40",
     "langgraph>=0.2.60",
     "langgraph-checkpoint-postgres>=2.0",
+    "defusedxml>=0.7.1",
 ]
 
 [dependency-groups]
@@ -28,6 +29,8 @@ dev = [
     "mypy>=1.11",
     "types-pyyaml>=6.0",
     "httpx>=0.27",
+    "hypothesis>=6.170.15",
+    "types-defusedxml>=0.7.0.20260504",
 ]
 
 [build-system]
@@ -67,7 +70,7 @@ ban-relative-imports = "all"
 [tool.ruff.lint.per-file-ignores]
 "src/researchpilot/llm/adapters/anthropic_adapter.py" = ["TID251"]
 "src/researchpilot/graph/adapters/neo4j/*" = ["TID251"]
-"tests/**" = ["S", "TID251"]
+"tests/**" = ["S", "TID251", "E501"]  # long literal test data
 "alembic/**" = ["S608"]
 "alembic/versions/*" = ["E501"]  # embedded SQL
 

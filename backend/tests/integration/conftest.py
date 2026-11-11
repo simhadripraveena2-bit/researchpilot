@@ -7,6 +7,7 @@ import contextlib
 from collections.abc import AsyncIterator, Awaitable, Callable
 
 import httpx
+import psycopg
 import pytest
 import uvicorn
 from fastapi import FastAPI
@@ -15,6 +16,7 @@ from researchpilot.api.app import create_app
 from researchpilot.core.settings import Settings
 from researchpilot.worker.main import Worker, build_worker
 from tests.conftest import _sqlalchemy_url
+from tests.fixtures.source_transport import FixtureTransport
 
 API = "/api/v1"
 
@@ -33,9 +35,26 @@ def settings(migrated_db: str) -> Settings:
     )
 
 
+@pytest.fixture(autouse=True)
+def _clean_global_paper_data(migrated_db: str) -> None:
+    """Works, source records and caches are global (not project-scoped), so each test
+    starts without them. DELETE (not TRUNCATE) so graph-node triggers fire."""
+    with psycopg.connect(migrated_db, autocommit=True) as conn:
+        conn.execute("DELETE FROM research_items WHERE item_type = 'paper'")
+        conn.execute("DELETE FROM source_records")
+        conn.execute("DELETE FROM http_cache")
+        conn.execute("DELETE FROM source_rate_limits")
+
+
 @pytest.fixture
-async def app(settings: Settings) -> AsyncIterator[FastAPI]:
-    application = create_app(settings)
+def sources_transport() -> FixtureTransport:
+    """Recorded scholarly-source responses; tests never call the real APIs."""
+    return FixtureTransport()
+
+
+@pytest.fixture
+async def app(settings: Settings, sources_transport: FixtureTransport) -> AsyncIterator[FastAPI]:
+    application = create_app(settings, source_transport=sources_transport, source_rate_limits=False)
     async with application.router.lifespan_context(application):
         yield application
 
