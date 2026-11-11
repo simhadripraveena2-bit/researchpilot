@@ -34,7 +34,9 @@ from tests.fixtures.source_transport import SOURCES, FixtureTransport
 from tests.unit.test_source_client import FakeTime
 
 S2 = SOURCES / "semantic_scholar"
-KEY = "s2-test-key-0123456789abcdef"  # a placeholder that must never appear in output
+# A random placeholder generated per run (no key-like literal in the repository); it must
+# never appear in output.
+KEY = f"placeholder-{uuid.uuid4().hex}"
 
 
 class Records:

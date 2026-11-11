@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import uuid
 from collections.abc import AsyncIterator, Awaitable, Callable
 
 import httpx
@@ -63,7 +64,8 @@ async def app(settings: Settings, sources_transport: FixtureTransport) -> AsyncI
         yield application
 
 
-TEST_S2_KEY = "test-placeholder-not-a-real-key"
+# Generated per run: tests never call Semantic Scholar, and no key-like literal is committed.
+TEST_S2_KEY = f"placeholder-{uuid.uuid4().hex}"
 
 
 @pytest.fixture
