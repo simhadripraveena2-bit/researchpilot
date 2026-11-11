@@ -80,6 +80,12 @@ class SourcePolicy:
     timeout_seconds: float = 30.0
     cache_ttl: Mapping[str, timedelta] = field(default_factory=dict)
     default_cache_ttl: timedelta = timedelta(days=1)
+    # Sources served by one host share a request budget (e.g. bioRxiv and medRxiv).
+    rate_limit_key: SourceName | None = None
+
+    @property
+    def limit_key(self) -> SourceName:
+        return self.rate_limit_key or self.source
 
     def ttl(self, endpoint_class: str) -> timedelta:
         return self.cache_ttl.get(endpoint_class, self.default_cache_ttl)
@@ -393,7 +399,7 @@ class SourceClient:
         last_error = "no attempt made"
         status: int | None = None
         for attempt in range(1, self.policy.max_attempts + 1):
-            await self._limiter.acquire(self.source, self.policy.min_interval_seconds)
+            await self._limiter.acquire(self.policy.limit_key, self.policy.min_interval_seconds)
             retry_after: float | None = None
             try:
                 self.requests_made += 1

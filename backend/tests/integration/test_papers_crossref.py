@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 import httpx
-import psycopg
 import pytest
 
+from tests.fixtures.source_transport import FixtureTransport
 from tests.integration.conftest import API, create_project
 
 pytestmark = pytest.mark.integration
@@ -44,10 +44,14 @@ async def test_journal_article_is_a_published_manifestation_with_verified_date(
 
 
 async def test_biorxiv_doi_via_crossref_alone_is_unconfirmed(
-    client: httpx.AsyncClient, db: psycopg.Connection
+    client: httpx.AsyncClient, sources_transport: FixtureTransport
 ) -> None:
-    """Crossref is not the system of record for bioRxiv dates: secondary, upstream bioRxiv,
-    so the date stays unconfirmed until the bioRxiv API confirms it."""
+    """If the preprint servers don't return the record, Crossref is used; it is not the
+    system of record for bioRxiv dates (secondary, upstream bioRxiv), so the date stays
+    unconfirmed."""
+    sources_transport.overrides["api.biorxiv.org"] = lambda r: httpx.Response(
+        200, json={"messages": [{"status": "no posts found"}], "collection": []}
+    )
     d = await add_and_get(client, "doi:10.1101/2022.10.22.513336")
     [m] = d["manifestations"]
     assert (m["kind"], m["server_or_venue"], m["peer_review_label"]) == (

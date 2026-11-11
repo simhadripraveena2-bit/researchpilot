@@ -6,19 +6,25 @@ import uuid
 from typing import Any
 
 import sqlalchemy as sa
+import structlog
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from researchpilot.core.errors import CapabilityUnavailable, NotFound
-from researchpilot.domain.enums import DiscoveredVia
+from researchpilot.domain.enums import DiscoveredVia, SourceName
 from researchpilot.domain.identifiers import (
     Identifier,
     IdentifierScheme,
     arxiv_id_from_doi,
     parse_identifier,
 )
+from researchpilot.integrations.base import SourceError, SourceNotFound
+from researchpilot.integrations.biorxiv import is_server_preprint_doi, likely_server
 from researchpilot.integrations.registry import Sources
 from researchpilot.services.papers.ingest import ingest_arxiv
+from researchpilot.services.papers.ingest_biorxiv import ingest_preprint_server
 from researchpilot.services.papers.ingest_crossref import ingest_crossref
+
+log = structlog.get_logger(__name__)
 
 
 async def add_paper_by_identifier(
@@ -33,6 +39,8 @@ async def add_paper_by_identifier(
     if paper_id is None:
         if identifier.scheme is IdentifierScheme.ARXIV:
             paper_id = (await ingest_arxiv(session, await sources.arxiv.fetch(identifier))).paper_id
+        elif identifier.scheme is IdentifierScheme.DOI and is_server_preprint_doi(identifier.value):
+            paper_id = await _add_server_preprint(session, sources, identifier.value)
         elif identifier.scheme is IdentifierScheme.DOI:
             fetched = await sources.crossref.fetch(identifier.value)
             paper_id = (await ingest_crossref(session, fetched)).paper_id
@@ -53,6 +61,24 @@ async def add_paper_by_identifier(
         )
     ).scalar_one_or_none()
     return paper_id, added is not None
+
+
+async def _add_server_preprint(session: AsyncSession, sources: Sources, doi: str) -> uuid.UUID:
+    """bioRxiv or medRxiv (the likely server first, then the other). If neither server has
+    the DOI or the API is unavailable, Crossref is used; the posting date then stays
+    unconfirmed (Crossref is not the system of record for these preprints)."""
+    first = sources.medrxiv if likely_server(doi) is SourceName.MEDRXIV_API else sources.biorxiv
+    second = sources.biorxiv if first is sources.medrxiv else sources.medrxiv
+    for server in (first, second):
+        try:
+            fetched = await server.fetch(doi)
+        except SourceNotFound:
+            continue
+        except SourceError as exc:
+            log.warning("papers.preprint_server_unavailable", source=exc.source.value, doi=doi)
+            break
+        return (await ingest_preprint_server(session, fetched)).paper_id
+    return (await ingest_crossref(session, await sources.crossref.fetch(doi))).paper_id
 
 
 async def _known_paper(session: AsyncSession, identifier: Identifier) -> uuid.UUID | None:

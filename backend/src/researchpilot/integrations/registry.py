@@ -18,6 +18,11 @@ from researchpilot.integrations.base import (
     SourceClient,
     SourceRecordStore,
 )
+from researchpilot.integrations.biorxiv import (
+    BIORXIV_POLICY,
+    MEDRXIV_POLICY,
+    PreprintServerClient,
+)
 from researchpilot.integrations.crossref import CROSSREF_POLICY, CrossrefClient
 
 
@@ -32,6 +37,8 @@ class Sources:
     records: SourceRecordStore
     arxiv: ArxivClient
     crossref: CrossrefClient
+    biorxiv: PreprintServerClient
+    medrxiv: PreprintServerClient
 
     async def aclose(self) -> None:
         await self.http.aclose()
@@ -64,4 +71,6 @@ def build_sources(
         records=records,
         arxiv=ArxivClient(SourceClient(ARXIV_POLICY, http, limiter, cache), records),
         crossref=CrossrefClient(SourceClient(CROSSREF_POLICY, http, limiter, cache), records),
+        biorxiv=PreprintServerClient(SourceClient(BIORXIV_POLICY, http, limiter, cache), records),
+        medrxiv=PreprintServerClient(SourceClient(MEDRXIV_POLICY, http, limiter, cache), records),
     )

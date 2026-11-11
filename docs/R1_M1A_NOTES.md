@@ -61,6 +61,15 @@ Status: implemented and tested (see below).
 | Add by DOI (non-arXiv DOIs go to Crossref) | `services/papers/service.py` | same |
 | Resolver tie-break: on equal dates, the specific event beats Crossref's derived `issued` | `services/dates/resolver.py` | `test_date_resolver.py` |
 
+## Step 2: bioRxiv and medRxiv
+
+| Part | Where | Tests |
+|---|---|---|
+| Client per server: `/details` by DOI (all versions), interval pages with offset cursors, `/pubs` links; "no posts found" = not found; shared request budget for the host | `integrations/biorxiv.py`, [integration doc](integrations/BIORXIV.md) | `tests/unit/test_biorxiv.py` |
+| Ingestion: preprint manifestation, primary v1 `preprint_posted`, v2+ `version_posted`, versions table; same DOI from Crossref joins the same manifestation as secondary events | `services/papers/ingest_biorxiv.py` | `tests/integration/test_papers_biorxiv.py` |
+| Routing: `10.1101/YYYY.MM.DD.N…` DOIs → likely server, then the other, then Crossref (also when the API is down: date stays unconfirmed) | `services/papers/service.py` | same, `test_papers_crossref.py` |
+| `SourcePolicy.rate_limit_key`: several sources on one host share a request budget | `integrations/base.py` | `test_biorxiv.py` |
+
 ## Decisions and deviations
 
 | # | Topic | What was done | Why |
@@ -79,6 +88,8 @@ Status: implemented and tested (see below).
 | 13 | Crossref `accepted` on preprints | Not recorded as `accepted` for `posted-content` | It is the latest preprint version's date (verified), not a journal acceptance |
 | 14 | Crossref `created` | Stored as `index_created` | Registration of the DOI record in Crossref; never a public-availability event |
 | 15 | Upstream of Crossref dates | `crossref` for DOIs it registers; `biorxiv`/`medrxiv` for those servers' preprints (from `institution`) | Crossref exposes the depositing server; agreement with the server's own API is therefore not independent corroboration |
+| 16 | bioRxiv/medRxiv request rate | 1 request/s shared by both servers | No published limit; one host |
+| 17 | Preprint server outage | Falls back to Crossref so the paper can still be added, with an unconfirmed date | Coverage over failure; the date is never overstated |
 | 12 | Network access | A personal `researchpilot` cloud environment allows only the six source hosts | Required to verify source behaviour; CI uses recorded responses only |
 
 ## Corrections after review of 7f447bc
