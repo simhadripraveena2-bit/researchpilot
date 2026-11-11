@@ -25,6 +25,7 @@ from researchpilot.domain.enums import (
 from researchpilot.domain.identifiers import IdentifierScheme
 from researchpilot.integrations.biorxiv import SERVER_NAME, FetchedPreprint, posted_at
 from researchpilot.services.dates.store import resolve_paper_dates
+from researchpilot.services.matching.links import StatedLink, record_links, target
 from researchpilot.services.papers.ingest import (
     IngestResult,
     add_date,
@@ -161,6 +162,15 @@ async def ingest_preprint_server(session: AsyncSession, fetched: FetchedPreprint
             posted_at(v.posted),
             record_id,
             source=preprint.server,
+        )
+    if preprint.published_doi and (link := target("doi", preprint.published_doi)):
+        await record_links(
+            session,
+            paper_id,
+            manifestation_id,
+            preprint.server,
+            [StatedLink("is-preprint-of", link[0], link[1], {"field": "collection[].published"})],
+            record_id,
         )
     await resolve_paper_dates(session, paper_id, retrieved_at)
     return IngestResult(paper_id, manifestation_id, created)

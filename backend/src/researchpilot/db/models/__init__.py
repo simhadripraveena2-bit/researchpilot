@@ -5,6 +5,11 @@ from researchpilot.db.models.events import DomainEvent, DomainEventDelivery
 from researchpilot.db.models.graph import GraphNode, NodeSourceRegistry, ResearchItem
 from researchpilot.db.models.identity import Project, ProjectMember, User
 from researchpilot.db.models.jobs import Job
+from researchpilot.db.models.matching import (
+    PaperMatchDecision,
+    PaperMergeEvent,
+    PaperVersionLink,
+)
 from researchpilot.db.models.papers import (
     Paper,
     PaperAuthor,
@@ -34,8 +39,11 @@ __all__ = [
     "PaperDate",
     "PaperIdentifier",
     "PaperManifestation",
+    "PaperMatchDecision",
+    "PaperMergeEvent",
     "PaperSourceLink",
     "PaperVersion",
+    "PaperVersionLink",
     "Project",
     "ProjectItem",
     "ProjectMember",

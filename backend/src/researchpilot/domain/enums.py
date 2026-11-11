@@ -308,3 +308,38 @@ class ReadingStatus(StrEnum):
     READING = "reading"
     READ = "read"
     SKIPPED = "skipped"
+
+
+class MatchRelation(StrEnum):
+    SAME_WORK = "same_work"
+    PREPRINT_OF = "preprint_of"
+    PUBLISHED_VERSION_OF = "published_version_of"
+    EXTENDED_VERSION_OF = "extended_version_of"
+    ERRATUM_OF = "erratum_of"
+    COMMENT_OR_REPLY_OF = "comment_or_reply_of"
+    UNRELATED = "unrelated"
+
+
+class MatchOutcome(StrEnum):
+    AUTO_MATCH = "auto_match"
+    POSSIBLE_MATCH = "possible_match"
+    RELATED_NOT_SAME = "related_not_same"
+    NO_MATCH = "no_match"
+
+
+class DecidedBy(StrEnum):
+    SYSTEM = "system"
+    USER = "user"
+
+
+class UserMatchStatus(StrEnum):
+    PENDING = "pending"
+    CONFIRMED = "confirmed"
+    REJECTED = "rejected"
+
+
+class MergeMethod(StrEnum):
+    IDENTIFIER = "identifier"
+    VERSION_RELATION = "version_relation"
+    EVIDENCE_RULES = "evidence_rules"
+    MANUAL = "manual"

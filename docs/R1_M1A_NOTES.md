@@ -70,6 +70,29 @@ Status: implemented and tested (see below).
 | Routing: `10.1101/YYYY.MM.DD.N…` DOIs → likely server, then the other, then Crossref (also when the API is down: date stays unconfirmed) | `services/papers/service.py` | same, `test_papers_crossref.py` |
 | `SourcePolicy.rate_limit_key`: several sources on one host share a request budget | `integrations/base.py` | `test_biorxiv.py` |
 
+## Step 3: Version Matcher (D29)
+
+| Part | Where | Tests |
+|---|---|---|
+| Pure matcher: decisive / strong / supporting / contradicting evidence, versioned rules (`d29-v1`) | `services/matching/version_matcher.py` | `tests/unit/test_version_matcher.py` (incl. Hypothesis: title similarity alone never matches; outcome symmetric) |
+| Stated links per manifestation (arXiv author DOI, Crossref `relation`, bioRxiv/medRxiv `published`), derived index `paper_version_links` | `services/matching/links.py`, ingestion modules | integration tests below |
+| Candidates (links in both directions + trigram-similar titles), decisions (`paper_match_decisions`), reversible merges (`paper_merge_events`), split, confirm/reject, sticky user decisions (trigger) | `services/matching/store.py`, migration `0005` | `tests/integration/test_version_matching.py` |
+| Add-paper flow: ingest → follow decisive links (≤ 3, one level) → match → project membership on the surviving work | `services/papers/service.py` | all paper integration tests |
+| API: `GET /projects/{id}/papers/{paper_id}/matches`, `POST /projects/{id}/matches/{decision}/confirm` / `reject`, `POST /projects/{id}/merges/{merge}/split` | `api/routers/papers.py` | `test_version_matching.py`, route inventory |
+
+Real recorded cases (all in `test_version_matching.py`, `test_papers_biorxiv.py`, `test_papers_crossref.py`):
+
+| Case | Result |
+|---|---|
+| bioRxiv `10.1101/2022.10.22.513336` ↔ eLife `10.7554/elife.87434` (and its versioned DOI `.3`), in either order | One work, three manifestations; first public appearance = verified bioRxiv posting 2022-10-22, not the 2024-06-03 journal date |
+| medRxiv `10.1101/2023.12.14.23299828` ↔ JAMA Pediatrics `10.1001/jamapediatrics.2024.1379` (titles completely different) | Auto-matched by the stated link only (title similarity < 0.9) |
+| arXiv `hep-th/9711200` → author DOI → IJTP reprint `10.1023/A:1026654312961` | Auto-matched; date `uncertain` (journal known only to the month, so `submission_only` does not apply) |
+| Same paper's ATMP original and AIP proceedings version (same title and author, no identifier link) | Possible matches: listed with evidence, not merged; confirm merges, split restores exactly and is remembered as rejected |
+| *Neural networks and logistic regression* Part I ↔ Part II (same authors, title similarity > 0.95) | No match (`part_number_differs`) |
+| Two *Nature Reviews Methods Primers* records titled "Graph neural networks", one without authors | No match (author overlap cannot be established) |
+| Comment `10.3390/insects17070712` ↔ reply `10.3390/insects17070713` | Related, not same; cannot be merged (422) |
+| ResNet arXiv `1512.03385` ↔ CVPR `10.1109/cvpr.2016.90` (no identifier link yet) | Possible match until Semantic Scholar/OpenAlex evidence (step 4) |
+
 ## Decisions and deviations
 
 | # | Topic | What was done | Why |
@@ -90,6 +113,13 @@ Status: implemented and tested (see below).
 | 15 | Upstream of Crossref dates | `crossref` for DOIs it registers; `biorxiv`/`medrxiv` for those servers' preprints (from `institution`) | Crossref exposes the depositing server; agreement with the server's own API is therefore not independent corroboration |
 | 16 | bioRxiv/medRxiv request rate | 1 request/s shared by both servers | No published limit; one host |
 | 17 | Preprint server outage | Falls back to Crossref so the paper can still be added, with an unconfirmed date | Coverage over failure; the date is never overstated |
+| 18 | No-identifier auto-match | Disabled: such pairs are at most possible matches | The rule needs abstract similarity from embeddings (≥ 0.90), which arrive with M1b; until then a human confirms |
+| 19 | Contradictions | A contradicting feature (Part I/II, comment/reply/erratum markers on one side, thesis vs article, disjoint authors, different first author without an identifier link, implausible date order) blocks auto-match **and** possible match; with decisive evidence it gives a possible match | Adversarial pairs should not even be proposed as "possibly the same work" |
+| 20 | Merge representation | `papers.merged_into_id`; the merged work's row and graph node stay; its manifestations and all their rows move to the older (surviving) work; `paper_merge_events.moved` records manifestation ids and project memberships, so a split is exact | Reversibility (R1-46) without deleting identities |
+| 21 | `paper_version_links` (new table) | Derived index of links stated in source records, per manifestation | Finds candidate pairs in both directions; rebuildable from `source_records` |
+| 22 | Following links | After adding a paper, the targets of its decisive links are fetched (one level, at most 3, failures only reduce coverage) | Makes preprint ↔ journal pairs appear without a separate search |
+| 23 | Earlier unconfirmed version (resolver) | If another manifestation has a secondary public claim > 2 days before every primary event, the date is `conflicting` (ARCHITECTURE §4.8.3 updated) | Found with the bioRxiv-outage case: otherwise the 2024 journal date would have been "verified" for a work public since 2022 |
+| 24 | Strong links | Crossref `is-same-as` / `is-version-of` / `has-version` and (step 4) "both identifiers on one S2/OpenAlex record" are strong, not decisive | ARCHITECTURE §4.8a lists only preprint relations as decisive |
 | 12 | Network access | A personal `researchpilot` cloud environment allows only the six source hosts | Required to verify source behaviour; CI uses recorded responses only |
 
 ## Corrections after review of 7f447bc

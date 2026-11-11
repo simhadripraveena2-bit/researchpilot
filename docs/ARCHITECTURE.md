@@ -257,7 +257,7 @@ agreement may simply repeat one upstream value.
 | `corroborated` | No primary event, but **two claims with established, disjoint upstream provenance** agree within ±1 day | Release-type tab, with "Corroborated by independent sources" and the chain shown |
 | `source_agreement` | Several secondary sources agree, but their independence **cannot be established** (unknown or shared upstream) | **Date uncertain**: "Reported by OpenAlex and Semantic Scholar; these may share upstream data" |
 | `single_source` | Exactly one secondary claim | **Date uncertain**: "Only OpenAlex reports this date" |
-| `conflicting` | Primary events disagree by more than 2 days, or secondary claims disagree with no primary event | **Date uncertain**, all claims shown |
+| `conflicting` | Primary events of one kind disagree by more than 2 days; or secondary claims disagree with no primary event; or another version (manifestation) has a secondary public claim more than 2 days **before** every primary event — e.g. a journal version whose preprint posting is known only from Crossref (the later primary date must not become the first appearance) | **Date uncertain**, all claims shown |
 | `uncertain` | Month/year precision only, a future date, or no claim | **Date uncertain** |
 
 `corroborated` will be rare in the MVP, because few sources expose

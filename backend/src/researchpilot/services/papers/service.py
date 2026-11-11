@@ -20,6 +20,7 @@ from researchpilot.domain.identifiers import (
 from researchpilot.integrations.base import SourceError, SourceNotFound
 from researchpilot.integrations.biorxiv import is_server_preprint_doi, likely_server
 from researchpilot.integrations.registry import Sources
+from researchpilot.services.matching.store import match_work
 from researchpilot.services.papers.ingest import ingest_arxiv
 from researchpilot.services.papers.ingest_biorxiv import ingest_preprint_server
 from researchpilot.services.papers.ingest_crossref import ingest_crossref
@@ -27,29 +28,27 @@ from researchpilot.services.papers.ingest_crossref import ingest_crossref
 log = structlog.get_logger(__name__)
 
 
+MAX_FOLLOWED_LINKS = 3
+
+
 async def add_paper_by_identifier(
     session: AsyncSession, sources: Sources, project_id: uuid.UUID, text: str
 ) -> tuple[uuid.UUID, bool]:
-    """Returns (paper id, whether it was newly added to the project)."""
+    """Returns (paper id, whether it was newly added to the project).
+
+    New works: ingest from the identifier's system of record, follow the work's decisive
+    version links (fetching the other version), then run the Version Matcher; the project
+    membership attaches to the surviving work.
+    """
     identifier = parse_identifier(text)
     if identifier.scheme is IdentifierScheme.DOI and (arxiv := arxiv_id_from_doi(identifier.value)):
         identifier = Identifier(IdentifierScheme.ARXIV, arxiv)
 
     paper_id = await _known_paper(session, identifier)
     if paper_id is None:
-        if identifier.scheme is IdentifierScheme.ARXIV:
-            paper_id = (await ingest_arxiv(session, await sources.arxiv.fetch(identifier))).paper_id
-        elif identifier.scheme is IdentifierScheme.DOI and is_server_preprint_doi(identifier.value):
-            paper_id = await _add_server_preprint(session, sources, identifier.value)
-        elif identifier.scheme is IdentifierScheme.DOI:
-            fetched = await sources.crossref.fetch(identifier.value)
-            paper_id = (await ingest_crossref(session, fetched)).paper_id
-        else:
-            raise CapabilityUnavailable(
-                f"Adding papers by {identifier.scheme.value} identifier is not available yet; "
-                "use a DOI or an arXiv ID",
-                scheme=identifier.scheme.value,
-            )
+        paper_id = await ingest_identifier(session, sources, identifier)
+        await follow_version_links(session, sources, paper_id)
+        paper_id = await match_work(session, paper_id)
 
     added = (
         await session.execute(
@@ -61,6 +60,55 @@ async def add_paper_by_identifier(
         )
     ).scalar_one_or_none()
     return paper_id, added is not None
+
+
+async def ingest_identifier(
+    session: AsyncSession, sources: Sources, identifier: Identifier
+) -> uuid.UUID:
+    """Fetches the identifier from its system of record and stores it (no matching)."""
+    if identifier.scheme is IdentifierScheme.ARXIV:
+        return (await ingest_arxiv(session, await sources.arxiv.fetch(identifier))).paper_id
+    if identifier.scheme is IdentifierScheme.DOI and is_server_preprint_doi(identifier.value):
+        return await _add_server_preprint(session, sources, identifier.value)
+    if identifier.scheme is IdentifierScheme.DOI:
+        fetched = await sources.crossref.fetch(identifier.value)
+        return (await ingest_crossref(session, fetched)).paper_id
+    raise CapabilityUnavailable(
+        f"Adding papers by {identifier.scheme.value} identifier is not available yet; "
+        "use a DOI or an arXiv ID",
+        scheme=identifier.scheme.value,
+    )
+
+
+async def follow_version_links(
+    session: AsyncSession, sources: Sources, paper_id: uuid.UUID
+) -> list[uuid.UUID]:
+    """Fetches the targets of the work's decisive version links that are not stored yet
+    (one level, at most ``MAX_FOLLOWED_LINKS``). A failed lookup only reduces coverage."""
+    targets = (
+        await session.execute(
+            sa.text(
+                "SELECT DISTINCT l.target_scheme, l.target_value FROM paper_version_links l "
+                "WHERE l.paper_id = :p AND l.strength = 'decisive' AND NOT EXISTS ("
+                "SELECT 1 FROM paper_identifiers i WHERE i.scheme = l.target_scheme "
+                "AND i.value = l.target_value) ORDER BY 1, 2 LIMIT :n"
+            ),
+            {"p": paper_id, "n": MAX_FOLLOWED_LINKS},
+        )
+    ).all()
+    fetched: list[uuid.UUID] = []
+    for scheme, value in targets:
+        identifier = Identifier(IdentifierScheme(scheme), value)
+        try:
+            async with session.begin_nested():
+                fetched.append(await ingest_identifier(session, sources, identifier))
+        except (SourceError, CapabilityUnavailable) as exc:
+            log.warning(
+                "papers.version_link_not_followed",
+                target=str(identifier),
+                reason=type(exc).__name__,
+            )
+    return fetched
 
 
 async def _add_server_preprint(session: AsyncSession, sources: Sources, doi: str) -> uuid.UUID:

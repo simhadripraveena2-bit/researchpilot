@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import uuid
 from datetime import date, datetime
+from decimal import Decimal
 from typing import Any
 
 from fastapi import APIRouter, Request, Response, status
@@ -22,6 +23,7 @@ from researchpilot.domain.enums import (
     ReportingSource,
     UpstreamSource,
 )
+from researchpilot.services.matching import service as matching
 from researchpilot.services.papers.service import (
     add_paper_by_identifier,
     get_project_paper,
@@ -170,3 +172,81 @@ async def get_paper(paper_id: uuid.UUID, scope: ProjectScoped, session: Session)
         reading_status=p["reading_status"],
         is_saved=p["is_saved"],
     )
+
+
+class MatchOut(BaseModel):
+    """A Version Matcher decision about this work and another one (D29)."""
+
+    id: uuid.UUID
+    other_paper_id: uuid.UUID
+    other_title: str
+    other_merged_into: uuid.UUID | None
+    outcome: str
+    relation: str
+    decided_by: str
+    user_status: str | None
+    confidence: Decimal
+    features: dict[str, Any]
+    rule_version: str
+    merge_id: uuid.UUID | None
+
+
+class MergeResult(BaseModel):
+    paper_id: uuid.UUID
+
+
+def _editor(scope: ProjectScoped) -> None:
+    if scope.role is ProjectRole.VIEWER:
+        raise Forbidden("viewers cannot change matches")
+
+
+@router.get("/projects/{project_id}/papers/{paper_id}/matches")
+async def list_matches(
+    paper_id: uuid.UUID, scope: ProjectScoped, session: Session
+) -> list[MatchOut]:
+    """Possible matches, merges and related works for this paper, with their evidence."""
+    rows = await matching.list_matches(session, scope.project_id, paper_id)
+    return [
+        MatchOut(
+            id=r["id"],
+            other_paper_id=r["other_id"],
+            other_title=r["other_title"],
+            other_merged_into=r["other_merged_into"],
+            outcome=r["outcome"],
+            relation=r["relation"],
+            decided_by=r["decided_by"],
+            user_status=r["user_status"],
+            confidence=r["confidence"],
+            features=r["features"],
+            rule_version=r["rule_version"],
+            merge_id=r["merge_id"],
+        )
+        for r in rows
+    ]
+
+
+@router.post("/projects/{project_id}/matches/{decision_id}/confirm")
+async def confirm_match(
+    decision_id: uuid.UUID, scope: ProjectScoped, session: Session
+) -> MergeResult:
+    """The user confirms a possible match: the works are merged (reversible)."""
+    _editor(scope)
+    return MergeResult(paper_id=await matching.confirm(session, scope.project_id, decision_id))
+
+
+@router.post(
+    "/projects/{project_id}/matches/{decision_id}/reject", status_code=status.HTTP_204_NO_CONTENT
+)
+async def reject_match(decision_id: uuid.UUID, scope: ProjectScoped, session: Session) -> None:
+    """The user says these are different works; automatic matching never proposes it again."""
+    _editor(scope)
+    await matching.reject(session, scope.project_id, decision_id)
+
+
+@router.post(
+    "/projects/{project_id}/merges/{merge_id}/split", status_code=status.HTTP_204_NO_CONTENT
+)
+async def split_merge(merge_id: uuid.UUID, scope: ProjectScoped, session: Session) -> None:
+    """Undo a merge exactly; the pair is then remembered as rejected."""
+    _editor(scope)
+    await matching.split(session, scope.project_id, merge_id)

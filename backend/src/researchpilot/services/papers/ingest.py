@@ -32,6 +32,7 @@ from researchpilot.domain.enums import (
 from researchpilot.domain.identifiers import IdentifierScheme
 from researchpilot.integrations.arxiv import FetchedEntry
 from researchpilot.services.dates.store import resolve_paper_dates
+from researchpilot.services.matching.links import StatedLink, record_links, target
 
 
 @dataclass(frozen=True)
@@ -179,6 +180,22 @@ async def ingest_arxiv(session: AsyncSession, fetched: FetchedEntry) -> IngestRe
             record_id,
         )
 
+    if entry.doi and (link := target("doi", entry.doi)):
+        await record_links(
+            session,
+            paper_id,
+            manifestation_id,
+            SourceName.ARXIV_API,
+            [
+                StatedLink(
+                    "is-preprint-of",
+                    link[0],
+                    link[1],
+                    {"field": "arxiv:doi", "journal_ref": entry.journal_ref},
+                )
+            ],
+            record_id,
+        )
     await resolve_paper_dates(session, paper_id, retrieved_at)
     return IngestResult(paper_id, manifestation_id, created)
 

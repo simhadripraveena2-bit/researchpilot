@@ -16,8 +16,10 @@ Pure function of a work's date events (all manifestations). It never overstates:
 * ``source_agreement`` - several reporting sources agree (+-1 day) but independence cannot be
   shown (unknown or shared upstream).
 * ``single_source`` - exactly one secondary claim (or claims from a single reporting source).
-* ``conflicting`` - primary events of one kind disagree by > 2 days, or secondary claims
-  disagree (> 1 day apart) with no primary event.
+* ``conflicting`` - primary events of one kind disagree by > 2 days; or secondary claims
+  disagree (> 1 day apart) with no primary event; or another version has a secondary public
+  claim more than 2 days before every primary event (the later primary date must not become
+  the first appearance).
 * ``uncertain`` - month/year precision only, future dates only, or no claim.
 
 A secondary claim that disagrees with every primary public event by more than 2 days is
@@ -130,6 +132,27 @@ def resolve(claims: list[DateClaim], retrieved_at: datetime) -> DateResolution:
                 )
             )
         first = _earliest(primary_public)
+        # A public claim for *another* version, clearly earlier than every primary event, means
+        # the work may have been public before the primary date: e.g. a journal version whose
+        # preprint posting is known only from a secondary source. The later primary date must
+        # not become the first appearance; the date is conflicting until confirmed.
+        earlier = [
+            c
+            for c in secondary
+            if c.manifestation_id != first.manifestation_id
+            and c.value < first.value - PRIMARY_CONFLICT
+        ]
+        if earlier:
+            earliest_claim = _earliest(earlier)
+            return done(
+                DateResolution(
+                    DateConfidence.CONFLICTING,
+                    candidate_public_date=earliest_claim.value.date(),
+                    reason=f"{earliest_claim.reporting_source.value} reports an earlier "
+                    f"{earliest_claim.event.value} for another version, not confirmed by its "
+                    "system of record",
+                )
+            )
         reason = f"{first.event.value} from the system of record ({first.reporting_source.value})"
         if submission is not None and submission.value < first.value:
             reason += "; an earlier arXiv submission exists, but its announcement was not captured"

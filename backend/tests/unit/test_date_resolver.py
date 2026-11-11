@@ -312,3 +312,50 @@ def test_on_equal_dates_the_specific_event_beats_derived_issued() -> None:
     for order in ([issued, online], [online, issued]):
         r = resolve(order, NOW)
         assert (r.basis, r.first_public) == (B.PUBLISHED_ONLINE, online)
+
+
+def test_unconfirmed_earlier_preprint_blocks_a_later_journal_date() -> None:
+    """bioRxiv API unavailable: the preprint posting is known only from Crossref (secondary);
+    the journal date is primary but two years later. Not 'verified journal date'."""
+    preprint_via_crossref = claim(
+        E.PREPRINT_POSTED,
+        "2022-10-22",
+        m=BIORXIV_M,
+        primary=False,
+        source=R.CROSSREF,
+        upstream=U.BIORXIV,
+    )
+    journal = claim(
+        E.PUBLISHED_ONLINE, "2024-06-03", m=JOURNAL_M, source=R.CROSSREF, upstream=U.CROSSREF
+    )
+    r = resolve([preprint_via_crossref, journal], datetime(2024, 7, 1, tzinfo=UTC))
+    assert (r.confidence, r.first_public, r.candidate_public_date) == (
+        C.CONFLICTING,
+        None,
+        date(2022, 10, 22),
+    )
+
+
+def test_verified_earlier_preprint_posting_beats_the_journal_date() -> None:
+    posted = claim(
+        E.PREPRINT_POSTED,
+        "2022-10-22",
+        m=BIORXIV_M,
+        source=R.BIORXIV_API,
+        upstream=U.BIORXIV,
+        version=1,
+    )
+    journal = claim(
+        E.PUBLISHED_ONLINE, "2024-06-03", m=JOURNAL_M, source=R.CROSSREF, upstream=U.CROSSREF
+    )
+    r = resolve([journal, posted], datetime(2024, 7, 1, tzinfo=UTC))
+    assert (r.confidence, r.basis, r.first_public) == (C.VERIFIED, B.POSTED, posted)
+
+
+def test_secondary_claim_of_the_same_version_does_not_block() -> None:
+    online = claim(E.PUBLISHED_ONLINE, "2024-06-03", m=JOURNAL_M, source=R.CROSSREF)
+    openalex = claim(
+        E.REPORTED_PUBLICATION_DATE, "2024-01-01", m=JOURNAL_M, primary=False, source=R.OPENALEX
+    )
+    r = resolve([online, openalex], datetime(2024, 7, 1, tzinfo=UTC))
+    assert r.first_public == online and r.flags[openalex.id] == ("disagrees_with_primary",)

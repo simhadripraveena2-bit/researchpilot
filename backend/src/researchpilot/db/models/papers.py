@@ -111,6 +111,10 @@ class Paper(Base):
         nullable=False,
         server_default=DateConfidence.UNCERTAIN.value,
     )
+    # Set while this work is merged into another (D29); cleared again by a split.
+    merged_into_id: Mapped[uuid.UUID | None] = mapped_column(
+        UUID(as_uuid=True), sa.ForeignKey("papers.id", ondelete="SET NULL"), index=True
+    )
     row_version: Mapped[int] = row_version()
     created_at: Mapped[datetime] = created_at()
     updated_at: Mapped[datetime] = updated_at()

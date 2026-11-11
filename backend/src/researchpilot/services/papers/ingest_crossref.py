@@ -31,6 +31,7 @@ from researchpilot.domain.enums import (
 from researchpilot.domain.identifiers import IdentifierScheme
 from researchpilot.integrations.crossref import CrossrefWork, FetchedWork
 from researchpilot.services.dates.store import resolve_paper_dates
+from researchpilot.services.matching.links import StatedLink, record_links, target
 from researchpilot.services.papers.ingest import (
     IngestResult,
     add_date,
@@ -154,6 +155,17 @@ async def ingest_crossref(session: AsyncSession, fetched: FetchedWork) -> Ingest
         session, paper_id, manifestation_id, [(a.name, list(a.affiliations)) for a in work.authors]
     )
     await add_crossref_dates(session, paper_id, manifestation_id, work, record_id, retrieved_at)
+    stated = [
+        StatedLink(
+            rel.type,
+            *found,
+            {"field": f"relation.{rel.type}", "id": rel.id, "asserted_by": rel.asserted_by},
+        )
+        for rel in work.relations
+        if (found := target(rel.id_type, rel.id)) is not None
+        and found != (IdentifierScheme.DOI, work.doi)
+    ]
+    await record_links(session, paper_id, manifestation_id, SourceName.CROSSREF, stated, record_id)
     await resolve_paper_dates(session, paper_id, retrieved_at)
     return IngestResult(paper_id, manifestation_id, created)
 

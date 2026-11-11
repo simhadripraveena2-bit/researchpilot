@@ -116,10 +116,22 @@ async def test_old_style_identifier_with_journal_link(
     resp = await add(client, project_id, "arXiv:hep-th/9711200v2")  # queried without version
     assert resp.status_code == 201, resp.text
     detail = (await client.get(f"{API}/projects/{project_id}/papers/{resp.json()['id']}")).json()
-    assert detail["identifiers"][0]["value"] == "hep-th/9711200"
-    # The author-supplied journal DOI is kept in the raw record for the Version Matcher;
-    # it is not an identifier of the arXiv manifestation.
-    assert {i["scheme"] for i in detail["identifiers"]} == {"arxiv"}
+    # The author-supplied journal DOI is not an identifier of the arXiv manifestation: it is
+    # a version link. Following it fetched the IJTP reprint, a separate manifestation that
+    # the Version Matcher attached to the same work.
+    by_manifestation = {m["id"]: m for m in detail["manifestations"]}
+    arxiv_m = next(m for m in by_manifestation.values() if m["server_or_venue"] == "arxiv")
+    assert {(i["scheme"], i["value"], i["manifestation_id"]) for i in detail["identifiers"]} == {
+        ("arxiv", "hep-th/9711200", arxiv_m["id"]),
+        (
+            "doi",
+            "10.1023/a:1026654312961",
+            next(m["id"] for m in by_manifestation.values() if m["kind"] == "published"),
+        ),
+    }
+    # Only a month is known for the journal version, so no date can be confirmed (the
+    # submission-only fallback does not apply once a public-availability claim exists).
+    assert detail["resolved_date"]["confidence"] == "uncertain"
     [payload] = db.execute(
         "SELECT payload->>'entry_xml' FROM source_records WHERE source = 'arxiv_api' "
         "AND source_entity_id = 'hep-th/9711200v3'"

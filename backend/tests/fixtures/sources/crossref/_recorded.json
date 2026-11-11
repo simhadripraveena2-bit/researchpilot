@@ -175,6 +175,17 @@
   "status": 200,
   "url": "https://api.crossref.org/works/10.4310/atmp.1998.v2.n2.a1"
  },
+ "works_10.7554%2Felife.87434.3.json": {
+  "headers": {
+   "x-api-pool": "public-single",
+   "x-concurrency-limit": "1",
+   "x-rate-limit-interval": "1s",
+   "x-rate-limit-limit": "5"
+  },
+  "recorded": "2026-11-11",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.7554/elife.87434.3"
+ },
  "works_10.7554%2Felife.87434.json": {
   "headers": {
    "x-api-pool": "public-single",
