@@ -1,0 +1,15 @@
+# Default gitleaks rules, plus one narrow exception.
+#
+# Recorded Crossref API responses (public bibliographic metadata, recorded without
+# credentials; the recorder never stores request headers) contain reference lists whose
+# citation keys ("key":"pp.00999.2024_ref12") match the generic-api-key rule. Only those
+# recording directories are excluded; every other file is scanned as before.
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Recorded public Crossref responses (citation keys are not secrets)"
+paths = [
+  '''^backend/benchmarks/recordings/crossref/[^/]+\.json$''',
+  '''^backend/tests/fixtures/sources/crossref/[^/]+\.json$''',
+]
