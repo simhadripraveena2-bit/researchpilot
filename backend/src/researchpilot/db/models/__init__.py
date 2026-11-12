@@ -2,7 +2,14 @@
 
 from researchpilot.db.models.claims import Claim, ClaimEvidence, ClaimVerification
 from researchpilot.db.models.events import DomainEvent, DomainEventDelivery
-from researchpilot.db.models.graph import GraphNode, NodeSourceRegistry, ResearchItem
+from researchpilot.db.models.graph import (
+    GraphNode,
+    NodeSourceRegistry,
+    RelationEndpointRule,
+    RelationRegistry,
+    ResearchItem,
+    StructuralRelation,
+)
 from researchpilot.db.models.identity import Project, ProjectMember, User
 from researchpilot.db.models.jobs import Job
 from researchpilot.db.models.matching import (
@@ -10,6 +17,7 @@ from researchpilot.db.models.matching import (
     PaperMergeEvent,
     PaperVersionLink,
 )
+from researchpilot.db.models.objectives import ObjectiveSubQuestion, ResearchObjective
 from researchpilot.db.models.papers import (
     ArxivAnnouncementLog,
     Paper,
@@ -36,6 +44,7 @@ __all__ = [
     "HttpCacheEntry",
     "Job",
     "NodeSourceRegistry",
+    "ObjectiveSubQuestion",
     "Paper",
     "PaperAuthor",
     "PaperDate",
@@ -49,11 +58,15 @@ __all__ = [
     "Project",
     "ProjectItem",
     "ProjectMember",
+    "RelationEndpointRule",
+    "RelationRegistry",
     "ResearchItem",
+    "ResearchObjective",
     "ResearchRun",
     "RunEvent",
     "SourceRateLimit",
     "SourceRecord",
+    "StructuralRelation",
     "TaskExecution",
     "User",
 ]

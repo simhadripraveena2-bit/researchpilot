@@ -11,7 +11,7 @@ from fastapi.routing import APIRoute
 
 from researchpilot import __version__
 from researchpilot.api.errors import install_error_handlers
-from researchpilot.api.routers import graph, health, papers, projects, releases, runs
+from researchpilot.api.routers import graph, health, objectives, papers, projects, releases, runs
 from researchpilot.core.clock import SystemClock
 from researchpilot.core.logging import configure_logging
 from researchpilot.core.security import assert_safe_startup
@@ -27,6 +27,7 @@ ROUTERS = (
     health.router,
     projects.router,
     papers.router,
+    objectives.router,
     releases.router,
     runs.router,
     graph.router,

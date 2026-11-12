@@ -381,3 +381,25 @@ class ReleaseType(StrEnum):
 
 
 NEW_RESEARCH = frozenset({ReleaseType.NEW_PREPRINT, ReleaseType.NEW_PUBLICATION})
+
+
+class ObjectiveSource(StrEnum):
+    PLANNER = "planner"
+    USER_EDIT = "user_edit"
+    FEEDBACK_SUGGESTION = "feedback_suggestion"
+
+
+class RelationClass(StrEnum):
+    RESEARCH = "research"
+    STRUCTURAL = "structural"
+
+
+class ScopePolicy(StrEnum):
+    GLOBAL_ONLY = "global_only"
+    PROJECT_ONLY = "project_only"
+    PROJECT_OR_GLOBAL = "project_or_global"
+
+
+class OnParentDelete(StrEnum):
+    CASCADE_CHILD = "cascade_child"
+    DETACH = "detach"

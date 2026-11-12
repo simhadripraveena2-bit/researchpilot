@@ -16,6 +16,15 @@ from researchpilot.domain.enums import CheckpointStatus, RunStatus, TaskStatus, 
 class ResearchRun(Base):
     __tablename__ = "research_runs"
 
+    __table_args__ = (
+        # The objective version the run used (immutable once set; trigger).
+        sa.ForeignKeyConstraint(
+            ["project_id", "objective_version"],
+            ["research_objectives.project_id", "research_objectives.version"],
+            name="fk_research_runs_objective_version",
+        ),
+    )
+
     id: Mapped[uuid.UUID] = uuid_pk()  # also the LangGraph thread id
     project_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),

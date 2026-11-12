@@ -9,6 +9,7 @@ import httpx
 import psycopg
 import pytest
 
+from researchpilot.core.clock import FixedClock
 from researchpilot.core.settings import Settings
 from researchpilot.worker.main import ARXIV_CAPTURE_JOB, build_worker
 from tests.fixtures.source_transport import FixtureTransport
@@ -27,6 +28,10 @@ async def detail(client: httpx.AsyncClient, project_id: str, paper_id: str) -> d
     return dict((await client.get(f"{API}/projects/{project_id}/papers/{paper_id}")).json())
 
 
+# The worker's own scheduling (``tick``) must not depend on the real date of the test run.
+CLOCK = FixedClock(datetime(2026, 11, 11, 7, tzinfo=UTC))
+
+
 async def run_capture(
     settings: Settings, transport: FixtureTransport, categories: list[str] | None = None
 ) -> None:
@@ -34,7 +39,7 @@ async def run_capture(
         update={"arxiv_capture_enabled": True, "arxiv_announcement_categories": categories or []}
     )
     worker, close = await build_worker(
-        worker_settings, source_transport=transport, source_rate_limits=False
+        worker_settings, source_transport=transport, source_rate_limits=False, clock=CLOCK
     )
     try:
         assert await worker.schedule_periodic(datetime(2026, 11, 11, 7, tzinfo=UTC))
@@ -131,7 +136,7 @@ async def test_capture_is_idempotent_and_runs_once_per_day(
     ).fetchone()
     worker_settings = settings.model_copy(update={"arxiv_capture_enabled": True})
     worker, close = await build_worker(
-        worker_settings, source_transport=sources_transport, source_rate_limits=False
+        worker_settings, source_transport=sources_transport, source_rate_limits=False, clock=CLOCK
     )
     try:
         assert not await worker.schedule_periodic(datetime(2026, 11, 11, 9, tzinfo=UTC))

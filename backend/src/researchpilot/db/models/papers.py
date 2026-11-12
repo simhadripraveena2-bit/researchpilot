@@ -316,6 +316,14 @@ class ProjectItem(Base):
     """Project membership, inclusion and reading status of an item."""
 
     __tablename__ = "project_items"
+    __table_args__ = (
+        # The objective version active when the item entered the project (immutable).
+        sa.ForeignKeyConstraint(
+            ["project_id", "objective_version"],
+            ["research_objectives.project_id", "research_objectives.version"],
+            name="fk_project_items_objective_version",
+        ),
+    )
 
     project_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True), sa.ForeignKey("projects.id", ondelete="CASCADE"), primary_key=True
@@ -351,6 +359,7 @@ class ProjectItem(Base):
         ARRAY(sa.Text), server_default=sa.text("'{}'::text[]"), nullable=False
     )
     first_seen_at: Mapped[datetime] = created_at()
+    objective_version: Mapped[int | None] = mapped_column(sa.Integer)
 
 
 class ArxivAnnouncementLog(Base):

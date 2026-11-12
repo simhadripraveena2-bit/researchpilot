@@ -3,9 +3,10 @@
 Scope approved for this round: identifiers, SourceClient, arXiv / Semantic Scholar /
 OpenAlex / Crossref / bioRxiv / medRxiv clients, paper manifestations, identifiers and source
 records, deduplication and the Version Matcher, date events and the Date Resolver, and arXiv
-announcement capture. **Not** in this round: the research objective model and Planner (task 5),
-the discovery workflow W1 (task 6), graph-compatible relationship tables (task 6a), and
-M1b–M1d. PostgreSQL is the only store; no Neo4j.
+announcement capture; then release types and date windows (task 4a) and the research
+objective model and API (task 5, without the Planner). **Not** in this round: the Planner, the
+discovery workflow W1 (task 6), the remaining graph-compatible relationship tables (task 6a),
+and M1b–M1d. PostgreSQL is the only store; no Neo4j.
 
 ## Dependencies
 
@@ -148,6 +149,46 @@ published version of an earlier preprint in Jun 2024 (never new research); Cross
 and retraction notices → correction notice; CVPR 2016 first seen now → older paper newly
 indexed.
 
+## Research objective model (task 5: model and API, no Planner)
+
+Migration `0008`, `services/objectives/`, `api/routers/objectives.py`, page
+`/projects/:id/objective`.
+
+* **One objective per project, many versions.** `research_objectives` holds one immutable row
+  per version (`UNIQUE(project_id, version)`); `projects.active_objective_id` says which
+  version is in use (composite FK: always one of the project's own). Every edit, including a
+  sub-question change, inserts the next version and makes it active; `activate` puts an
+  earlier version back in use without creating or changing anything.
+* **Contents:** main question, sub-questions, domain and subdomains, tasks and problem areas,
+  keywords, synonyms, related (focus) concepts, exclusions, constraints (methods; datasets and
+  benchmarks; compute, hardware, cost; time; resources; licences; other), expected outcomes,
+  user context, notes, level, goal, source, `based_on_version`, `change_summary`, `created_by`.
+  Lists are trimmed and deduplicated (case-insensitive, first spelling kept). New list-type
+  fields need no new table (arrays/JSONB; the constraints schema is validated in the API).
+* **Sub-questions** are rows of `objective_sub_questions` linked to exactly one version by
+  `structural_relations` `PART_OF` (the approved single-source rule: no `objective_id`
+  column). A new version copies them as new rows with the same keys; new sub-questions get the
+  next key never used in the project, so `SQ3` always means the same sub-question in history.
+* **Recorded objective version:** `research_runs.objective_version` (R0 column, now with a
+  composite FK) and `project_items.objective_version` (new) are set from the active version
+  when the row is created and cannot change afterwards (trigger). Relevance assessments and
+  judgements (M1b) will reference the version's `id`, which never changes either.
+* **Concurrency:** edits carry `base_version`, which must be the active version; the service
+  locks the project row, so of two edits from the same base exactly one creates a version and
+  the other gets **409** with the now-active version (`UNIQUE(project_id, version)` is the
+  backstop).
+* **Validation:** field limits (422) — main question 3–1000 chars, list items 1–300 chars,
+  ≤ 50 per list, ≤ 6 sub-questions (RIE §2.1), sub-question keys `SQn`, no unknown fields; hard
+  rules (422) — duplicate keys or texts, an exclusion that is also a keyword / concept / task /
+  problem area, a dataset, benchmark or method both wanted and excluded/avoided. Completeness
+  (saved anyway, reported on every read and by `/validate`): ≥ 2 sub-questions, a domain, a
+  task or problem area, keywords or concepts, an expected outcome.
+* **Authorization:** all routes are project-scoped (`ProjectScoped`, route-inventory test);
+  other users' projects are 404; viewers can read and validate but not change (403).
+* **Frontend:** a basic form (core fields; one item per line), version list, viewing an
+  earlier version read-only with "Use this version", completeness hints and the 409 message.
+  Synonyms and constraints are kept on save but edited only through the API for now.
+
 ## Decisions and deviations
 
 | # | Topic | What was done | Why |
@@ -192,6 +233,15 @@ indexed.
 | 39 | New publication with a known earlier preprint | *Date uncertain*, not *New publication* | §4.8.4 requires that no earlier manifestation is known; covers the approved Nov 8 / Nov 15 case |
 | 40 | Unconfirmed first date | Revision / newly indexed only with primary evidence of existence before the window; otherwise *Date uncertain* | Nothing unconfirmed is promoted; a v2 still proves an older v1 when v1 is primary-dated |
 | 41 | `/me/preferences` | Display time zone (IANA, validated); allow-listed in the route inventory as user-level | ARCHITECTURE §4.11 contract |
+| 42 | Version rows immutable | No UPDATE on objective versions, sub-questions or `PART_OF` rows; DELETE only through a cascade | History must not be rewritten silently (requirement 4) |
+| 43 | Active version | `projects.active_objective_id` (composite FK), not an `is_active` flag | One pointer per project: no "two active" state to guard; activation never touches version rows |
+| 44 | `project_items.objective_version` | New column (not in DATABASE_SCHEMA before) | Discovered items must say which objective version found them; `discovered_in_run_id` alone is null for manual adds |
+| 45 | `relation_endpoint_rules.child_table` | Extra column | The generic cardinality and cascade triggers need the child's table; avoids hard-coding table names per rule |
+| 46 | `parent_project` registration | The sub-question's node is created by its `PART_OF` insert, with the parent's scope; `rp_register_graph_node` no longer raises for that rule (0001 text restored on downgrade) | Scope comes from the parent, which is only known when the link is written |
+| 47 | Stale run versions on (re)upgrade | 0008 clears `research_runs.objective_version` values that cannot refer to an objective (possible only after a downgrade); its downgrade clears them too | Found by the migration test: the composite FK could not be added otherwise |
+| 48 | Edits without changes | 200 with the active version, no new version | Avoids empty history entries from repeated saves |
+| 49 | Removed sub-question keys | Never reused in the project | A key in an old run or judgement keeps one meaning |
+| 50 | Worker clock | `Worker` takes the existing injectable `Clock` for its daily capture scheduling | `test_capture_is_idempotent_and_runs_once_per_day` failed on the real date 2026-11-12 (the worker scheduled "today" from the wall clock) |
 | 12 | Network access | A personal `researchpilot` cloud environment allows only the six source hosts | Required to verify source behaviour; CI uses recorded responses only |
 
 ## Corrections after review of 7f447bc
@@ -213,7 +263,7 @@ Both regression suites fail on 7f447bc and pass after the fix.
 * ARCHITECTURE §4.8.4 (and §4.8.5, §10) now state that `submission_only` applies only when no
   other public-availability event is known, with the Nov 8 / Nov 15 example.
 
-## Known limitations (after steps 1–5)
+## Known limitations (after steps 1–5, task 4a and task 5)
 
 * **Semantic Scholar** works with the approved key; without `S2_API_KEY` it is reported
   `unavailable`. Even with the key, occasional 429s occur at 1.25 s spacing; they are retried
@@ -235,6 +285,16 @@ Both regression suites fail on 7f447bc and pass after the fix.
   publishers, other registries) are classified by their type only.
 * The frontend has no `LocalTime` component or Latest Research page yet (M1c); the API already
   returns the local display strings.
-* Not started (outside this round): research objective + Planner (task 5), discovery workflow
-  W1 with search log (task 6), graph-compatible relationship tables (task 6a), G-MATCH and
-  G-LATEST-DATES benchmark sets (D19 evaluation roles).
+* **Objective:** no Planner yet: objectives are entered by the user (`source = user_edit`);
+  `planner` and `feedback_suggestion` exist only as values. Nothing uses the objective for
+  discovery or relevance yet (W1, M1b); runs and items only record its version.
+* The objective page edits the core fields only; synonyms and constraints are API-only.
+* Deleting a project cascades to objectives, sub-questions and their nodes, but no deletion
+  markers (`entity_tombstones`) are written yet (task 6a; needed before the graph sync, R2).
+* `relation_registry` / `relation_endpoint_rules` contain only `PART_OF` (Topic → Objective);
+  `RESULT_FOR`, `research_relations` and the code-registry mirror check come with task 6a.
+* No `objective.updated` reassessment consumer: the `objective.version_created` /
+  `objective.activated` events are emitted but nothing consumes them until M1b.
+* Not started (outside this round): the Planner, discovery workflow W1 with search log
+  (task 6), remaining graph-compatible relationship tables (task 6a), G-MATCH and
+  G-LATEST-DATES benchmark sets (D19 evaluation roles), M1b–M1d, Neo4j.

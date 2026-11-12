@@ -52,7 +52,13 @@ def test_exactly_registered_tables_have_registration_trigger(db: psycopg.Connect
         )
     }
     # The node sources that exist so far (DATABASE_SCHEMA §16.3 lists the full inventory).
-    assert registry == {"projects", "papers", "paper_manifestations"}
+    assert registry == {
+        "projects",
+        "papers",
+        "paper_manifestations",
+        "research_objectives",
+        "objective_sub_questions",
+    }
     assert triggered == registry
     assert versioned == registry
     # Non-node tables never register nodes.

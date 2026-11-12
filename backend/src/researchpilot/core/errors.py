@@ -48,3 +48,7 @@ class GraphCapabilityUnavailable(CapabilityUnavailable):
 
 class InsecureConfiguration(ResearchPilotError):
     code, status, title = "insecure_configuration", 500, "Insecure configuration"
+
+
+class Conflict(ResearchPilotError):
+    code, status, title = "conflict", 409, "Conflict"

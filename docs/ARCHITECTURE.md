@@ -590,6 +590,13 @@ Rules:
 | Method | Path | Purpose |
 |---|---|---|
 | GET | `/projects/{id}/releases` | release type of each project paper for a window: `days` (default rolling 7 d) or `from`/`to` (UTC dates, inclusive, or offset timestamps, `[from, to)`), `release_type`, `tz` (display only); returns the window in UTC and local time, counts by type, new-research count, and per entry the placing event (with local display), `boundary_day`, confidence, basis, first public appearance, publication type and peer-review label (M1a; computed on read, no scan) |
+| POST | `/projects/{id}/objective` | create version 1 of the research objective (core question, sub-questions, domain/subdomains, tasks, problem areas, keywords, synonyms, related concepts, exclusions, constraints, expected outcomes, user context, notes); 409 if one exists; returns the version with its completeness report (M1a) |
+| GET | `/projects/{id}/objective?version=` | the active version (default) or a given version, with sub-questions (stable keys SQ1…) and completeness |
+| PUT | `/projects/{id}/objective` | an edit, saved as a **new version** that becomes active: body = full content + `base_version` (must be the active version, else **409**) + optional `change_summary`; 200 and no new version if nothing changed |
+| GET | `/projects/{id}/objective/versions` | every version, newest first, with `is_active`, `based_on_version`, `change_summary` |
+| POST | `/projects/{id}/objective/active` | `{version}`: put an existing version back in use; nothing earlier is rewritten |
+| POST · PATCH · DELETE | `/projects/{id}/objective/sub-questions` · `/{key}` | add, reword or remove one sub-question (`base_version` in body / query); each creates a new version |
+| POST | `/projects/{id}/objective/validate` | check a draft without saving: hard errors (could not be saved) and missing items |
 | GET | `/projects/{id}/latest` | entries for a window: `from`, `to` (default rolling 7 d, UTC), `release_type`, `subtopic`, `method`, `source`, `tier`, `action`, `oa`, `status`; includes coverage, the last scan and the display time zone |
 | POST | `/projects/{id}/latest/scans` | start a scan for a window → `202 {run_id, scan_id}` |
 | GET | `/latest/scans/{scan_id}` | scan status, coverage, failures, counts by release type |
@@ -933,6 +940,14 @@ the registry.
   writes a deletion marker (§12.6a).
 - Single-table sources (`citations`, `paper_authors`, `entity_links`,
   `limitations`, …) use ordinary foreign keys to their endpoint tables.
+- **Implemented in M1a (migration 0008) for `PART_OF` (sub-question →
+  objective):** the registry and endpoint-rule rows; triggers on
+  `structural_relations` for the allowed combination (`rp_relation_10_endpoints`)
+  and the registry-driven `enforce_relation_scope()` (`rp_relation_20_scope`);
+  the deferred exactly-one check; and cascade on parent delete. A
+  `parent_project` node (a sub-question) is registered in `graph_nodes` when
+  its `PART_OF` link is written, with the parent's scope. Deletion markers
+  (§12.6a) and the other relationship types arrive with task 6a.
 
 #### 12.4.2a Project-scope invariant for relationships
 

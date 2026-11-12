@@ -24,7 +24,8 @@ from researchpilot.workflows.registry import WORKFLOWS
 router = APIRouter(tags=["runs"])
 
 _RUN = (
-    "id, project_id, workflow, status, config, manifest, error, created_at, started_at, finished_at"
+    "id, project_id, workflow, status, config, manifest, error, objective_version, created_at, "
+    "started_at, finished_at"
 )
 _CHECKPOINT = "id, run_id, name, payload, status, decision, comment, created_at, decided_at"
 

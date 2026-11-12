@@ -30,6 +30,15 @@ export function ProjectOverview() {
       </div>
       {journey.data && <JourneyBar journey={journey.data} />}
       <div className="rounded-md border bg-white p-4 dark:bg-slate-900">
+        <h2 className="font-medium">Research objective</h2>
+        <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
+          Your main question, sub-questions and what is in or out of scope.
+        </p>
+        <Link to={`/projects/${projectId}/objective`} className="text-sm text-indigo-700 underline">
+          View or edit the objective
+        </Link>
+      </div>
+      <div className="rounded-md border bg-white p-4 dark:bg-slate-900">
         <h2 className="font-medium">System check</h2>
         <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
           Paper search arrives in the next release. Meanwhile you can run a short check that

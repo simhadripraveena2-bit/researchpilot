@@ -59,6 +59,7 @@ class RunOut(BaseModel):
     config: dict[str, Any]
     manifest: dict[str, Any]
     error: dict[str, Any] | None
+    objective_version: int | None = None  # the objective version this run used
     created_at: datetime
     started_at: datetime | None
     finished_at: datetime | None

@@ -20,6 +20,11 @@ const journey = {
 function mockFetch() {
   globalThis.fetch = vi.fn(async (url: RequestInfo | URL) => {
     const path = String(url);
+    if (path.includes("/objective")) {
+      // A new project has no objective yet.
+      const problem = { title: "Not found", status: 404, code: "not_found" };
+      return new Response(JSON.stringify(problem), { status: 404 });
+    }
     const body = path.endsWith("/journey") ? journey
       : path.endsWith("/runs") ? []
       : path.endsWith("/projects") ? [project]
@@ -28,7 +33,7 @@ function mockFetch() {
   }) as typeof fetch;
 }
 
-test.each(["/", "/projects/new", "/projects/p1"])("no internal jargon on %s", async (path) => {
+test.each(["/", "/projects/new", "/projects/p1", "/projects/p1/objective"])("no internal jargon on %s", async (path) => {
   mockFetch();
   const router = createMemoryRouter(routes, { initialEntries: [path] });
   const { container } = render(
@@ -37,5 +42,6 @@ test.each(["/", "/projects/new", "/projects/p1"])("no internal jargon on %s", as
     </QueryClientProvider>,
   );
   await waitFor(() => expect(container.textContent).not.toMatch(/Loading/));
+  expect(container.textContent).not.toMatch(/Unexpected Application Error|Something went wrong/);
   for (const pattern of BANNED) expect(container.textContent).not.toMatch(pattern);
 });

@@ -1,4 +1,14 @@
-import type { Checkpoint, Journey, Problem, Project, Run, RunEvent } from "./types";
+import type {
+  Checkpoint,
+  Journey,
+  ObjectiveContent,
+  ObjectiveVersion,
+  ObjectiveVersionSummary,
+  Problem,
+  Project,
+  Run,
+  RunEvent,
+} from "./types";
 
 const BASE = "/api/v1";
 
@@ -42,6 +52,31 @@ export const api = {
     request<{ status: string }>(`/checkpoints/${checkpointId}/decision`, {
       method: "POST",
       body: JSON.stringify({ status }),
+    }),
+  getObjective: (projectId: string, version?: number) =>
+    request<ObjectiveVersion>(
+      `/projects/${projectId}/objective${version ? `?version=${version}` : ""}`,
+    ),
+  objectiveVersions: (projectId: string) =>
+    request<ObjectiveVersionSummary[]>(`/projects/${projectId}/objective/versions`),
+  createObjective: (projectId: string, body: ObjectiveContent) =>
+    request<ObjectiveVersion>(`/projects/${projectId}/objective`, {
+      method: "POST",
+      body: JSON.stringify(body),
+    }),
+  /** Saves an edit as a new version; 409 if another edit came first. */
+  updateObjective: (
+    projectId: string,
+    body: ObjectiveContent & { base_version: number; change_summary?: string },
+  ) =>
+    request<ObjectiveVersion>(`/projects/${projectId}/objective`, {
+      method: "PUT",
+      body: JSON.stringify(body),
+    }),
+  activateObjective: (projectId: string, version: number) =>
+    request<ObjectiveVersion>(`/projects/${projectId}/objective/active`, {
+      method: "POST",
+      body: JSON.stringify({ version }),
     }),
 };
 

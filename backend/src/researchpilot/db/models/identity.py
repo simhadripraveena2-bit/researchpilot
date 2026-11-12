@@ -69,6 +69,13 @@ class Project(Base):
             "(tutor_retention_policy = 'delete_after_days') = (tutor_retention_days IS NOT NULL)",
             name="retention_days_iff_policy",
         ),
+        # The active version must be one of this project's objective versions.
+        sa.ForeignKeyConstraint(
+            ["id", "active_objective_id"],
+            ["research_objectives.project_id", "research_objectives.id"],
+            name="fk_projects_active_objective",
+            use_alter=True,
+        ),
     )
 
     id: Mapped[uuid.UUID] = uuid_pk()
@@ -92,6 +99,8 @@ class Project(Base):
         server_default=TutorRetentionPolicy.KEEP_UNTIL_DELETED.value,
     )
     tutor_retention_days: Mapped[int | None] = mapped_column(sa.Integer)
+    # The objective version currently in use (any version of this project's objective).
+    active_objective_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     status: Mapped[ProjectStatus] = mapped_column(
         enum_type(ProjectStatus, "project_status"),
         nullable=False,

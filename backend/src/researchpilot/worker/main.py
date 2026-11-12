@@ -12,7 +12,7 @@ import socket
 import traceback
 import uuid
 from collections.abc import Awaitable, Callable, Coroutine
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta
 from typing import Any
 
 import httpx
@@ -21,6 +21,7 @@ from psycopg.rows import dict_row
 from psycopg_pool import AsyncConnectionPool
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
+from researchpilot.core.clock import Clock, SystemClock
 from researchpilot.core.logging import configure_logging, get_logger
 from researchpilot.core.settings import Settings, get_settings
 from researchpilot.db.session import make_engine, make_sessionmaker, session_scope
@@ -72,6 +73,7 @@ class Worker:
         runner: WorkflowRunner,
         dispatcher: Dispatcher,
         sources: Sources | None = None,
+        clock: Clock | None = None,
     ) -> None:
         self.id = f"{socket.gethostname()}:{os.getpid()}:{uuid.uuid4().hex[:6]}"
         self._settings = settings
@@ -79,6 +81,7 @@ class Worker:
         self._runner = runner
         self._dispatcher = dispatcher
         self._sources = sources
+        self._clock: Clock = clock or SystemClock()
         self._log = get_logger(component="worker", worker=self.id)
         self._handlers: dict[str, JobHandler] = {
             "run_workflow": self._run_workflow,
@@ -109,7 +112,7 @@ class Worker:
         """Enqueues today's announcement capture once, after the feeds are rebuilt."""
         if not self._settings.arxiv_capture_enabled or self._sources is None:
             return False
-        now = now or datetime.now(UTC)
+        now = now or self._clock.now()
         if now.hour < self._settings.arxiv_capture_after_utc_hour:
             return False
         async with session_scope(self._sessions) as session:
@@ -231,6 +234,7 @@ async def build_worker(
     source_transport: httpx.AsyncBaseTransport | None = None,
     *,
     source_rate_limits: bool = True,
+    clock: Clock | None = None,
 ) -> tuple[Worker, Callable[[], Awaitable[None]]]:
     engine = make_engine(settings.database_url)
     sessions = make_sessionmaker(engine)
@@ -245,7 +249,7 @@ async def build_worker(
         await pool.close()
         await engine.dispose()
 
-    return Worker(settings, sessions, runner, dispatcher, sources), close
+    return Worker(settings, sessions, runner, dispatcher, sources, clock), close
 
 
 async def main() -> None:

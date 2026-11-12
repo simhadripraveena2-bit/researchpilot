@@ -76,3 +76,65 @@ export interface Problem {
   code: string;
   detail?: string;
 }
+
+export interface SubQuestion {
+  id: string;
+  key: string;
+  text: string;
+  ordinal: number;
+}
+
+export interface Issue {
+  field: string;
+  code: string;
+  message: string;
+}
+
+export interface Completeness {
+  complete: boolean;
+  errors: Issue[];
+  missing: Issue[];
+}
+
+/** Fields the user edits; one version of the research objective holds all of them. */
+export interface ObjectiveContent {
+  core_question: string;
+  sub_questions: { key?: string | null; text: string }[];
+  domain: string | null;
+  subdomains: string[];
+  target_tasks: string[];
+  problem_areas: string[];
+  focus_concepts: string[];
+  keywords: string[];
+  synonyms: Record<string, string[]>;
+  exclusions: string[];
+  constraints: Record<string, unknown>;
+  expected_outcomes: string[];
+  user_context: string | null;
+  notes: string | null;
+}
+
+export interface ObjectiveVersion extends Omit<ObjectiveContent, "sub_questions"> {
+  id: string;
+  project_id: string;
+  version: number;
+  is_active: boolean;
+  sub_questions: SubQuestion[];
+  expertise_level: ExpertiseLevel;
+  goal: ProjectGoal;
+  source: "planner" | "user_edit" | "feedback_suggestion";
+  based_on_version: number | null;
+  change_summary: string | null;
+  created_at: string;
+  completeness: Completeness;
+}
+
+export interface ObjectiveVersionSummary {
+  id: string;
+  version: number;
+  is_active: boolean;
+  core_question: string;
+  based_on_version: number | null;
+  change_summary: string | null;
+  created_at: string;
+}

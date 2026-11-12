@@ -57,8 +57,11 @@ async def add_paper_by_identifier(
     added = (
         await session.execute(
             sa.text(
-                "INSERT INTO project_items (project_id, item_id, discovered_via) "
-                "VALUES (:p, :i, :v) ON CONFLICT DO NOTHING RETURNING item_id"
+                # The objective version in use when the item entered the project (kept).
+                "INSERT INTO project_items (project_id, item_id, discovered_via, "
+                "objective_version) VALUES (:p, :i, :v, (SELECT o.version FROM projects pr "
+                "JOIN research_objectives o ON o.id = pr.active_objective_id WHERE pr.id = :p)) "
+                "ON CONFLICT DO NOTHING RETURNING item_id"
             ),
             {"p": project_id, "i": paper_id, "v": DiscoveredVia.MANUAL.value},
         )

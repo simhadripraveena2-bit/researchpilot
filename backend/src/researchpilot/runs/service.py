@@ -37,8 +37,11 @@ async def create_run(
     run_id = uuid7()
     await session.execute(
         sa.text(
-            "INSERT INTO research_runs (id, project_id, workflow, config, manifest) "
-            "VALUES (:id, :p, :w, CAST(:c AS jsonb), CAST(:m AS jsonb))"
+            # The run records the objective version it uses; it never changes afterwards.
+            "INSERT INTO research_runs (id, project_id, workflow, config, manifest, "
+            "objective_version) VALUES (:id, :p, :w, CAST(:c AS jsonb), CAST(:m AS jsonb), "
+            "(SELECT o.version FROM projects pr JOIN research_objectives o "
+            "ON o.id = pr.active_objective_id WHERE pr.id = :p))"
         ),
         {"id": run_id, "p": project_id, "w": workflow.value, "c": _j(config), "m": _j(manifest)},
     )
