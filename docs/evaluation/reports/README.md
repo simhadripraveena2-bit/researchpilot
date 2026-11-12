@@ -134,6 +134,9 @@ G-MATCH "false negatives" seen during preparation were caused by the harness or 
 
 ## Readiness
 
+Superseded by [`../M1A_EVALUATION_READINESS.md`](../M1A_EVALUATION_READINESS.md) (the
+governance and review status). The summary below is unchanged:
+
 **Not established.** The harness, protocol guard and B0 regression suite are ready, and the
 gates are enforced in CI. The release targets in EVALUATION_FRAMEWORK §3.1 and §3.8 cannot be
 judged before:

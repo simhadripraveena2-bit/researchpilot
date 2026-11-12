@@ -1,5 +1,7 @@
 # B3 (held-out) isolation: what is enforced, what is not, and the proposal
 
+The operational steps are in [`B3_CHECKLIST.md`](B3_CHECKLIST.md).
+
 EVALUATION_FRAMEWORK §2a: "The implementing developer, including any AI coding assistant,
 never reads B3 items or answers."
 
