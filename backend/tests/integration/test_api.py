@@ -117,15 +117,13 @@ async def test_graph_service_returns_backend_neutral_view(client: httpx.AsyncCli
     assert view["edges"] == []
 
 
-async def test_neighbour_traversal_is_unavailable_until_r1(client: httpx.AsyncClient) -> None:
-    """Regression: R0 must not advertise or fake direct-neighbour traversal."""
+async def test_neighbour_traversal_is_served_in_r1(client: httpx.AsyncClient) -> None:
     project_id = await create_project(client)
     resp = await client.get(f"{API}/projects/{project_id}/graph/nodes/{project_id}/neighbors")
-    assert resp.status_code == 501
-    assert resp.headers["content-type"].startswith("application/problem+json")
-    body = resp.json()
-    assert body["code"] == "graph_capability_unavailable"
-    assert (body["capability"], body["available_from"]) == ("neighbors", "R1")
+    assert resp.status_code == 200
+    view = resp.json()
+    assert [n["uid"] for n in view["nodes"]] == [project_id]
+    assert view["edges"] == []
 
 
 async def test_multi_hop_paths_are_unavailable_before_r2(client: httpx.AsyncClient) -> None:

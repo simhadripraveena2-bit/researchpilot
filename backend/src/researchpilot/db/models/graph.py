@@ -97,7 +97,7 @@ class RelationEndpointRule(Base):
     from_kind: Mapped[str] = mapped_column(sa.Text, primary_key=True)
     to_kind: Mapped[str] = mapped_column(sa.Text, primary_key=True)
     role: Mapped[str] = mapped_column(sa.Text, primary_key=True, server_default="")
-    child_table: Mapped[str] = mapped_column(sa.Text, nullable=False)
+    child_table: Mapped[str | None] = mapped_column(sa.Text)
     cardinality: Mapped[str] = mapped_column(sa.Text, nullable=False)
     on_parent_delete: Mapped[OnParentDelete] = mapped_column(
         enum_type(OnParentDelete, "on_parent_delete"), nullable=False

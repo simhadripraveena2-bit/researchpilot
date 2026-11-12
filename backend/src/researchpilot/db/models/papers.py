@@ -158,6 +158,11 @@ class PaperManifestation(Base):
     created_from_source_record_id: Mapped[uuid.UUID | None] = mapped_column(
         UUID(as_uuid=True), sa.ForeignKey(_SOURCE_RECORD_FK, ondelete="SET NULL")
     )
+    # HAS_VERSION edge identity: UUIDv5 of (type, table, paper, manifestation), set by trigger;
+    # it changes (and the old edge gets a deletion marker) when a merge or split moves it.
+    relation_uid: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), nullable=False, unique=True, server_default=sa.FetchedValue()
+    )
     row_version: Mapped[int] = row_version()
     created_at: Mapped[datetime] = created_at()
 
@@ -287,11 +292,12 @@ class PaperSourceLink(Base):
     )
 
 
-class PaperAuthor(Base):
-    """Author list as reported by a manifestation's source. ``author_id`` stays empty until
-    author resolution (S2/OpenAlex author IDs, ORCID) links it to an ``authors`` row."""
+class ManifestationAuthor(Base):
+    """Author list as reported by a manifestation's source: node data of the manifestation,
+    not a graph relationship. ``AUTHORED_BY`` (Paper -> Author) lives only in
+    ``paper_authors`` and is written once authors are resolved (ORCID, S2/OpenAlex IDs)."""
 
-    __tablename__ = "paper_authors"
+    __tablename__ = "manifestation_authors"
 
     manifestation_id: Mapped[uuid.UUID] = mapped_column(
         UUID(as_uuid=True),
@@ -305,7 +311,6 @@ class PaperAuthor(Base):
         nullable=False,
         index=True,
     )
-    author_id: Mapped[uuid.UUID | None] = mapped_column(UUID(as_uuid=True))
     raw_name: Mapped[str] = mapped_column(sa.Text, nullable=False)
     raw_affiliations: Mapped[list[object]] = mapped_column(
         JSONB, server_default=sa.text("'[]'::jsonb"), nullable=False
@@ -358,6 +363,11 @@ class ProjectItem(Base):
     tags: Mapped[list[str]] = mapped_column(
         ARRAY(sa.Text), server_default=sa.text("'{}'::text[]"), nullable=False
     )
+    # IN_PROJECT edge identity: UUIDv5 of (type, table, item, project), set by trigger.
+    relation_uid: Mapped[uuid.UUID] = mapped_column(
+        UUID(as_uuid=True), nullable=False, unique=True, server_default=sa.FetchedValue()
+    )
+    row_version: Mapped[int] = row_version()
     first_seen_at: Mapped[datetime] = created_at()
     objective_version: Mapped[int | None] = mapped_column(sa.Integer)
 

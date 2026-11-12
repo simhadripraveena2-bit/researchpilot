@@ -14,7 +14,6 @@ import json
 import uuid
 from dataclasses import dataclass
 from datetime import UTC, datetime
-from typing import Any
 
 import sqlalchemy as sa
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -27,6 +26,7 @@ from researchpilot.domain.enums import (
     MergeMethod,
     UserMatchStatus,
 )
+from researchpilot.relations.writer import relation_writer
 from researchpilot.services.dates.store import resolve_paper_dates
 from researchpilot.services.matching.version_matcher import (
     RULE_VERSION,
@@ -45,7 +45,7 @@ _MANIFESTATION_TABLES = (
     "paper_identifiers",
     "paper_dates",
     "paper_versions",
-    "paper_authors",
+    "manifestation_authors",
     "paper_version_links",
     "paper_source_links",
 )
@@ -71,7 +71,7 @@ async def load_view(session: AsyncSession, paper_id: uuid.UUID) -> WorkView:
     authors_by_m: dict[uuid.UUID, list[str]] = {}
     for row in await session.execute(
         sa.text(
-            "SELECT manifestation_id, raw_name FROM paper_authors WHERE paper_id = :p "
+            "SELECT manifestation_id, raw_name FROM manifestation_authors WHERE paper_id = :p "
             "ORDER BY manifestation_id, position"
         ),
         {"p": paper_id},
@@ -263,11 +263,8 @@ async def merge(
             sa.text(f"UPDATE {table} SET paper_id = :s WHERE paper_id = :m"),  # noqa: S608
             {"s": survivor, "m": merged},
         )
-    await session.execute(
-        sa.text("UPDATE paper_manifestations SET paper_id = :s WHERE paper_id = :m"),
-        {"s": survivor, "m": merged},
-    )
-    moved_projects, dropped = await _move_project_items(session, survivor, merged)
+    await relation_writer.move_versions(session, survivor, from_paper=merged)
+    moved_projects, dropped = await relation_writer.merge_project_items(session, survivor, merged)
     await session.execute(
         sa.text("UPDATE papers SET merged_into_id = :s WHERE id = :m"),
         {"s": survivor, "m": merged},
@@ -296,34 +293,6 @@ async def merge(
     )
     await resolve_paper_dates(session, survivor, datetime.now(UTC))
     return event_id
-
-
-async def _move_project_items(
-    session: AsyncSession, survivor: uuid.UUID, merged: uuid.UUID
-) -> tuple[list[str], list[dict[str, Any]]]:
-    """Membership moves to the survivor; where the survivor is already in that project, the
-    merged work's row is kept in the merge event (restored by a split)."""
-    dropped = [
-        dict(r.row)
-        for r in await session.execute(
-            sa.text(
-                "DELETE FROM project_items pi WHERE pi.item_id = :m AND EXISTS ("
-                "SELECT 1 FROM project_items s WHERE s.project_id = pi.project_id "
-                "AND s.item_id = :s) RETURNING to_jsonb(pi.*) AS row"
-            ),
-            {"s": survivor, "m": merged},
-        )
-    ]
-    moved = [
-        str(r.project_id)
-        for r in await session.execute(
-            sa.text(
-                "UPDATE project_items SET item_id = :s WHERE item_id = :m RETURNING project_id"
-            ),
-            {"s": survivor, "m": merged},
-        )
-    ]
-    return moved, dropped
 
 
 async def _clear_resolution(session: AsyncSession, paper_id: uuid.UUID) -> None:
@@ -364,24 +333,14 @@ async def split(session: AsyncSession, merge_event_id: uuid.UUID, *, by_user: bo
             ),
             {"m": merged, "ids": manifestations},
         )
-    await session.execute(
-        sa.text("UPDATE paper_manifestations SET paper_id = :m WHERE id = ANY(:ids)"),
-        {"m": merged, "ids": manifestations},
+    await relation_writer.move_versions(session, merged, manifestation_ids=manifestations)
+    await relation_writer.split_project_items(
+        session,
+        survivor,
+        merged,
+        [uuid.UUID(p) for p in moved["project_items_moved"]],
+        moved["project_items_dropped"],
     )
-    for project_id in moved["project_items_moved"]:
-        await session.execute(
-            sa.text("UPDATE project_items SET item_id = :m WHERE project_id = :p AND item_id = :s"),
-            {"m": merged, "s": survivor, "p": uuid.UUID(project_id)},
-        )
-    for row in moved["project_items_dropped"]:
-        await session.execute(
-            sa.text(
-                "INSERT INTO project_items SELECT * FROM "
-                "jsonb_populate_record(NULL::project_items, CAST(:r AS jsonb)) "
-                "ON CONFLICT DO NOTHING"
-            ),
-            {"r": json.dumps(row)},
-        )
     await session.execute(
         sa.text("UPDATE papers SET merged_into_id = NULL WHERE id = :m"), {"m": merged}
     )

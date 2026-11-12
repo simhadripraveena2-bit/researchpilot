@@ -403,3 +403,99 @@ class ScopePolicy(StrEnum):
 class OnParentDelete(StrEnum):
     CASCADE_CHILD = "cascade_child"
     DETACH = "detach"
+
+
+class Assertion(StrEnum):
+    """How a relationship is known (ARCHITECTURE §12.5)."""
+
+    SOURCE_METADATA = "source_metadata"
+    AUTHOR_REPORTED = "author_reported"
+    EXTRACTED = "extracted"
+    COMPUTED = "computed"
+    INFERRED = "inferred"
+    HYPOTHESIZED = "hypothesized"
+    USER_ASSERTED = "user_asserted"
+    USER_CONFIRMED = "user_confirmed"
+    REJECTED = "rejected"
+    STRUCTURAL = "structural"
+
+
+# A global (null-scope) relationship may only come from global inputs (§12.4.2a).
+GLOBAL_ASSERTIONS = frozenset(
+    {
+        Assertion.SOURCE_METADATA,
+        Assertion.AUTHOR_REPORTED,
+        Assertion.EXTRACTED,
+        Assertion.COMPUTED,
+        Assertion.INFERRED,
+    }
+)
+USER_ASSERTIONS = frozenset({Assertion.USER_ASSERTED, Assertion.USER_CONFIRMED})
+
+
+class RelationStatus(StrEnum):
+    ACTIVE = "active"
+    RETRACTED = "retracted"
+
+
+class AssertionChangeReason(StrEnum):
+    QUOTE_VERIFIED = "quote_verified"
+    USER_CONFIRMED = "user_confirmed"
+    USER_REJECTED = "user_rejected"
+    USER_RESTORED = "user_restored"
+    VERIFICATION_FAILED = "verification_failed"
+    SOURCE_RETRACTED = "source_retracted"
+
+
+class RelationDecisionKind(StrEnum):
+    CONFIRMED = "confirmed"
+    REJECTED = "rejected"
+
+
+class TombstoneReason(StrEnum):
+    USER_DELETE = "user_delete"
+    RETENTION = "retention"
+    PROJECT_DELETE = "project_delete"
+    ACCOUNT_DELETE = "account_delete"
+    MERGE_SPLIT = "merge_split"
+    RETRACTED = "retracted"
+    REJECTED = "rejected"
+
+
+class DeletionScope(StrEnum):
+    CONVERSATION = "conversation"
+    ALL_CONVERSATIONS = "all_conversations"
+    LEARNING_PROGRESS = "learning_progress"
+    PROJECT = "project"
+    ACCOUNT = "account"
+    RETENTION_EXPIRY = "retention_expiry"
+
+
+class EntityRole(StrEnum):
+    INTRODUCES = "introduces"
+    USES_METHOD = "uses_method"
+    EVALUATES_ON = "evaluates_on"
+    COMPARES_AGAINST = "compares_against"  # RIE data, not a graph relationship
+    REPORTS_METRIC = "reports_metric"  # RIE data, not a graph relationship
+
+
+class SpanVerification(StrEnum):
+    EXACT = "exact"
+    FUZZY = "fuzzy"
+    UNVERIFIED = "unverified"
+
+
+class SpanLocation(StrEnum):
+    ABSTRACT = "abstract"
+    BODY_TEXT = "body_text"
+    TABLE = "table"
+    FIGURE_CAPTION = "figure_caption"
+    METADATA = "metadata"
+    LATEX_SOURCE = "latex_source"
+
+
+class ResearchGroupKind(StrEnum):
+    INSTITUTION = "institution"
+    LAB = "lab"
+    CONSORTIUM = "consortium"
+    UNKNOWN = "unknown"

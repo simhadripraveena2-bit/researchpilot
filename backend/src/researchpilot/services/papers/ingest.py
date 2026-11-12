@@ -375,13 +375,14 @@ async def replace_authors(
 ) -> None:
     """The manifestation's author list as its source currently reports it."""
     await session.execute(
-        sa.text("DELETE FROM paper_authors WHERE manifestation_id = :m"), {"m": manifestation_id}
+        sa.text("DELETE FROM manifestation_authors WHERE manifestation_id = :m"),
+        {"m": manifestation_id},
     )
     for position, (name, affiliations) in enumerate(authors, start=1):
         await session.execute(
             sa.text(
-                "INSERT INTO paper_authors (manifestation_id, position, paper_id, raw_name, "
-                "raw_affiliations) VALUES (:m, :pos, :p, :n, CAST(:a AS jsonb))"
+                "INSERT INTO manifestation_authors (manifestation_id, position, paper_id, "
+                "raw_name, raw_affiliations) VALUES (:m, :pos, :p, :n, CAST(:a AS jsonb))"
             ),
             {
                 "m": manifestation_id,

@@ -146,3 +146,99 @@ def test_0008_objectives_upgrade_and_downgrade_with_data(empty_db: str) -> None:
     command.upgrade(cfg, "head")  # clears values that cannot refer to an objective
     with psycopg.connect(empty_db) as conn:
         assert conn.execute("SELECT objective_version FROM research_runs").fetchall() == [(None,)]
+
+
+def test_0009_relationships_upgrade_and_downgrade_with_data(empty_db: str) -> None:
+    """Existing manifestations and project items get their deterministic edge ids; the raw
+    author list moves to manifestation_authors; downgrade restores 0008 exactly."""
+    from researchpilot.relations.ids import relation_uid
+
+    cfg = alembic_config(_sqlalchemy_url(empty_db))
+    command.upgrade(cfg, "0008")
+    user, project, paper, manifestation = (uuid7() for _ in range(4))
+    with psycopg.connect(empty_db, autocommit=True) as conn:
+        functions_0008 = dict(
+            conn.execute(
+                "SELECT proname, prosrc FROM pg_proc WHERE proname IN "
+                "('rp_register_graph_node', 'enforce_relation_scope', 'rp_relation_endpoints')"
+            ).fetchall()
+        )
+        conn.execute("INSERT INTO users (id, display_name) VALUES (%s, 'u')", (user,))
+        conn.execute(
+            "INSERT INTO projects (id, user_id, title, topic, expertise_level, goal) "
+            "VALUES (%s, %s, 't', 't', 'beginner', 'find_gap')",
+            (project, user),
+        )
+        conn.execute("INSERT INTO research_items (id, item_type) VALUES (%s, 'paper')", (paper,))
+        conn.execute(
+            "INSERT INTO papers (id, title, normalized_title) VALUES (%s, 'T', 't')", (paper,)
+        )
+        conn.execute(
+            "INSERT INTO paper_manifestations (id, paper_id, kind, server_or_venue, "
+            "primary_identifier_scheme, primary_identifier_value, peer_review_label) "
+            "VALUES (%s, %s, 'preprint', 'arXiv', 'arxiv', '2611.00001', "
+            "'preprint_not_peer_reviewed')",
+            (manifestation, paper),
+        )
+        conn.execute(
+            "INSERT INTO paper_authors (manifestation_id, position, paper_id, raw_name) "
+            "VALUES (%s, 1, %s, 'Ada Lovelace')",
+            (manifestation, paper),
+        )
+        conn.execute(
+            "INSERT INTO project_items (project_id, item_id, discovered_via) "
+            "VALUES (%s, %s, 'manual')",
+            (project, paper),
+        )
+
+    command.upgrade(cfg, "0009")
+    with psycopg.connect(empty_db, autocommit=True) as conn:
+        assert conn.execute(
+            "SELECT relation_uid FROM paper_manifestations WHERE id = %s", (manifestation,)
+        ).fetchone() == (relation_uid("HAS_VERSION", "paper_manifestations", paper, manifestation),)
+        assert conn.execute("SELECT relation_uid, row_version FROM project_items").fetchone() == (
+            relation_uid("IN_PROJECT", "project_items", paper, project),
+            1,
+        )
+        assert conn.execute(
+            "SELECT raw_name FROM manifestation_authors WHERE manifestation_id = %s",
+            (manifestation,),
+        ).fetchone() == ("Ada Lovelace",)
+        assert conn.execute("SELECT count(*) FROM paper_authors").fetchone() == (0,)
+        assert conn.execute("SELECT count(*) FROM relation_registry").fetchone() == (15,)
+        # A tombstone for a removed edge, to check that downgrade drops the table cleanly.
+        conn.execute("DELETE FROM project_items")
+        assert conn.execute("SELECT kind FROM entity_tombstones").fetchall() == [("IN_PROJECT",)]
+
+    command.downgrade(cfg, "0008")
+    with psycopg.connect(empty_db, autocommit=True) as conn:
+        tables = {r[0] for r in conn.execute("SELECT tablename FROM pg_tables")}
+        assert {"paper_authors"} <= tables
+        assert tables.isdisjoint(
+            {
+                "manifestation_authors",
+                "citations",
+                "research_relations",
+                "entity_links",
+                "entity_tombstones",
+                "authors",
+                "entities",
+                "evidence_spans",
+                "deletion_log",
+            }
+        )
+        assert conn.execute(
+            "SELECT raw_name, author_id FROM paper_authors WHERE manifestation_id = %s",
+            (manifestation,),
+        ).fetchone() == ("Ada Lovelace", None)
+        assert (
+            dict(
+                conn.execute(
+                    "SELECT proname, prosrc FROM pg_proc WHERE proname IN "
+                    "('rp_register_graph_node', 'enforce_relation_scope', 'rp_relation_endpoints')"
+                ).fetchall()
+            )
+            == functions_0008
+        )
+        assert conn.execute("SELECT type FROM relation_registry").fetchall() == [("PART_OF",)]
+    command.upgrade(cfg, "head")

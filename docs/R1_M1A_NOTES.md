@@ -4,9 +4,9 @@ Scope approved for this round: identifiers, SourceClient, arXiv / Semantic Schol
 OpenAlex / Crossref / bioRxiv / medRxiv clients, paper manifestations, identifiers and source
 records, deduplication and the Version Matcher, date events and the Date Resolver, and arXiv
 announcement capture; then release types and date windows (task 4a) and the research
-objective model and API (task 5, without the Planner). **Not** in this round: the Planner, the
-discovery workflow W1 (task 6), the remaining graph-compatible relationship tables (task 6a),
-and M1b–M1d. PostgreSQL is the only store; no Neo4j.
+objective model and API (task 5, without the Planner) and the graph-compatible relationship
+infrastructure (task 6a). **Not** in this round: the Planner, the discovery workflow W1
+(task 6), and M1b–M1d. PostgreSQL is the only store; no Neo4j.
 
 ## Dependencies
 
@@ -26,9 +26,8 @@ identifiers ─┬─> SourceClient ─> clients (arXiv, S2, OpenAlex, Crossref,
 * The Date Resolver's confidence rules are pure and were built first; release types and
   window logic need announcement events and published-version manifestations.
 * Announcement capture needs works with arXiv manifestations to attach events to.
-* HAS_VERSION scope enforcement (`enforce_relation_scope()` on `paper_manifestations`) needs
-  `relation_registry` (task 6a). The manifestation table already has no scope column and is
-  registered as a global node source, so adding the check later changes no data.
+* HAS_VERSION scope enforcement (`enforce_relation_scope()` on `paper_manifestations`) needed
+  `relation_registry`; added in task 6a (0009) without changing any existing data.
 
 ## First vertical slice: add an arXiv paper by identifier
 
@@ -189,6 +188,66 @@ Migration `0008`, `services/objectives/`, `api/routers/objectives.py`, page
   earlier version read-only with "Use this version", completeness hints and the 409 message.
   Synonyms and constraints are kept on save but edited only through the API for now.
 
+## Relationship sources and graph data (task 6a)
+
+Migration `0009`, `researchpilot/relations/` (registry, writer, audit, tombstones),
+`services/projects/deletion.py`, alembic SQL in `alembic/rp_sql/relations_0009.py`.
+
+**Relationship types and their single source** (database registry = code registry, tested):
+
+| Type | Class | Source | Scope policy |
+|---|---|---|---|
+| CITES | research | `citations` | global only |
+| AUTHORED_BY | research | `paper_authors` | global only |
+| AFFILIATED_WITH | research | `author_affiliations` | global only |
+| INTRODUCES / USES_METHOD / EVALUATES_ON | research | `entity_links` (by `role`) | project or global |
+| EXTENDS / CONTRADICTS / RELATED_TO / ADDRESSES / DERIVED_FROM | research | `research_relations` (by `type`) | project or global |
+| VALIDATED_BY | research | `research_relations` | project only |
+| HAS_VERSION | structural | `paper_manifestations.paper_id` | global only (no scope column) |
+| IN_PROJECT | structural | `project_items` | project only |
+| PART_OF | structural | `structural_relations` | project only |
+| REPORTS_LIMITATION (R2), RESULT_FOR (R2), IMPLEMENTED_BY (R4) | — | known to the code registry; registered with their source tables | — |
+
+New node sources: `authors`, `research_groups` (global) and `entities` (global; label by
+type; glossary terms are not nodes). New tables: `evidence_spans`, `relation_decisions`,
+`relation_suppressions`, `relation_assertion_log`, `entity_tombstones`, `deletion_log`.
+
+* **Database rules, for any writer** (the same triggers on every registered source, read
+  from the registry): registered type and allowed endpoint combination; endpoints exist as
+  graph nodes (composite FKs where endpoints are polymorphic); type and endpoints never
+  change (except HAS_VERSION / IN_PROJECT moves by merge/split); deterministic
+  `relation_uid` (UUIDv5, a forged one is refused); the project-scope invariant and the
+  global-scope rule (no project context, no user assertions in global rows); evidence by
+  assertion (source records and verified spans are looked up); sticky rejection (only a user
+  in the row's project changes a rejected row; global rows are rejected only by system
+  verification); rejected rows cannot be deleted except by cascade.
+* **RelationWriter** (`relations/writer.py`) is the single write path, enforced by a source
+  scan test. Callers pass a `WriteContext` (project or global; system service or user). It
+  validates the same rules first (clear 422 `relation_rejected` errors), upserts by natural
+  key (concurrent writers produce one row), never downgrades an assertion (a user's, or an
+  established one by an inferred one), logs promotions (`quote_verified`), and turns
+  automatic writes that hit a rejected row or a suppression fingerprint into logged no-ops.
+  `reject` / `confirm`: project rows change (sticky); global rows get a project overlay
+  (`relation_decisions`) plus a suppression and are never modified. `system_reject`
+  (failed verification) and `retract` (source withdrew) for any scope. Structural writes:
+  `link_part_of`, `add_to_project`, `move_versions`, `merge_project_items` /
+  `split_project_items` (the objective, paper and matching services now call these).
+* **Deletion markers:** triggers write `entity_tombstones (uid, kind, reason, timestamps)` for
+  every deleted graph node and relationship row, for moved edges (`merge_split`, old uid) and
+  for rejections and retractions; a marker is cleared when the element exists or becomes
+  eligible again. Deleting a project or user sets the reason (`project_delete`,
+  `account_delete`) for the whole cascade. `DELETE /projects/{id}?permanent=true` (owner)
+  deletes the project, its outbox events and everything scoped to it, and writes a
+  `deletion_log` entry (salted hash, counts). A daily `tombstone_purge` job removes markers
+  verified absent or older than 30 days.
+* **Audits** (`relations/audit.py`): `check_enforcement` (every registry row has its
+  triggers, endpoint/scope columns with FKs, the global-only CHECK; a dummy type without
+  triggers fails), `undeclared_references` (any reference column into a node table must be
+  a registered relationship column, scope, or declared non-source), `find_orphans` (nodes
+  without source rows, qualifying rows without nodes, kind or scope mismatches).
+* **Reads:** the PostgreSQL `GraphService` now serves 1-hop neighbours with scope
+  visibility, assertion policy and project overlays.
+
 ## Decisions and deviations
 
 | # | Topic | What was done | Why |
@@ -242,6 +301,16 @@ Migration `0008`, `services/objectives/`, `api/routers/objectives.py`, page
 | 48 | Edits without changes | 200 with the active version, no new version | Avoids empty history entries from repeated saves |
 | 49 | Removed sub-question keys | Never reused in the project | A key in an old run or judgement keeps one meaning |
 | 50 | Worker clock | `Worker` takes the existing injectable `Clock` for its daily capture scheduling | `test_capture_is_idempotent_and_runs_once_per_day` failed on the real date 2026-11-12 (the worker scheduled "today" from the wall clock) |
+| 51 | Raw author lists | Renamed `paper_authors` → `manifestation_authors` (node data of the manifestation); new `paper_authors` is AUTHORED_BY | The old table held per-manifestation raw names with an always-empty `author_id`; as the AUTHORED_BY source it would have been a second, unresolved author link per version |
+| 52 | No `citations.first_seen_run_id` | Not added | A run belongs to a project; a global relationship must not reference project context (the requested rule "global-only relationships must not contain project-specific evidence") |
+| 53 | Sources of later releases | `limitations` (REPORTS_LIMITATION), RESULT_FOR and `item_code_links` (IMPLEMENTED_BY) are in the code registry, not created | Their endpoint node tables (limitations with evidence, reported results, repositories) are R2/R4; creating empty node tables now would be unnecessary |
+| 54 | `entity_links` assessment roles | `compares_against`, `reports_metric` are scope-checked like the table's types but never projected and have no registry type | DATABASE_SCHEMA lists them as RIE data in the same table; a registry row would make them graph relationships |
+| 55 | Trigger context | Acting user/service, scope and change/deletion reasons reach the triggers as transaction-local settings (`rp.actor`, `rp.actor_scope`, `rp.change_reason`, `rp.deletion_reason`) set by `RelationWriter` / deletion code | Lets one generic trigger enforce sticky rejection and write meaningful markers and log entries; direct SQL that forges a setting is outside the supported write path (the source scan blocks it in code) |
+| 56 | `relation_assertion_log` | Adds `relation_uid`, statuses, `actor` and `scope_project_id` (FK, cascade) | Project history must be deleted with its project; status changes (retraction) are logged too |
+| 57 | Neighbours in R1 | `GraphCapability.NEIGHBORS` advertised; citation graph, versions and related papers still not | Overlays must be applied by a real read path; the other views need data that the discovery workflow (task 6) fills |
+| 58 | `evidence_spans` | Created now; `document_id` / `section_id` without FKs until documents exist (M1d) | Evidence by assertion needs span verification in the database |
+| 59 | Markers on re-creation | A marker is removed when the same uid exists or is eligible again (re-insert, un-reject, move back) | Otherwise a later sync could delete a live element |
+| 60 | Deletion log hash | HMAC-SHA256 with `DELETION_LOG_SALT`; without it a random salt is used and discarded | A one-way hash even when no salt is configured; never the raw id |
 | 12 | Network access | A personal `researchpilot` cloud environment allows only the six source hosts | Required to verify source behaviour; CI uses recorded responses only |
 
 ## Corrections after review of 7f447bc
@@ -263,7 +332,7 @@ Both regression suites fail on 7f447bc and pass after the fix.
 * ARCHITECTURE §4.8.4 (and §4.8.5, §10) now state that `submission_only` applies only when no
   other public-availability event is known, with the Nov 8 / Nov 15 example.
 
-## Known limitations (after steps 1–5, task 4a and task 5)
+## Known limitations (after steps 1–5 and tasks 4a, 5 and 6a)
 
 * **Semantic Scholar** works with the approved key; without `S2_API_KEY` it is reported
   `unavailable`. Even with the key, occasional 429s occur at 1.25 s spacing; they are retried
@@ -289,12 +358,18 @@ Both regression suites fail on 7f447bc and pass after the fix.
   `planner` and `feedback_suggestion` exist only as values. Nothing uses the objective for
   discovery or relevance yet (W1, M1b); runs and items only record its version.
 * The objective page edits the core fields only; synonyms and constraints are API-only.
-* Deleting a project cascades to objectives, sub-questions and their nodes, but no deletion
-  markers (`entity_tombstones`) are written yet (task 6a; needed before the graph sync, R2).
-* `relation_registry` / `relation_endpoint_rules` contain only `PART_OF` (Topic → Objective);
-  `RESULT_FOR`, `research_relations` and the code-registry mirror check come with task 6a.
+* **Relationships:** nothing produces research relationships yet: citations, authorship,
+  affiliations (author resolution), entity links (extraction, R2) and relevance relations
+  (M1b) arrive with their workflows; the tables, rules and writer are ready.
+* Deletion markers are written but not consumed until the Graph Sync Worker (R2); until then
+  markers are purged at the 30-day cap without verification (no alert, nothing to verify).
+* Only project and account cascades set their own marker reason; other deletions default to
+  `user_delete` (conversation/retention reasons arrive with those features).
+* `signal_ids` in evidence are checked for presence only (assessment signals arrive in M1b).
+* Account deletion (all of a user's projects) has no API yet; the database writes
+  `account_delete` markers if a user row is deleted.
 * No `objective.updated` reassessment consumer: the `objective.version_created` /
   `objective.activated` events are emitted but nothing consumes them until M1b.
 * Not started (outside this round): the Planner, discovery workflow W1 with search log
-  (task 6), remaining graph-compatible relationship tables (task 6a), G-MATCH and
+  (task 6), G-MATCH and
   G-LATEST-DATES benchmark sets (D19 evaluation roles), M1b–M1d, Neo4j.

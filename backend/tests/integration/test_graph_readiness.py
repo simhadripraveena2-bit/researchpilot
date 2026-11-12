@@ -58,9 +58,17 @@ def test_exactly_registered_tables_have_registration_trigger(db: psycopg.Connect
         "paper_manifestations",
         "research_objectives",
         "objective_sub_questions",
+        "authors",
+        "research_groups",
+        "entities",
     }
     assert triggered == registry
-    assert versioned == registry
+    # Every synced table (node sources and relationship sources) bumps row_version, except
+    # structural_relations, whose rows never change.
+    relation_sources = {r[0] for r in db.execute("SELECT source_table FROM relation_registry")} - {
+        "structural_relations"
+    }
+    assert versioned == registry | relation_sources
     # Non-node tables never register nodes.
     assert not {"users", "research_runs", "claims", "research_items"} & triggered
 

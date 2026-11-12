@@ -1,4 +1,4 @@
-"""R0's PostgreSQL GraphService stays within its documented scope (ARCHITECTURE §12.8)."""
+"""The PostgreSQL GraphService stays within its documented scope (ARCHITECTURE §12.8)."""
 
 from __future__ import annotations
 
@@ -16,16 +16,8 @@ def _service() -> PostgresGraphService:
     return PostgresGraphService(sessions=None)  # type: ignore[arg-type]  # never queried
 
 
-def test_r0_advertises_no_capabilities() -> None:
-    assert _service().capabilities() == frozenset()
-
-
-async def test_neighbours_refused_with_r1_availability() -> None:
-    with pytest.raises(CapabilityUnavailable) as err:
-        await _service().neighbors(
-            uuid.uuid4(), GraphScope(uuid.uuid4()), AssertionPolicy.ESTABLISHED_ONLY
-        )
-    assert err.value.extra == {"capability": "neighbors", "available_from": "R1"}
+def test_r1_advertises_direct_neighbours_only() -> None:
+    assert _service().capabilities() == frozenset({GraphCapability.NEIGHBORS})
 
 
 async def test_paths_refused_with_r2_availability() -> None:

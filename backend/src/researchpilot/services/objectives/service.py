@@ -23,9 +23,10 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from researchpilot.core.errors import Conflict, NotFound, ValidationFailed
 from researchpilot.core.ids import uuid7
-from researchpilot.db.models import ObjectiveSubQuestion, ResearchObjective, StructuralRelation
+from researchpilot.db.models import ObjectiveSubQuestion, ResearchObjective
 from researchpilot.domain.enums import ExpertiseLevel, ObjectiveSource, ProjectGoal
 from researchpilot.events.outbox import emit
+from researchpilot.relations.writer import relation_writer
 from researchpilot.services.objectives.model import (
     Completeness,
     Constraints,
@@ -397,18 +398,10 @@ async def _write_version(
         child = ObjectiveSubQuestion(id=uuid7(), key=key, text=sq.text, ordinal=ordinal)
         session.add(child)
         await session.flush()
-        session.add(
-            StructuralRelation(
-                id=uuid7(),
-                type="PART_OF",
-                child_uid=child.id,
-                child_kind="Topic",
-                parent_uid=obj.id,
-                parent_kind="Objective",
-                scope_project_id=project.id,
-            )
+        # Registers the Topic node with the objective's project scope.
+        await relation_writer.link_part_of(
+            session, project.id, (child.id, "Topic"), (obj.id, "Objective")
         )
-        await session.flush()  # registers the Topic node with the objective's project scope
     await session.execute(
         sa.text("UPDATE projects SET active_objective_id = :o WHERE id = :p"),
         {"o": obj.id, "p": project.id},

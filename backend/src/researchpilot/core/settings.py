@@ -81,6 +81,10 @@ class Settings(BaseSettings):
     github_token: SecretStr | None = None
     hf_token: SecretStr | None = None
     session_secret: SecretStr | None = Field(default=None, description="Signing key (hosted mode)")
+    deletion_log_salt: SecretStr | None = Field(
+        default=None,
+        description="Salt for the one-way subject hash in deletion_log; unset = random per entry",
+    )
 
     def secret_values(self) -> list[str]:
         """All configured secret values, for the log redactor."""

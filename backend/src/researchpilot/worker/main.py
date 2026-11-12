@@ -31,6 +31,7 @@ from researchpilot.integrations.registry import Sources, build_sources
 from researchpilot.jobs import queue
 from researchpilot.llm.factory import build_runtime_gateway
 from researchpilot.llm.gateway import LLMGateway
+from researchpilot.relations import tombstones
 from researchpilot.runs import service
 from researchpilot.services.dates.announcements import capture, categories_to_capture
 from researchpilot.workflows.runner import WorkflowRunner
@@ -63,6 +64,9 @@ async def open_checkpointer(settings: Settings) -> tuple[AsyncPostgresSaver, Asy
 
 
 ARXIV_CAPTURE_JOB = "arxiv_announcement_capture"
+TOMBSTONE_PURGE_JOB = "tombstone_purge"
+# No graph database before R2: markers cannot be verified absent yet (§12.6a).
+GRAPH_BACKEND_ENABLED = False
 
 
 class Worker:
@@ -87,6 +91,7 @@ class Worker:
             "run_workflow": self._run_workflow,
             "resume_workflow": self._run_workflow,
             ARXIV_CAPTURE_JOB: self._capture_announcements,
+            TOMBSTONE_PURGE_JOB: self._purge_tombstones,
         }
 
     async def _run_workflow(self, job: queue.ClaimedJob) -> None:
@@ -107,6 +112,25 @@ class Worker:
             logged=report.logged,
             events=report.events_added,
         )
+
+    async def _purge_tombstones(self, job: queue.ClaimedJob) -> None:
+        async with session_scope(self._sessions) as session:
+            report = await tombstones.purge(
+                session, self._clock.now(), graph_enabled=GRAPH_BACKEND_ENABLED
+            )
+        self._log.info("tombstones.purge_job_done", purged=report.purged)
+
+    async def schedule_maintenance(self, now: datetime | None = None) -> bool:
+        """Enqueues today's deletion-marker purge once (idempotent per UTC day)."""
+        now = now or self._clock.now()
+        async with session_scope(self._sessions) as session:
+            job = await queue.enqueue_once(
+                session,
+                TOMBSTONE_PURGE_JOB,
+                {"day": now.date().isoformat()},
+                dedupe_key=f"{TOMBSTONE_PURGE_JOB}:{now.date().isoformat()}",
+            )
+        return job is not None
 
     async def schedule_periodic(self, now: datetime | None = None) -> bool:
         """Enqueues today's announcement capture once, after the feeds are rebuilt."""
@@ -138,6 +162,7 @@ class Worker:
         most one job."""
         dispatched = await self._dispatcher.dispatch_once()
         await self.schedule_periodic()
+        await self.schedule_maintenance()
         stale = timedelta(seconds=self._settings.job_stale_after_seconds)
         failed = await self._fail_exhausted(stale)
         async with session_scope(self._sessions) as session:

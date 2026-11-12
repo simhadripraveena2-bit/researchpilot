@@ -16,6 +16,7 @@ from researchpilot.events.outbox import emit
 from researchpilot.graph.service import GraphScope
 from researchpilot.graph.view import AssertionPolicy, GraphView
 from researchpilot.journey.registry import JourneyView, ProjectStats, compute_journey
+from researchpilot.services.projects import deletion
 
 router = APIRouter(tags=["projects"])
 
@@ -127,10 +128,27 @@ async def update_project(body: ProjectUpdate, scope: ProjectScoped, session: Ses
 
 
 @router.delete("/projects/{project_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def archive_project(scope: ProjectScoped, session: Session) -> Response:
-    """Archives (soft delete). Permanent deletion arrives with the retention work (R1)."""
+async def delete_project(
+    scope: ProjectScoped,
+    session: Session,
+    request: Request,
+    permanent: bool = False,
+) -> Response:
+    """Archives the project (soft delete). With ``permanent=true`` the project and everything
+    in it are deleted for good: project-scoped graph nodes and relationships get deletion
+    markers, and only an anonymous count is kept (``deletion_log``). Owner only."""
     if scope.role is not ProjectRole.OWNER:
-        raise Forbidden("only the owner can archive a project")
+        raise Forbidden("only the owner can delete or archive a project")
+    if permanent:
+        settings = request.app.state.settings
+        salt = settings.deletion_log_salt
+        await deletion.delete_project(
+            session,
+            scope.project_id,
+            salt=salt.get_secret_value() if salt else None,
+            requested_at=request.app.state.clock.now(),
+        )
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
     await session.execute(
         sa.text("UPDATE projects SET status = 'archived', updated_at = now() WHERE id = :id"),
         {"id": scope.project_id},

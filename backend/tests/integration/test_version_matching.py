@@ -51,7 +51,7 @@ def snapshot(db: psycopg.Connection, paper_id: str) -> dict[str, frozenset[tuple
         "reporting_source, upstream_source, source_record_id FROM paper_dates WHERE paper_id = %s",
         "versions": "SELECT manifestation_id, version, submitted_at FROM paper_versions "
         "WHERE paper_id = %s",
-        "authors": "SELECT manifestation_id, position, raw_name FROM paper_authors "
+        "authors": "SELECT manifestation_id, position, raw_name FROM manifestation_authors "
         "WHERE paper_id = %s",
         "links": "SELECT manifestation_id, link_type, target_value, source FROM "
         "paper_version_links WHERE paper_id = %s",

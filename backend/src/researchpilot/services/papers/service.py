@@ -20,6 +20,7 @@ from researchpilot.domain.identifiers import (
 from researchpilot.integrations.base import SourceError, SourceNotFound
 from researchpilot.integrations.biorxiv import is_server_preprint_doi, likely_server
 from researchpilot.integrations.registry import Sources
+from researchpilot.relations.writer import relation_writer
 from researchpilot.services.matching.store import match_work
 from researchpilot.services.papers.enrich import enrich_work
 from researchpilot.services.papers.ingest import ingest_arxiv
@@ -54,19 +55,11 @@ async def add_paper_by_identifier(
         coverage = await enrich_work(session, sources, paper_id)
         paper_id = await match_work(session, paper_id)  # strong evidence may now match
 
-    added = (
-        await session.execute(
-            sa.text(
-                # The objective version in use when the item entered the project (kept).
-                "INSERT INTO project_items (project_id, item_id, discovered_via, "
-                "objective_version) VALUES (:p, :i, :v, (SELECT o.version FROM projects pr "
-                "JOIN research_objectives o ON o.id = pr.active_objective_id WHERE pr.id = :p)) "
-                "ON CONFLICT DO NOTHING RETURNING item_id"
-            ),
-            {"p": project_id, "i": paper_id, "v": DiscoveredVia.MANUAL.value},
-        )
-    ).scalar_one_or_none()
-    return paper_id, added is not None, coverage
+    # IN_PROJECT, recording the objective version in use (kept for good).
+    added = await relation_writer.add_to_project(
+        session, project_id, paper_id, DiscoveredVia.MANUAL
+    )
+    return paper_id, added, coverage
 
 
 async def ingest_identifier(
@@ -254,7 +247,7 @@ async def get_project_paper(
         (
             await session.execute(
                 sa.text(
-                    "SELECT manifestation_id, position, raw_name FROM paper_authors "
+                    "SELECT manifestation_id, position, raw_name FROM manifestation_authors "
                     "WHERE paper_id = :p ORDER BY manifestation_id, position"
                 ),
                 {"p": paper_id},

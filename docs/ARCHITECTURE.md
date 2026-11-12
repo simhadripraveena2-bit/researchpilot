@@ -597,6 +597,7 @@ Rules:
 | POST | `/projects/{id}/objective/active` | `{version}`: put an existing version back in use; nothing earlier is rewritten |
 | POST · PATCH · DELETE | `/projects/{id}/objective/sub-questions` · `/{key}` | add, reword or remove one sub-question (`base_version` in body / query); each creates a new version |
 | POST | `/projects/{id}/objective/validate` | check a draft without saving: hard errors (could not be saved) and missing items |
+| DELETE | `/projects/{id}?permanent=true` | owner only: delete the project and everything in it for good; deletion markers for every project-scoped graph node and edge (reason `project_delete`), an anonymous `deletion_log` entry; global knowledge stays. Without `permanent` the project is archived (M1a) |
 | GET | `/projects/{id}/latest` | entries for a window: `from`, `to` (default rolling 7 d, UTC), `release_type`, `subtopic`, `method`, `source`, `tier`, `action`, `oa`, `status`; includes coverage, the last scan and the display time zone |
 | POST | `/projects/{id}/latest/scans` | start a scan for a window → `202 {run_id, scan_id}` |
 | GET | `/latest/scans/{scan_id}` | scan status, coverage, failures, counts by release type |
@@ -625,7 +626,7 @@ Rules:
 | POST | `/tutor/messages/{id}/learning-sequence` | build a prerequisite sequence and optionally add it to the learning path |
 | GET / PUT | `/me/preferences` | time zone (browser or manual), default level |
 | GET | `/projects/{id}/graph` | backend-neutral `GraphView` subgraph: `labels`, `rel_types`, `assertion_policy` (default `established_only`), `include_inferred`, filters. Served by `GraphService` (PostgreSQL in R1, Neo4j from R2), with the same schema either way |
-| GET | `/graph/nodes/{uid}/neighbors` | 1-hop neighbours with relationship assertion, confidence and evidence (R1+) |
+| GET | `/graph/nodes/{uid}/neighbors` | 1-hop neighbours with relationship assertion, confidence and evidence (R1+). **M1a:** served by the PostgreSQL `GraphService` at `/projects/{id}/graph/nodes/{uid}/neighbors` from every projected source in the registry; only global or caller-project edges whose both endpoints are visible; rejected and retracted rows excluded; the project's overlays applied (rejected hidden, confirmed shown as `user_confirmed`) |
 | GET | `/graph/paths?from=&to=&max_hops=&assertion_policy=` | multi-hop paths, each labelled with its weakest assertion (**R2+**; earlier or in degraded mode: `graph-capability-unavailable`) |
 | GET | `/graph/nodes/{uid}/provenance-trail` | proposal/hypothesis → gaps → limitations → papers → evidence (R4) |
 | POST | `/relations/{uid}/confirm` · `/reject` | user confirms or rejects an inferred relationship in the active project (logged; never automatic). For a global relationship this writes a project-scoped overlay (`relation_decisions`) and never changes the global row (§12.4.2a) |
@@ -940,14 +941,20 @@ the registry.
   writes a deletion marker (§12.6a).
 - Single-table sources (`citations`, `paper_authors`, `entity_links`,
   `limitations`, …) use ordinary foreign keys to their endpoint tables.
-- **Implemented in M1a (migration 0008) for `PART_OF` (sub-question →
-  objective):** the registry and endpoint-rule rows; triggers on
-  `structural_relations` for the allowed combination (`rp_relation_10_endpoints`)
-  and the registry-driven `enforce_relation_scope()` (`rp_relation_20_scope`);
-  the deferred exactly-one check; and cascade on parent delete. A
-  `parent_project` node (a sub-question) is registered in `graph_nodes` when
-  its `PART_OF` link is written, with the parent's scope. Deletion markers
-  (§12.6a) and the other relationship types arrive with task 6a.
+- **Implemented in M1a.** Migration 0008: `PART_OF` (sub-question → objective)
+  with the deferred exactly-one check and cascade; a `parent_project` node is
+  registered when its `PART_OF` link is written, with the parent's scope.
+  Migration 0009: every other R1 source (`citations`, `paper_authors`,
+  `author_affiliations`, `entity_links`, `research_relations`,
+  `paper_manifestations`, `project_items`). One function attaches the same
+  triggers to every registered source, all driven by `relation_registry`:
+  `rp_relation_10_check` (registered type, allowed combination, endpoints
+  that exist and cannot change, deterministic `relation_uid`),
+  `rp_relation_20_scope` (`enforce_relation_scope()`, including the
+  global-scope rule), `rp_relation_30_evidence` (research sources: evidence by
+  assertion, sticky rejection, rejected rows kept) and `rp_relation_40_after`
+  (deletion markers, assertion log). `REPORTS_LIMITATION`, `RESULT_FOR` (R2)
+  and `IMPLEMENTED_BY` (R4) are registered with their source tables.
 
 #### 12.4.2a Project-scope invariant for relationships
 
@@ -1020,7 +1027,11 @@ rejection (§12.5) applies per scope.
    therefore fails the build.
 2. **`RelationWriter`:** validates scope before writing, so callers get a
    clear error instead of a database exception. It never decides scope
-   implicitly: callers pass the `ProjectScope` they act in.
+   implicitly: callers pass the `ProjectScope` they act in. Implemented in M1a
+   (`researchpilot.relations.writer`): callers pass a `WriteContext` (project
+   or global, and the acting system service or user). A source scan in CI
+   fails the build if any code outside `researchpilot/relations/` inserts,
+   updates or deletes relationship rows or moves a `HAS_VERSION` link.
 3. **Projection and queries:** the Graph Projector re-checks the invariant
    and refuses (and alerts on) any violating row. Reconciliation runs a
    **scope audit**: the count of Neo4j edges violating the rule must be 0.
