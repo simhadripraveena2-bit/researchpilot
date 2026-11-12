@@ -261,6 +261,13 @@ async def add_crossref_dates(
         evidence: dict[str, object] = {"field": field, "date_parts": list(date.parts)}
         if field == "issued":
             evidence["meaning"] = "Crossref-derived earliest publication date"
+        precision = date.precision
+        if _nominal_issue_day(work, field):
+            # Day 01 of an issue date is the issue's nominal date (G-LATEST-DATES B0: print
+            # dates of 1 Nov / 1 Mar for articles online on 19 Nov / 30 Apr). Kept as the
+            # month it names, so it never verifies a day (R1_M1A_NOTES decision 70).
+            precision = DatePrecision.MONTH
+            evidence["note"] = "day 01 of an issue date treated as month precision (nominal)"
         if upstream is not UpstreamSource.CROSSREF:
             evidence["upstream_field"] = "institution[0].name"
         await add_date(
@@ -269,7 +276,7 @@ async def add_crossref_dates(
             manifestation_id,
             event,
             date.value,
-            date.precision,
+            precision,
             is_primary=is_primary and event not in _METADATA_EVENTS,
             reporting=ReportingSource.CROSSREF,
             upstream=upstream,
@@ -280,3 +287,19 @@ async def add_crossref_dates(
 
 
 _METADATA_EVENTS = {DateEvent.METADATA_DEPOSITED, DateEvent.METADATA_INDEXED}
+
+
+def _nominal_issue_day(work: CrossrefWork, field: str) -> bool:
+    """A day-01 ``published-print`` date, or a day-01 ``issued`` date that does not come from
+    an online or posted date (``issued`` is derived from the earliest of them)."""
+    date = work.dates.get(field)
+    if date is None or date.precision is not DatePrecision.DAY or date.value.day != 1:
+        return False
+    if field == "published-print":
+        return True
+    if field == "issued":
+        return all(
+            other is None or other.value != date.value
+            for other in (work.dates.get("published-online"), work.dates.get("posted"))
+        )
+    return False

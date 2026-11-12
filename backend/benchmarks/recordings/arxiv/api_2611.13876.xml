@@ -1,0 +1,38 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/V3JcNTY55FLQpEsbnxN3wTDFGdY</id>
+  <title>arXiv Query: search_query=&amp;id_list=2611.13876&amp;start=0&amp;max_results=1</title>
+  <updated>2026-11-12T21:45:16Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=1&amp;id_list=2611.13876" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>1</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2611.13876v1</id>
+    <title>Influence of the branching geometry on SPION propagation: coupling of experiment and simulation</title>
+    <updated>2026-11-10T10:36:01Z</updated>
+    <link href="https://arxiv.org/abs/2611.13876v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2611.13876v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Magnetic Drug Targeting (MDT) is an emerging therapeutic concept in cancer medicine, where superparamagnetic iron oxide nanoparticles (SPIONs) are used as carriers for medication. Their magnetic properties allow for the manipulation of particle transport within the vascular structure and thus targeted delivery to the tumor site. To develop effective concepts for particle steering and accumulation, a detailed understanding of the particle--flow interaction, especially at asymmetric vascular bifurcations, is needed. Based on hierarchical scaling laws, generalized bifurcation geometries with varying degrees of asymmetry were derived and additively manufactured. The particle distribution was investigated by in situ optical measurements under different flow conditions and magnetic field configurations and compared with Lagrangian particle and Volume of Fluid Simulations (VoFS). While the particle mass partition followed the hydraulic flow split in asymmetric bifurcations, density-driven stratification dominated in the symmetric bifurcation, where one daughter branch received only a minor fraction of the particle mass at low flow rates despite carrying half of the flow. The Lagrangian model reproduced the predominantly advective propagation, whereas only the VoFS approach captured the stratification-induced asymmetry. Magnetic actuation counteracted the stratification, reversed the passive branch preference and increased particle retention. From a molecular communication perspective, bifurcation geometry, collective volume effects and magnetic actuation thus jointly determine the received particle signal at vascular bifurcations.</summary>
+    <category term="cs.ET" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="q-bio.QM" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-11-10T10:36:01Z</published>
+    <arxiv:comment>6 pages, 4 figures; submitted to IEEE ICC for review; Funded by DFG - GRK2950</arxiv:comment>
+    <arxiv:primary_category term="cs.ET"/>
+    <author>
+      <name>Daniel Fleischhauer</name>
+    </author>
+    <author>
+      <name>Luiz C. P. Wille</name>
+    </author>
+    <author>
+      <name>Stefan Lyer</name>
+    </author>
+    <author>
+      <name>Jens Kirchner</name>
+    </author>
+    <author>
+      <name>Dietmar Drummer</name>
+    </author>
+  </entry>
+</feed>

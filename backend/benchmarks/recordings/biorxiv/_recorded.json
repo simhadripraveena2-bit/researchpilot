@@ -1,0 +1,82 @@
+{
+ "rec_1c376d6100b2.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.biorxiv.org/details/biorxiv/10.1101/2023.07.10.548412"
+ },
+ "rec_22b061066a8a.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.biorxiv.org/details/biorxiv/10.1101/2021.10.22.465218"
+ },
+ "rec_290d47ab169d.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.biorxiv.org/details/biorxiv/10.1101/2023.10.03.560658"
+ },
+ "rec_8fbc09e78246.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.biorxiv.org/details/biorxiv/10.1101/2023.08.22.554292"
+ },
+ "rec_964de98d949e.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.biorxiv.org/details/biorxiv/10.1101/2023.10.02.560470"
+ },
+ "rec_9eafdafb0818.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.biorxiv.org/details/biorxiv/10.1101/2023.05.26.542436"
+ },
+ "rec_b44fe7e664ed.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.biorxiv.org/details/biorxiv/10.1101/2022.09.22.507167"
+ },
+ "rec_c9024871b75f.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.biorxiv.org/details/biorxiv/10.1101/2023.07.27.550891"
+ },
+ "rec_dd06f2c4e55d.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.biorxiv.org/details/biorxiv/10.1101/2023.08.14.553247"
+ },
+ "rec_e898553e595c.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.biorxiv.org/details/biorxiv/10.1101/2021.12.07.471480"
+ }
+}

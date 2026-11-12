@@ -136,3 +136,32 @@ async def test_cursor_pagination_follows_next_cursor_and_respects_rate_limit() -
     assert len({r.work.doi for r in results}) == 4
     assert limiter.waits == [0.0, CROSSREF_POLICY.min_interval_seconds]
     assert SourceName.CROSSREF is client._client.source
+
+
+# --- nominal issue dates (R1_M1A_NOTES decision 70; found by G-LATEST-DATES B0) -----------
+RECORDINGS = Path(__file__).resolve().parents[2] / "benchmarks" / "recordings" / "crossref"
+
+
+def _recorded_work(doi: str) -> object:
+    name = f"works_{quote(doi, safe='')}.json"
+    path = next(p for p in (RECORDINGS / name, SOURCES / "crossref" / name) if p.exists())
+    return parse_work(json.loads(path.read_text())["message"])
+
+
+@pytest.mark.parametrize(
+    ("doi", "nominal"),
+    [
+        # print 2018-11-01 (nominal November issue), online 2018-11-19
+        ("10.1088/1361-6595/aaebdb", {"published-print": True, "issued": True}),
+        # print 2026-03-01, online 2026-04-30
+        ("10.1093/bib/bbag239", {"published-print": True, "issued": True}),
+        # online 2019-09-04 and issued from it; print 2021-07-03 is a real day
+        ("10.1080/14767058.2019.1659770", {"published-print": False, "issued": False}),
+    ],
+)
+def test_day_01_issue_dates_are_nominal(doi: str, nominal: dict[str, bool]) -> None:
+    from researchpilot.services.papers.ingest_crossref import _nominal_issue_day
+
+    work = _recorded_work(doi)
+    assert {f: _nominal_issue_day(work, f) for f in nominal} == nominal  # type: ignore[arg-type]
+    assert not _nominal_issue_day(work, "published-online")  # type: ignore[arg-type]

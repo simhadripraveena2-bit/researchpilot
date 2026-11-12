@@ -1,0 +1,30 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/Mujo37bh4hHGs9vyyu/nOZXJY8k</id>
+  <title>arXiv Query: search_query=&amp;id_list=2611.13277&amp;start=0&amp;max_results=1</title>
+  <updated>2026-11-12T21:44:57Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=1&amp;id_list=2611.13277" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>1</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2611.13277v1</id>
+    <title>Pulsatile Endocrine Regulation with a Releasable Hormone Pool: Impulsive Feedback Model</title>
+    <updated>2026-11-09T21:42:14Z</updated>
+    <link href="https://arxiv.org/abs/2611.13277v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2611.13277v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>An impulsive model of endocrine regulation equipped with frequency- and amplitude-modulated pulsatile feedback is extended to study the dynamical effects pertaining to limitations due to the releasable hormone pool. The model describes a three-hormone regulatory loop and is applicable to endocrine systems such as the reproductive, stress, and growth hormone axes. Conditions guaranteeing the existence and uniqueness of a periodic solution with a single feedback-triggered impulse per period (a 1-cycle) are derived, together with monotonicity properties of its characteristics. An explicit Jacobian formula is obtained to assess local orbital stability. Model analysis demonstrates that a reduced hormone-pool replenishment rate produces a lower-amplitude, higher-frequency 1-cycle. This behavior is consistent with experimentally observed alterations in testosterone regulation in aging human males.</summary>
+    <category term="eess.SY" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="math.DS" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="math.OC" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="q-bio.QM" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-11-09T21:42:14Z</published>
+    <arxiv:primary_category term="eess.SY"/>
+    <author>
+      <name>Anton V. Proskurnikov</name>
+    </author>
+    <author>
+      <name>Alexander Medvedev</name>
+    </author>
+  </entry>
+</feed>

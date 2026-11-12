@@ -1,0 +1,1438 @@
+{
+ "benchmark": "G-MATCH",
+ "split": "B0",
+ "version": "b0-v0.1",
+ "description": "Development split (B0) of G-MATCH: real record pairs from arXiv, Crossref, bioRxiv/medRxiv (and Semantic Scholar where recorded), chosen to cover each category of EVALUATION_FRAMEWORK \u00a72. Labels are AI-proposed from the evidence quoted per case and await team review; they are not gold and support no release claim.",
+ "recordings": [
+  "../recordings",
+  "../../tests/fixtures/sources"
+ ],
+ "match_cases": [
+  {
+   "id": "GM-B0-001",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "a": "10.1101/2023.10.03.560658",
+   "b": "10.7554/elife.92909",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "The bioRxiv preprint and the journal article are one work: bioRxiv itself records the publication.",
+   "evidence": [
+    "bioRxiv /pubs (2024-06-03) lists 10.1101/2023.10.03.560658 as published as 10.7554/elife.92909",
+    "bioRxiv /details for the preprint carries the published DOI"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-002",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "a": "10.1101/2023.08.22.554292",
+   "b": "10.7554/elife.93686.3",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "The bioRxiv preprint and the journal article are one work: bioRxiv itself records the publication.",
+   "evidence": [
+    "bioRxiv /pubs (2024-06-03) lists 10.1101/2023.08.22.554292 as published as 10.7554/elife.93686.3",
+    "bioRxiv /details for the preprint carries the published DOI"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-003",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "a": "10.1101/2023.07.10.548412",
+   "b": "10.7554/elife.89017.3",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "The bioRxiv preprint and the journal article are one work: bioRxiv itself records the publication.",
+   "evidence": [
+    "bioRxiv /pubs (2024-06-03) lists 10.1101/2023.07.10.548412 as published as 10.7554/elife.89017.3",
+    "bioRxiv /details for the preprint carries the published DOI"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-004",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "a": "10.1101/2023.05.26.542436",
+   "b": "10.7554/elife.91288.3",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "The bioRxiv preprint and the journal article are one work: bioRxiv itself records the publication.",
+   "evidence": [
+    "bioRxiv /pubs (2024-06-03) lists 10.1101/2023.05.26.542436 as published as 10.7554/elife.91288.3",
+    "bioRxiv /details for the preprint carries the published DOI"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-005",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "a": "10.1101/2023.08.14.553247",
+   "b": "10.7554/elife.91924.3",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "The bioRxiv preprint and the journal article are one work: bioRxiv itself records the publication.",
+   "evidence": [
+    "bioRxiv /pubs (2024-06-03) lists 10.1101/2023.08.14.553247 as published as 10.7554/elife.91924.3",
+    "bioRxiv /details for the preprint carries the published DOI"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-006",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "a": "10.1101/2022.09.22.507167",
+   "b": "10.7554/elife.90972.3",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "The bioRxiv preprint and the journal article are one work: bioRxiv itself records the publication.",
+   "evidence": [
+    "bioRxiv /pubs (2024-06-03) lists 10.1101/2022.09.22.507167 as published as 10.7554/elife.90972.3",
+    "bioRxiv /details for the preprint carries the published DOI"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-007",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "a": "10.1101/2021.10.22.465218",
+   "b": "10.1093/plphys/kiae255",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "The bioRxiv preprint and the journal article are one work: bioRxiv itself records the publication.",
+   "evidence": [
+    "bioRxiv /pubs (2024-06-03) lists 10.1101/2021.10.22.465218 as published as 10.1093/plphys/kiae255",
+    "bioRxiv /details for the preprint carries the published DOI"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-008",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "a": "10.1101/2023.07.27.550891",
+   "b": "10.1038/s42003-024-06342-y",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "The bioRxiv preprint and the journal article are one work: bioRxiv itself records the publication.",
+   "evidence": [
+    "bioRxiv /pubs (2024-06-03) lists 10.1101/2023.07.27.550891 as published as 10.1038/s42003-024-06342-y",
+    "bioRxiv /details for the preprint carries the published DOI"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-009",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "a": "10.1101/2021.12.07.471480",
+   "b": "10.1038/s41598-024-63226-1",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "The bioRxiv preprint and the journal article are one work: bioRxiv itself records the publication.",
+   "evidence": [
+    "bioRxiv /pubs (2024-06-03) lists 10.1101/2021.12.07.471480 as published as 10.1038/s41598-024-63226-1",
+    "bioRxiv /details for the preprint carries the published DOI"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-010",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "a": "10.1101/2023.10.02.560470",
+   "b": "10.1371/journal.pbio.3002664",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "The bioRxiv preprint and the journal article are one work: bioRxiv itself records the publication.",
+   "evidence": [
+    "bioRxiv /pubs (2024-06-03) lists 10.1101/2023.10.02.560470 as published as 10.1371/journal.pbio.3002664",
+    "bioRxiv /details for the preprint carries the published DOI"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-011",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "a": "10.1101/2022.10.22.513336",
+   "b": "10.7554/elife.87434",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "The bioRxiv preprint and the journal article are one work: bioRxiv itself records the publication.",
+   "evidence": [
+    "bioRxiv /pubs (2024-06-03) lists 10.1101/2022.10.22.513336 as published as 10.7554/elife.87434",
+    "bioRxiv /details for the preprint carries the published DOI"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-012",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "a": "hep-th/9711200",
+   "b": "10.1023/a:1026654312961",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "Maldacena's arXiv preprint and its International Journal of Theoretical Physics (1999) printing: the arXiv record's author-supplied DOI is the IJTP DOI. (Label corrected on evidence review: the first draft named the ATMP DOI, which the arXiv record does not carry; see ATMP below.)",
+   "evidence": [
+    "arXiv entry hep-th/9711200 <arxiv:doi> = 10.1023/A:1026654312961"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-013",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "a": "10.26434/chemrxiv.15006367/v1",
+   "b": "10.1021/acs.jcim.6c01012",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "ChemRxiv preprint and its JCIM article: Crossref links them in both directions.",
+   "evidence": [
+    "Crossref 10.1021/acs.jcim.6c01012 relation has-preprint 10.26434/chemrxiv.15006367/v1",
+    "Crossref 10.26434/chemrxiv.15006367/v1 relation is-preprint-of the JCIM DOI"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-014",
+   "category": "explicit_link_different_title",
+   "adversarial": false,
+   "a": "10.1101/2023.12.14.23299828",
+   "b": "10.1001/jamapediatrics.2024.1379",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "The medRxiv preprint was retitled for JAMA Pediatrics ('Longitudinal associations between weight indices, cognition...' vs 'Weight Indices, Cognition, and Mental Health From Childhood...'); the explicit link decides, not the title.",
+   "evidence": [
+    "Crossref JAMA record relation has-preprint 10.1101/2023.12.14.23299828",
+    "Crossref medRxiv record relation is-preprint-of 10.1001/jamapediatrics.2024.1379"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-015",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "a": "1512.03385",
+   "b": "10.1109/cvpr.2016.90",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "ResNet on arXiv and at CVPR 2016 are one work. No authoritative version link exists (the arXiv record has no DOI); the Semantic Scholar record lists both identifiers (strong evidence), with the same title and authors.",
+   "evidence": [
+    "Semantic Scholar record for ARXIV:1512.03385 lists DOI 10.1109/CVPR.2016.90",
+    "identical title; same four authors"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-016",
+   "category": "preprint_versions",
+   "adversarial": false,
+   "a": "10.7554/elife.89679",
+   "b": "10.7554/elife.89679.2",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "eLife reviewed preprint and its version 2: one work. Crossref declares them the same.",
+   "evidence": [
+    "Crossref 10.7554/elife.89679 relation is-same-as 10.7554/eLife.89679.2",
+    "identical title and 14 authors"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-017",
+   "category": "preprint_versions",
+   "adversarial": false,
+   "a": "10.7554/elife.87434",
+   "b": "10.7554/elife.87434.3",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "eLife article and its version of record (.3): one work (is-same-as).",
+   "evidence": [
+    "Crossref 10.7554/elife.87434 relation is-same-as 10.7554/eLife.87434.3"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-018",
+   "category": "preprint_versions",
+   "adversarial": false,
+   "a": "10.65215/ysbyhc05",
+   "b": "10.65215/r5bs2d54",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "Two deposits of the same posted copy of 'Attention Is All You Need'; Crossref declares one a version of the other.",
+   "evidence": [
+    "Crossref 10.65215/ysbyhc05 relation is-version-of 10.65215/r5bs2d54",
+    "identical title and eight authors"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-019",
+   "category": "ambiguous_no_link",
+   "adversarial": false,
+   "a": "10.2139/ssrn.5153505",
+   "b": "10.1016/j.chemolab.2025.105581",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "possible_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": true,
+    "decisive_evidence": false
+   },
+   "explanation": "An SSRN preprint and an Elsevier article with the same title and the same four authors: almost certainly one work, but no record links them, so only the user may merge them.",
+   "evidence": [
+    "identical titles; same four authors",
+    "no relation in either Crossref record"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-020",
+   "category": "ambiguous_no_link",
+   "adversarial": false,
+   "a": "10.21203/rs.3.rs-3733479/v1",
+   "b": "10.1007/s10462-024-10808-0",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "possible_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": true,
+    "decisive_evidence": false
+   },
+   "explanation": "Research Square preprint and Springer article, same title and three authors, no link.",
+   "evidence": [
+    "identical titles (case aside); same three authors",
+    "no relation in either record"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-021",
+   "category": "ambiguous_no_link",
+   "adversarial": false,
+   "a": "10.1561/2200000096",
+   "b": "10.1561/9781638281436",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "possible_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": true,
+    "decisive_evidence": false
+   },
+   "explanation": "The same survey published as a journal issue and as a book (now publishers): same title and eight authors, no link.",
+   "evidence": [
+    "identical titles; same eight authors; no relation"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-022",
+   "category": "ambiguous_no_link",
+   "adversarial": false,
+   "a": "10.65215/ysbyhc05",
+   "b": "10.65215/pc26a033",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "possible_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": true,
+    "decisive_evidence": false
+   },
+   "explanation": "Two posted copies of 'Attention Is All You Need' with the same eight authors and no link between these two deposits.",
+   "evidence": [
+    "identical title and authors; no relation between these DOIs"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-023",
+   "category": "preprint_versions",
+   "adversarial": false,
+   "a": "1706.03762",
+   "b": "10.65215/pc26a033",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "auto_match",
+    "auto_merge_allowed": true,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "The arXiv paper and a posted copy with the same title and eight authors. No system of record links them, but the OpenAlex work for the arXiv paper lists the copy's DOI among its locations (a strong, non-decisive link). (Label corrected on evidence review: first drafted as an unlinked possible match before the OpenAlex location was checked.)",
+   "evidence": [
+    "OpenAlex W2626778328 (doi 10.48550/arxiv.1706.03762) locations include https://doi.org/10.65215/pc26a033",
+    "identical title; same eight authors"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-024",
+   "category": "ambiguous_no_link",
+   "adversarial": false,
+   "a": "hep-th/9711200",
+   "b": "10.1063/1.59653",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "possible_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": true,
+    "decisive_evidence": false
+   },
+   "explanation": "Maldacena's preprint and its 1999 AIP proceedings version: same title and author, no identifier link (the arXiv DOI is the ATMP one).",
+   "evidence": [
+    "same title and author; no relation in the AIP record"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-025",
+   "category": "ambiguous_no_link",
+   "adversarial": false,
+   "a": "hep-th/9711200",
+   "b": "10.4310/atmp.1998.v2.n2.a1",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "possible_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": true,
+    "decisive_evidence": false
+   },
+   "explanation": "Maldacena's preprint and its ATMP 1998 publication: same title and author, but neither record links the two (the arXiv DOI field names the IJTP printing).",
+   "evidence": [
+    "same title and author",
+    "arXiv <arxiv:doi> is 10.1023/A:1026654312961, not the ATMP DOI",
+    "no relation in the ATMP Crossref record"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-026",
+   "category": "ambiguous_no_link",
+   "adversarial": false,
+   "a": "10.4310/atmp.1998.v2.n2.a1",
+   "b": "10.1023/a:1026654312961",
+   "expected": {
+    "relationship": "same_work",
+    "outcome": "possible_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": true,
+    "decisive_evidence": false
+   },
+   "explanation": "ATMP 1998 and the 1999 IJTP printing of the same paper: same title and author, no link.",
+   "evidence": [
+    "same title and author; no relation in either record"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-027",
+   "category": "similar_title_different",
+   "adversarial": true,
+   "a": "10.1109/access.2026.3665657",
+   "b": "10.4108/eetel.3466",
+   "expected": {
+    "relationship": "different",
+    "outcome": "no_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "Two different surveys both titled 'A Survey on Graph Neural Networks' (different authors and venues).",
+   "evidence": [
+    "identical title",
+    "no shared author (9 vs 1 authors)"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-028",
+   "category": "similar_title_different",
+   "adversarial": true,
+   "a": "10.1002/minf.201501008",
+   "b": "10.31032/ijbpas/2023/12.10.1013",
+   "expected": {
+    "relationship": "different",
+    "outcome": "no_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "'Deep Learning in Drug Discovery' (Molecular Informatics 2016) and an unrelated 2023 article with the same title.",
+   "evidence": [
+    "identical title; the 2023 record lists no authors; 7 years apart"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-029",
+   "category": "similar_title_different",
+   "adversarial": true,
+   "a": "10.1016/b978-0-443-19413-9.00013-8",
+   "b": "10.1002/minf.201501008",
+   "expected": {
+    "relationship": "different",
+    "outcome": "no_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "A book chapter and a journal article both titled 'Deep learning in drug discovery', by different authors.",
+   "evidence": [
+    "identical title; no shared author"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-030",
+   "category": "similar_title_different",
+   "adversarial": true,
+   "a": "10.1007/978-3-031-84300-6_13",
+   "b": "10.65215/ysbyhc05",
+   "expected": {
+    "relationship": "different",
+    "outcome": "no_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "'Is Attention All You Need?' (a single-author chapter) is not 'Attention Is All You Need': same words, different work.",
+   "evidence": [
+    "word-identical titles; no shared author"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-031",
+   "category": "similar_title_different",
+   "adversarial": true,
+   "a": "10.1201/9781003561460-19",
+   "b": "10.65215/ysbyhc05",
+   "expected": {
+    "relationship": "different",
+    "outcome": "no_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "A two-author book chapter titled 'Attention Is All You Need' is not the Vaswani et al. paper.",
+   "evidence": [
+    "identical title; no shared author"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-032",
+   "category": "similar_title_different",
+   "adversarial": true,
+   "a": "10.1038/s43586-024-00294-7",
+   "b": "10.1038/s43586-024-00304-8",
+   "expected": {
+    "relationship": "different",
+    "outcome": "no_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "Nature Reviews Methods Primers article 'Graph neural networks' and a second record with the same title and no authors (a separate item).",
+   "evidence": [
+    "identical title; the second record lists no authors"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-033",
+   "category": "similar_title_different",
+   "adversarial": true,
+   "a": "10.1038/s43586-024-00294-7",
+   "b": "10.1007/978-981-16-6054-2_3",
+   "expected": {
+    "relationship": "different",
+    "outcome": "no_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "Two works titled 'Graph Neural Networks' by different authors (primer vs book chapter).",
+   "evidence": [
+    "identical title; no shared author"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-034",
+   "category": "similar_title_different",
+   "adversarial": true,
+   "a": "10.1021/acs.jcim.5c01019",
+   "b": "10.1021/acs.jcim.5c01019.s001",
+   "expected": {
+    "relationship": "related_not_same",
+    "outcome": "no_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "A JCIM article and its Supporting Information file: same title, but the supplement is a component, not the work.",
+   "evidence": [
+    "Crossref .s001 type component, relation is-component-of the article; no authors"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-035",
+   "category": "part_series",
+   "adversarial": true,
+   "a": "10.1016/0167-9473(95)00032-1",
+   "b": "10.1016/0167-9473(95)00033-x",
+   "expected": {
+    "relationship": "different",
+    "outcome": "no_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "'Neural networks and logistic regression: Part I' and 'Part II': same authors and issue, different papers.",
+   "evidence": [
+    "titles differ only in the part number; same authors"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-036",
+   "category": "part_series",
+   "adversarial": true,
+   "a": "10.3844/ajeassp.2017.457.472",
+   "b": "10.3844/ajeassp.2017.473.483",
+   "expected": {
+    "relationship": "different",
+    "outcome": "no_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "'Gears-Part I' and 'Gears-Part II': same authors, venue and date, different papers.",
+   "evidence": [
+    "titles differ only in the part number; same three authors; consecutive pages"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-037",
+   "category": "comment_reply",
+   "adversarial": true,
+   "a": "10.3390/insects17070712",
+   "b": "10.3390/insects17070713",
+   "expected": {
+    "relationship": "related_not_same",
+    "outcome": "related_not_same",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "A comment and the authors' reply: related, never the same work.",
+   "evidence": [
+    "Crossref relation is-reply-to between the two records"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-038",
+   "category": "comment_reply",
+   "adversarial": true,
+   "a": "10.1075/lab.2.3.15vai",
+   "b": "10.1075/lab.2.3.01dab",
+   "expected": {
+    "relationship": "related_not_same",
+    "outcome": "related_not_same",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "A commentary on a target article.",
+   "evidence": [
+    "Crossref 10.1075/lab.2.3.15vai relation is-comment-on 10.1075/lab.2.3.01dab"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-039",
+   "category": "comment_reply",
+   "adversarial": true,
+   "a": "10.1162/99608f92.66fb00a2",
+   "b": "10.1162/99608f92.95388fcb",
+   "expected": {
+    "relationship": "related_not_same",
+    "outcome": "related_not_same",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "A Harvard Data Science Review commentary on a discussion article.",
+   "evidence": [
+    "Crossref 10.1162/99608f92.66fb00a2 relation is-comment-on 10.1162/99608f92.95388fcb"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-040",
+   "category": "comment_reply",
+   "adversarial": true,
+   "a": "10.21428/88de04a1.a9378969",
+   "b": "10.21428/88de04a1.12891b70",
+   "expected": {
+    "relationship": "related_not_same",
+    "outcome": "related_not_same",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "A review/response published as a reply to a PubPub article.",
+   "evidence": [
+    "Crossref 10.21428/88de04a1.a9378969 relation is-reply-to 10.21428/88de04a1.12891b70"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-041",
+   "category": "comment_reply",
+   "adversarial": true,
+   "a": "10.21428/3b2160cd.c3935d14",
+   "b": "10.21428/3b2160cd.c34a55dc",
+   "expected": {
+    "relationship": "related_not_same",
+    "outcome": "related_not_same",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "A reply to a PubPub article.",
+   "evidence": [
+    "Crossref 10.21428/3b2160cd.c3935d14 relation is-reply-to 10.21428/3b2160cd.c34a55dc"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-042",
+   "category": "comment_reply",
+   "adversarial": true,
+   "a": "10.7554/elife.89679.1.sa3",
+   "b": "10.7554/elife.89679.1",
+   "expected": {
+    "relationship": "related_not_same",
+    "outcome": "no_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "The authors' response to eLife's reviews: same title prefix, a peer-review document, never the paper. Crossref types it peer-review with is-review-of, which the matcher does not use as a link, so the correct outcome is to keep them apart.",
+   "evidence": [
+    "Crossref .sa3 type peer-review, title 'Author Response: ...', relation is-review-of"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-043",
+   "category": "correction_notice",
+   "adversarial": true,
+   "a": "10.1088/1361-6595/ab245f",
+   "b": "10.1088/1361-6595/aaebdb",
+   "expected": {
+    "relationship": "related_not_same",
+    "outcome": "related_not_same",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "An erratum and the article it corrects.",
+   "evidence": [
+    "Crossref ab245f update-to (correction) 10.1088/1361-6595/aaebdb"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-044",
+   "category": "correction_notice",
+   "adversarial": true,
+   "a": "10.1177/11795476221138199",
+   "b": "10.1177/11795476221126981",
+   "expected": {
+    "relationship": "related_not_same",
+    "outcome": "related_not_same",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "A corrigendum and its article.",
+   "evidence": [
+    "Crossref 11795476221138199 update-to (correction) 10.1177/11795476221126981"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-045",
+   "category": "correction_notice",
+   "adversarial": true,
+   "a": "10.1371/journal.pone.0301214",
+   "b": "10.1371/journal.pone.0161231",
+   "expected": {
+    "relationship": "related_not_same",
+    "outcome": "related_not_same",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "A PLOS ONE correction and its article.",
+   "evidence": [
+    "Crossref pone.0301214 update-to (correction) 10.1371/journal.pone.0161231"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-046",
+   "category": "correction_notice",
+   "adversarial": true,
+   "a": "10.1080/14688417.2024.2429234",
+   "b": "10.1080/14688417.2024.2416252",
+   "expected": {
+    "relationship": "related_not_same",
+    "outcome": "related_not_same",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "A correction notice and its article.",
+   "evidence": [
+    "Crossref 2429234 update-to (correction) 10.1080/14688417.2024.2416252"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-047",
+   "category": "correction_notice",
+   "adversarial": true,
+   "a": "10.1111/psj.70162",
+   "b": "10.1111/psj.70147",
+   "expected": {
+    "relationship": "related_not_same",
+    "outcome": "related_not_same",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "'Correction to \"Supply-Side Policy Feedback\"' and the article.",
+   "evidence": [
+    "Crossref psj.70162 update-to (correction) 10.1111/psj.70147"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-048",
+   "category": "correction_notice",
+   "adversarial": true,
+   "a": "10.1080/14767058.2026.2722700",
+   "b": "10.1080/14767058.2019.1659770",
+   "expected": {
+    "relationship": "related_not_same",
+    "outcome": "related_not_same",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": true
+   },
+   "explanation": "A retraction statement and the retracted article.",
+   "evidence": [
+    "Crossref 2026.2722700 update-to (retraction) 10.1080/14767058.2019.1659770"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-049",
+   "category": "correction_notice",
+   "adversarial": true,
+   "a": "10.3844/ajeassp.2019.127",
+   "b": "10.3844/ajeassp.2017.457.472",
+   "expected": {
+    "relationship": "related_not_same",
+    "outcome": "no_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "'Corrigendum: Gears-Part I' and the article. Without an update-to link the matcher can only keep them apart (recognising the erratum needs the link).",
+   "evidence": [
+    "title marker 'Corrigendum:'; shared first author"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-050",
+   "category": "correction_notice",
+   "adversarial": true,
+   "a": "10.1093/bib/bbag239",
+   "b": "10.1093/bib/bbad467",
+   "expected": {
+    "relationship": "related_not_same",
+    "outcome": "no_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "'Correction to: Attention is all you need: utilizing attention in AI-enabled...' and the article; no update-to link, no authors on the notice: keep apart.",
+   "evidence": [
+    "title marker 'Correction to:'; notice has no authors; no relation"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-051",
+   "category": "related_extends",
+   "adversarial": false,
+   "a": "1512.03385",
+   "b": "1603.05027",
+   "expected": {
+    "relationship": "related_not_same",
+    "outcome": "no_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "ResNet and 'Identity Mappings in Deep Residual Networks' (same authors, follow-up work).",
+   "evidence": [
+    "different titles and arXiv IDs; the second extends the first"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GM-B0-052",
+   "category": "related_extends",
+   "adversarial": false,
+   "a": "10.1021/acs.jcim.5c01019",
+   "b": "10.1021/acs.jctc.4c00798",
+   "expected": {
+    "relationship": "related_not_same",
+    "outcome": "no_match",
+    "auto_merge_allowed": false,
+    "user_confirmation_required": false,
+    "decisive_evidence": false
+   },
+   "explanation": "Two different GNN papers on molecular property prediction (quantum-embedded vs patch aggregation).",
+   "evidence": [
+    "different titles, authors and journals"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-match-guidelines-v0.1"
+   }
+  }
+ ]
+}

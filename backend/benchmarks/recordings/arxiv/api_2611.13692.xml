@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/jMK99ClYMheTZKHVhGkNtC+NCMY</id>
+  <title>arXiv Query: search_query=&amp;id_list=2611.13692&amp;start=0&amp;max_results=1</title>
+  <updated>2026-11-12T21:45:09Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=1&amp;id_list=2611.13692" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>1</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2611.13692v1</id>
+    <title>Similar visual tuning conceals different recovery dynamics in a model of macaque V1</title>
+    <updated>2026-11-10T07:39:57Z</updated>
+    <link href="https://arxiv.org/abs/2611.13692v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2611.13692v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Biologically detailed neuronal networks can model how brain circuits perform observed functions, but their high computational cost limits the comparisons needed to test biological hypotheses. To address this limitation, we extend a multiscale approach in which responses of small populations of spiking neurons are computed in advance and reused across a larger cortical circuit. In particular, we approximate these local responses by deep neural networks and achieve an estimated acceleration of the order $10^5$ for steady-state evaluation relative to spiking network simulation. Beyond computational acceleration, the smooth deep surrogate of local responses provides derivatives, allowing us to analyze linear stability and to trace how a perturbation in brain activity is transmitted through different pathways. We demonstrate the approach in a model of an input layer of macaque primary visual cortex (V1), testing circuits under visual stimulation and controlled perturbations. We resolve pathway contributions to stability, strong recurrent responses, and slow recovery. Yet different combinations of pathway strengths can support similar responses to visual stimuli while producing different recovery dynamics. Therefore, Steady responses and perturbation recovery place complementary constraints on candidate circuits. Overall, our approach offers efficient evaluation with an interpretable circuit structure, making systematic comparisons across stimuli and biological hypotheses practical.</summary>
+    <category term="q-bio.NC" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="q-bio.QM" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-11-10T07:39:57Z</published>
+    <arxiv:primary_category term="q-bio.NC"/>
+    <author>
+      <name>Xialei Huang</name>
+    </author>
+    <author>
+      <name>Qingyu Yan</name>
+    </author>
+    <author>
+      <name>Zheng Bian</name>
+    </author>
+    <author>
+      <name>Zhuo-Cheng Xiao</name>
+    </author>
+  </entry>
+</feed>

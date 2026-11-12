@@ -1,0 +1,458 @@
+{
+ "works_10.1002%2Fminf.201501008.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1002/minf.201501008"
+ },
+ "works_10.1007%2F978-3-031-84300-6_13.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1007/978-3-031-84300-6_13"
+ },
+ "works_10.1007%2F978-981-16-6054-2_3.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1007/978-981-16-6054-2_3"
+ },
+ "works_10.1007%2Fs10462-024-10808-0.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1007/s10462-024-10808-0"
+ },
+ "works_10.1016%2Fb978-0-443-19413-9.00013-8.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1016/b978-0-443-19413-9.00013-8"
+ },
+ "works_10.1016%2Fj.chemolab.2025.105581.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1016/j.chemolab.2025.105581"
+ },
+ "works_10.1021%2Facs.jcim.5c01019.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1021/acs.jcim.5c01019"
+ },
+ "works_10.1021%2Facs.jcim.5c01019.s001.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1021/acs.jcim.5c01019.s001"
+ },
+ "works_10.1021%2Facs.jcim.6c01012.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1021/acs.jcim.6c01012"
+ },
+ "works_10.1021%2Facs.jctc.4c00798.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1021/acs.jctc.4c00798"
+ },
+ "works_10.1038%2Fs41598-024-63226-1.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1038/s41598-024-63226-1"
+ },
+ "works_10.1038%2Fs42003-024-06342-y.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1038/s42003-024-06342-y"
+ },
+ "works_10.1075%2Flab.2.3.01dab.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1075/lab.2.3.01dab"
+ },
+ "works_10.1075%2Flab.2.3.15vai.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1075/lab.2.3.15vai"
+ },
+ "works_10.1080%2F14688417.2024.2416252.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1080/14688417.2024.2416252"
+ },
+ "works_10.1080%2F14688417.2024.2429234.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1080/14688417.2024.2429234"
+ },
+ "works_10.1088%2F1361-6595%2Faaebdb.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1088/1361-6595/aaebdb"
+ },
+ "works_10.1088%2F1361-6595%2Fab245f.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1088/1361-6595/ab245f"
+ },
+ "works_10.1093%2Fbib%2Fbbad467.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1093/bib/bbad467"
+ },
+ "works_10.1093%2Fbib%2Fbbag239.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1093/bib/bbag239"
+ },
+ "works_10.1093%2Fplphys%2Fkiae255.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1093/plphys/kiae255"
+ },
+ "works_10.1109%2Faccess.2026.3665657.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1109/access.2026.3665657"
+ },
+ "works_10.1162%2F99608f92.66fb00a2.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1162/99608f92.66fb00a2"
+ },
+ "works_10.1162%2F99608f92.95388fcb.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1162/99608f92.95388fcb"
+ },
+ "works_10.1177%2F11795476221126981.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1177/11795476221126981"
+ },
+ "works_10.1177%2F11795476221138199.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1177/11795476221138199"
+ },
+ "works_10.1201%2F9781003561460-19.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1201/9781003561460-19"
+ },
+ "works_10.1371%2Fjournal.pbio.3002664.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1371/journal.pbio.3002664"
+ },
+ "works_10.1371%2Fjournal.pone.0161231.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1371/journal.pone.0161231"
+ },
+ "works_10.1371%2Fjournal.pone.0301214.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1371/journal.pone.0301214"
+ },
+ "works_10.1561%2F2200000096.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1561/2200000096"
+ },
+ "works_10.1561%2F9781638281436.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1561/9781638281436"
+ },
+ "works_10.21203%2Frs.3.rs-3733479%2Fv1.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.21203/rs.3.rs-3733479/v1"
+ },
+ "works_10.2139%2Fssrn.5153505.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.2139/ssrn.5153505"
+ },
+ "works_10.21428%2F3b2160cd.c34a55dc.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.21428/3b2160cd.c34a55dc"
+ },
+ "works_10.21428%2F3b2160cd.c3935d14.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.21428/3b2160cd.c3935d14"
+ },
+ "works_10.21428%2F88de04a1.12891b70.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.21428/88de04a1.12891b70"
+ },
+ "works_10.21428%2F88de04a1.a9378969.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.21428/88de04a1.a9378969"
+ },
+ "works_10.26434%2Fchemrxiv.15006367%2Fv1.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.26434/chemrxiv.15006367/v1"
+ },
+ "works_10.31032%2Fijbpas%2F2023%2F12.10.1013.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.31032/ijbpas/2023/12.10.1013"
+ },
+ "works_10.3844%2Fajeassp.2017.457.472.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.3844/ajeassp.2017.457.472"
+ },
+ "works_10.3844%2Fajeassp.2017.473.483.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.3844/ajeassp.2017.473.483"
+ },
+ "works_10.3844%2Fajeassp.2019.127.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.3844/ajeassp.2019.127"
+ },
+ "works_10.4108%2Feetel.3466.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.4108/eetel.3466"
+ },
+ "works_10.65215%2Fpc26a033.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.65215/pc26a033"
+ },
+ "works_10.65215%2Fr5bs2d54.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.65215/r5bs2d54"
+ },
+ "works_10.65215%2Fysbyhc05.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.65215/ysbyhc05"
+ },
+ "works_10.7554%2Felife.89017.3.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.7554/elife.89017.3"
+ },
+ "works_10.7554%2Felife.89679.1.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.7554/elife.89679.1"
+ },
+ "works_10.7554%2Felife.89679.1.sa3.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.7554/elife.89679.1.sa3"
+ },
+ "works_10.7554%2Felife.89679.2.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.7554/elife.89679.2"
+ },
+ "works_10.7554%2Felife.89679.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.7554/elife.89679"
+ },
+ "works_10.7554%2Felife.90972.3.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.7554/elife.90972.3"
+ },
+ "works_10.7554%2Felife.91288.3.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.7554/elife.91288.3"
+ },
+ "works_10.7554%2Felife.91924.3.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.7554/elife.91924.3"
+ },
+ "works_10.7554%2Felife.92909.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.7554/elife.92909"
+ },
+ "works_10.7554%2Felife.93686.3.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.7554/elife.93686.3"
+ }
+}

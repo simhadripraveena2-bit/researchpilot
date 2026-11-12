@@ -1,0 +1,34 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/Brf8hHo3cbtukUtJ9pGKWycmdWs</id>
+  <title>arXiv Query: search_query=&amp;id_list=2609.21394&amp;start=0&amp;max_results=1</title>
+  <updated>2026-11-12T21:45:31Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=1&amp;id_list=2609.21394" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>1</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2609.21394v2</id>
+    <title>Reconstruction quality and restart repeatability are insufficient indicators of muscle synergy recovery by nonnegative matrix factorisation</title>
+    <updated>2026-11-10T07:49:47Z</updated>
+    <link href="https://arxiv.org/abs/2609.21394v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2609.21394v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Muscle-synergy studies use factorisation methods such as nonnegative matrix factorisation (NMF) to extract muscle synergies from surface electromyography (sEMG). Reconstruction quality and restart repeatability are commonly used to evaluate these estimates, but whether they indicate recovery of underlying synergies remains unclear. Here, we defined synergy recovery as selection of the correct ground-truth rank and a minimum matched spatial cosine similarity of at least 0.80. We generated 4320 independent 16-muscle sEMG sequences across five simulation factors: ground-truth rank, signal-to-noise ratio, sequence length, spatial mixing and activation mixing. Rank selection used a variance accounted for (VAF) threshold of 0.90. At the selected ranks, NMF achieved VAF of at least 0.90 for every sequence, with median restart repeatability of 0.985. However, synergy recovery was achieved in only 7.92% of sequences. Supplying the ground-truth rank increased recovery to 60.79%. Reconstruction quality and restart repeatability had modest associations with spatial cosine similarity (Spearman's rho = 0.253 and 0.281, respectively). Recovery varied with all five factors, with nine significant two-factor interactions in exploratory analyses. In a supporting analysis, we assessed recovery using reference signals constructed from spatial weights and activation coefficients estimated from measured sEMG during five movement conditions. Selected ranks were lower than reference ranks in all five conditions despite high reconstruction quality. Accurate reconstruction and repeatable estimates therefore did not establish recovery of the underlying synergy structure. Physiological interpretations require additional evidence of functional relevance and assessment of sensitivity to the selected rank.</summary>
+    <category term="q-bio.QM" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-09-18T07:06:29Z</published>
+    <arxiv:comment>35 pages, 4 figures, 6 tables (including 5 appendix tables); includes a technical appendix</arxiv:comment>
+    <arxiv:primary_category term="q-bio.QM"/>
+    <author>
+      <name>Ye Ma</name>
+    </author>
+    <author>
+      <name>Dongwei Liu</name>
+    </author>
+    <author>
+      <name>Meijin Hou</name>
+    </author>
+    <author>
+      <name>Chenyi Guo</name>
+    </author>
+  </entry>
+</feed>

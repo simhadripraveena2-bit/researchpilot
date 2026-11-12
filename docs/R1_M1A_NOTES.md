@@ -301,6 +301,22 @@ POST /projects/{id}/discovery-runs  (objective version recorded on the run)
   response (arXiv and Crossref answered everything; Semantic Scholar answered one query and
   was rate limited on two; OpenAlex's daily budget was exhausted). CI replays them.
 
+## Evaluation benchmarks: G-MATCH and G-LATEST-DATES (B0)
+
+| Part | Where | Tests |
+|---|---|---|
+| Case, dataset and split models; protocol guard (case IDs per split, expert labels for B1–B3, no synthetic data outside B0, B3 only outside the repository and only for the custodian); work-hash overlap check | `evaluation/cases.py` | `tests/unit/test_evaluation_cases.py` |
+| Replay of recorded responses (shared with the test fixtures); B0-only recording of missing system-of-record responses | `evaluation/replay.py`, `tests/fixtures/source_transport.py` | all integration tests |
+| Harness: scratch database, production code paths, unavailable aggregators, not-evaluable detection | `evaluation/harness.py` | `tests/integration/test_benchmarks_b0.py` |
+| G-MATCH runner and metrics (both orders, split + re-match for reversibility and sticky rejection) | `evaluation/gmatch.py` | same + unit metric tests |
+| G-LATEST-DATES runner and metrics | `evaluation/gdates.py` | same |
+| Reports (Markdown + JSON, run metadata, B3 aggregate-only) | `evaluation/report.py`, `scripts/run_benchmarks.py` | `test_b3_report_is_aggregate_only` |
+| B0 datasets (52 + 43 real cases, AI-proposed labels) and their recordings | `backend/benchmarks/` (`build_b0.py` generates the JSON) | — |
+| Guidelines, B3 isolation proposal, reports | `docs/evaluation/` | — |
+
+Run: `uv run python scripts/run_benchmarks.py benchmarks/g_match/b0.json
+benchmarks/g_latest_dates/b0.json --admin-url <postgres admin URL>`.
+
 ## Decisions and deviations
 
 | # | Topic | What was done | Why |
@@ -373,6 +389,8 @@ POST /projects/{id}/discovery-runs  (objective version recorded on the run)
 | 67 | One active discovery run per project | 409 on a second start | Two runs would race for the same items and sources |
 | 68 | Not in W1 yet | Stage A, seed selection, citation expansion, the paper-set review checkpoint | They need the RIE (M1b) |
 | 69 | Retry of finished runs | `failed` / `partially_succeeded` discovery runs can be reopened (`queued`) | Partial source failure is expected (rate limits, budgets); a retry redoes only what failed |
+| 70 | Nominal issue dates | Crossref `published-print` with day 01, and `issued` with day 01 that does not equal the online/posted date, are stored with **month** precision (evidence note "nominal") | Found by G-LATEST-DATES B0 (GD-B0-034..036): print dates of 1 Nov 2018 / 1 Mar 2026 for articles online on 19 Nov / 30 Apr were verified as first public dates, and a print-only 1 Feb 2017 date (record created in July) was verified. Day 01 of an issue is the issue's nominal date. Conservative: a true day-01 print date now needs another day-precision event to be verified (as OpenAlex day-01 values already are) |
+| 71 | Benchmark harness | Cases run the production paths (`add_paper_by_identifier`, capture, classifier, split) on a scratch database from recorded responses; aggregators without a recording answer 503 (unavailable); fresh source clients per case | No mocks of the rules under test; a circuit breaker opened by one case must not change the next (it did: GM-B0-015 lost Semantic Scholar evidence when run after other cases) |
 | 12 | Network access | A personal `researchpilot` cloud environment allows only the six source hosts | Required to verify source behaviour; CI uses recorded responses only |
 
 ## Corrections after review of 7f447bc
@@ -443,5 +461,8 @@ Both regression suites fail on 7f447bc and pass after the fix.
   `account_delete` markers if a user row is deleted.
 * No `objective.updated` reassessment consumer: the `objective.version_created` /
   `objective.activated` events are emitted but nothing consumes them until M1b.
-* Not started (outside this round): G-MATCH and G-LATEST-DATES benchmark sets (D19
-  evaluation roles), M1b–M1d, Neo4j.
+* **Benchmarks:** only B0 exists, with **AI-proposed labels** (not gold, awaiting team
+  review). B1/B2 need expert annotators and B3 a custodian (D19 roles not yet assigned).
+  B0 sizes (52 match pairs, 43 date cases) are below the §2a targets (~100 each), and some
+  categories are thin or missing (see `docs/evaluation/reports/`).
+* Not started (outside this round): M1b–M1d, Neo4j.

@@ -247,6 +247,20 @@ rate ≥ 0.95 of raw outputs.
   confusing term while reading using Ask & Learn, both without help (≥ 4 of
   5).
 
+## 2c. Implementation status (G-MATCH, G-LATEST-DATES)
+
+- Harness, metrics, protocol guard and reports: `backend/src/researchpilot/evaluation/`,
+  `backend/scripts/run_benchmarks.py`. Cases run the production code paths on a scratch
+  database from recorded responses (no network in CI).
+- **B0 only** so far: `backend/benchmarks/g_match/b0.json` (52 pairs) and
+  `backend/benchmarks/g_latest_dates/b0.json` (43 cases). They use real records, and their
+  labels are **AI-proposed and awaiting team review** (not gold). Reports:
+  `docs/evaluation/reports/`.
+- Guidelines: `docs/evaluation/G_MATCH_GUIDELINES.md`, `G_LATEST_DATES_GUIDELINES.md`
+  (draft v0.1, written before B1 annotation).
+- B1–B3 do not exist. B3 isolation (what code enforces, what it cannot, and the custodian
+  proposal) is described in `docs/evaluation/B3_ISOLATION.md`.
+
 ## 4. How evaluation runs
 
 | Layer | When | How |

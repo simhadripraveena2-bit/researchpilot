@@ -1,0 +1,1368 @@
+{
+ "benchmark": "G-LATEST-DATES",
+ "split": "B0",
+ "version": "b0-v0.1",
+ "description": "Development split (B0) of G-LATEST-DATES: real recorded records from arXiv (API and the 2026-11-11 announcement feeds), bioRxiv/medRxiv, Crossref and, where recorded, OpenAlex and Semantic Scholar. Labels are AI-proposed from the evidence quoted per case and await team review; they are not gold and support no release claim.",
+ "recordings": [
+  "../recordings",
+  "../../tests/fixtures/sources"
+ ],
+ "date_cases": [
+  {
+   "id": "GD-B0-001",
+   "category": "arxiv_announced",
+   "identifiers": [
+    "2611.13190"
+   ],
+   "capture_feeds": [
+    "q-bio.QM"
+   ],
+   "expected": {
+    "first_public_date": "2026-11-11",
+    "basis": "announced",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "new_preprint"
+   },
+   "explanation": "A new arXiv submission (submitted 2026-11-09T20:10:37Z) first announced on 2026-11-11 in its primary category; the captured announcement is the first public appearance, so the work is new research for that day.",
+   "evidence": [
+    "arXiv RSS q-bio.QM feed of Wed 2026-11-11 (pubDate 00:00 -0500) lists 2611.13190v1 with announce_type new",
+    "arXiv API 2611.13190: published 2026-11-09T20:10:37Z (v1), primary category q-bio.QM"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-002",
+   "category": "arxiv_announced",
+   "identifiers": [
+    "2611.13398"
+   ],
+   "capture_feeds": [
+    "q-bio.QM"
+   ],
+   "expected": {
+    "first_public_date": "2026-11-11",
+    "basis": "announced",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "new_preprint"
+   },
+   "explanation": "A new arXiv submission (submitted 2026-11-10T00:20:01Z) first announced on 2026-11-11 in its primary category; the captured announcement is the first public appearance, so the work is new research for that day.",
+   "evidence": [
+    "arXiv RSS q-bio.QM feed of Wed 2026-11-11 (pubDate 00:00 -0500) lists 2611.13398v1 with announce_type new",
+    "arXiv API 2611.13398: published 2026-11-10T00:20:01Z (v1), primary category q-bio.QM"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-003",
+   "category": "arxiv_announced",
+   "identifiers": [
+    "2611.14184"
+   ],
+   "capture_feeds": [
+    "q-bio.QM"
+   ],
+   "expected": {
+    "first_public_date": "2026-11-11",
+    "basis": "announced",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "new_preprint"
+   },
+   "explanation": "A new arXiv submission (submitted 2026-11-10T15:06:38Z) first announced on 2026-11-11 in its primary category; the captured announcement is the first public appearance, so the work is new research for that day.",
+   "evidence": [
+    "arXiv RSS q-bio.QM feed of Wed 2026-11-11 (pubDate 00:00 -0500) lists 2611.14184v1 with announce_type new",
+    "arXiv API 2611.14184: published 2026-11-10T15:06:38Z (v1), primary category q-bio.QM"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-004",
+   "category": "arxiv_announced",
+   "identifiers": [
+    "2611.13216"
+   ],
+   "capture_feeds": [
+    "cs.DL"
+   ],
+   "expected": {
+    "first_public_date": "2026-11-11",
+    "basis": "announced",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "new_preprint"
+   },
+   "explanation": "A new arXiv submission (submitted 2026-11-09T20:38:40Z) first announced on 2026-11-11 in its primary category; the captured announcement is the first public appearance, so the work is new research for that day.",
+   "evidence": [
+    "arXiv RSS cs.DL feed of Wed 2026-11-11 (pubDate 00:00 -0500) lists 2611.13216v1 with announce_type new",
+    "arXiv API 2611.13216: published 2026-11-09T20:38:40Z (v1), primary category cs.DL"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-005",
+   "category": "arxiv_submission_only",
+   "identifiers": [
+    "2611.13190"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2026-11-09",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "explanation": "The same arXiv paper without capturing its announcement: only the v1 submission time is known, which is stated as a submission (verified as such), never as the release date. Nothing places the work in the 2026-11-11 window (the true announcement day), which is the honest result without the feed.",
+   "evidence": [
+    "arXiv API 2611.13190: published 2026-11-09T20:10:37Z (v1); no feed captured; no aggregator record"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-006",
+   "category": "arxiv_submission_only",
+   "identifiers": [
+    "2611.13216"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2026-11-09",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "explanation": "The same arXiv paper without capturing its announcement: only the v1 submission time is known, which is stated as a submission (verified as such), never as the release date. Nothing places the work in the 2026-11-11 window (the true announcement day), which is the honest result without the feed.",
+   "evidence": [
+    "arXiv API 2611.13216: published 2026-11-09T20:38:40Z (v1); no feed captured; no aggregator record"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-007",
+   "category": "arxiv_cross_listing",
+   "identifiers": [
+    "2611.13277"
+   ],
+   "capture_feeds": [
+    "q-bio.QM"
+   ],
+   "expected": {
+    "first_public_date": "2026-11-09",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "explanation": "Listed in the q-bio.QM feed as a cross-listing (cross) from primary category eess.SY. A cross-listing is not an announcement of the work, so the first public date stays the v1 submission (submission only) and the feed entry places nothing in the window.",
+   "evidence": [
+    "arXiv RSS q-bio.QM 2026-11-11: 2611.13277v1 announce_type cross",
+    "arXiv API 2611.13277: published 2026-11-09T21:42:14Z (v1), primary eess.SY"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-008",
+   "category": "arxiv_cross_listing",
+   "identifiers": [
+    "2611.13692"
+   ],
+   "capture_feeds": [
+    "q-bio.QM"
+   ],
+   "expected": {
+    "first_public_date": "2026-11-10",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "explanation": "Listed in the q-bio.QM feed as a cross-listing (cross) from primary category q-bio.NC. A cross-listing is not an announcement of the work, so the first public date stays the v1 submission (submission only) and the feed entry places nothing in the window.",
+   "evidence": [
+    "arXiv RSS q-bio.QM 2026-11-11: 2611.13692v1 announce_type cross",
+    "arXiv API 2611.13692: published 2026-11-10T07:39:57Z (v1), primary q-bio.NC"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-009",
+   "category": "arxiv_cross_listing",
+   "identifiers": [
+    "2611.13876"
+   ],
+   "capture_feeds": [
+    "q-bio.QM"
+   ],
+   "expected": {
+    "first_public_date": "2026-11-10",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "explanation": "Listed in the q-bio.QM feed as a cross-listing (cross) from primary category cs.ET. A cross-listing is not an announcement of the work, so the first public date stays the v1 submission (submission only) and the feed entry places nothing in the window.",
+   "evidence": [
+    "arXiv RSS q-bio.QM 2026-11-11: 2611.13876v1 announce_type cross",
+    "arXiv API 2611.13876: published 2026-11-10T10:36:01Z (v1), primary cs.ET"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-010",
+   "category": "arxiv_cross_listing",
+   "identifiers": [
+    "2611.14511"
+   ],
+   "capture_feeds": [
+    "q-bio.QM"
+   ],
+   "expected": {
+    "first_public_date": "2026-11-10",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "explanation": "Listed in the q-bio.QM feed as a cross-listing (cross) from primary category cs.LG. A cross-listing is not an announcement of the work, so the first public date stays the v1 submission (submission only) and the feed entry places nothing in the window.",
+   "evidence": [
+    "arXiv RSS q-bio.QM 2026-11-11: 2611.14511v1 announce_type cross",
+    "arXiv API 2611.14511: published 2026-11-10T18:56:32Z (v1), primary cs.LG"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-011",
+   "category": "arxiv_cross_listing",
+   "identifiers": [
+    "2508.02061"
+   ],
+   "capture_feeds": [
+    "q-bio.QM"
+   ],
+   "expected": {
+    "first_public_date": "2025-08-04",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "explanation": "Listed in the q-bio.QM feed as a cross-listing (replace-cross) from primary category q-bio.GN. A cross-listing is not an announcement of the work, so the first public date stays the v1 submission (submission only) and the feed entry places nothing in the window.",
+   "evidence": [
+    "arXiv RSS q-bio.QM 2026-11-11: 2508.02061v3 announce_type replace-cross",
+    "arXiv API 2508.02061: published 2025-08-04T05:00:15Z (v1), primary q-bio.GN"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-012",
+   "category": "arxiv_cross_listing",
+   "identifiers": [
+    "2512.17129"
+   ],
+   "capture_feeds": [
+    "q-bio.QM"
+   ],
+   "expected": {
+    "first_public_date": "2025-12-18",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "explanation": "Listed in the q-bio.QM feed as a cross-listing (replace-cross) from primary category cs.LG. A cross-listing is not an announcement of the work, so the first public date stays the v1 submission (submission only) and the feed entry places nothing in the window.",
+   "evidence": [
+    "arXiv RSS q-bio.QM 2026-11-11: 2512.17129v3 announce_type replace-cross",
+    "arXiv API 2512.17129: published 2025-12-18T23:50:42Z (v1), primary cs.LG"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-013",
+   "category": "arxiv_cross_listing",
+   "identifiers": [
+    "2611.01666"
+   ],
+   "capture_feeds": [
+    "q-bio.QM"
+   ],
+   "expected": {
+    "first_public_date": "2026-11-01",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "explanation": "Listed in the q-bio.QM feed as a cross-listing (replace-cross) from primary category cs.LG. A cross-listing is not an announcement of the work, so the first public date stays the v1 submission (submission only) and the feed entry places nothing in the window.",
+   "evidence": [
+    "arXiv RSS q-bio.QM 2026-11-11: 2611.01666v3 announce_type replace-cross",
+    "arXiv API 2611.01666: published 2026-11-01T07:21:43Z (v1), primary cs.LG"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-014",
+   "category": "arxiv_revision",
+   "identifiers": [
+    "2609.21394"
+   ],
+   "capture_feeds": [
+    "q-bio.QM"
+   ],
+   "expected": {
+    "first_public_date": "2026-09-18",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "revised_version"
+   },
+   "explanation": "Version 2 of a September paper announced on 2026-11-11 (replace). The work's first public date stays v1's (submission only: v1's announcement was not captured); in the window it is a revised version, never a new preprint.",
+   "evidence": [
+    "arXiv RSS q-bio.QM 2026-11-11: 2609.21394v2 announce_type replace",
+    "arXiv API: published 2026-09-18T07:06:29Z (v1), updated 2026-11-10T07:49:47Z (v2)"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-015",
+   "category": "arxiv_revision",
+   "identifiers": [
+    "2604.22997"
+   ],
+   "capture_feeds": [
+    "q-bio.QM"
+   ],
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "single_source",
+    "candidate_public_date": "2026-04-24",
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "revised_version"
+   },
+   "explanation": "Version 2 of an April paper announced on 2026-11-11. OpenAlex reports a publication date (2026-04-24), a public-availability claim of unknown upstream, so the submission-only fallback does not apply: the date is single-source and shown only as unconfirmed. The primary v1 submission still shows the paper existed before the window, so it is a revised version, not new research.",
+   "evidence": [
+    "arXiv RSS q-bio.QM 2026-11-11: 2604.22997v2 announce_type replace",
+    "arXiv API: published 2026-04-24T20:31:36Z (v1), updated 2026-11-10T18:10:49Z",
+    "OpenAlex doi:10.48550/arxiv.2604.22997 publication_date 2026-04-24"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-016",
+   "category": "server_posted",
+   "identifiers": [
+    "10.1101/2022.10.22.513336"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2022-10-22",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint"
+   },
+   "explanation": "bioRxiv preprint: the server's v1 posting date is the first public appearance (the journal version, 10.7554/elife.87434, is later). OpenAlex's 2023-05-05 (= the eLife record's created date) disagrees and must not move the date.",
+   "evidence": [
+    "bioRxiv API details 10.1101/2022.10.22.513336: v1 date 2022-10-22, published 10.7554/elife.87434",
+    "OpenAlex publication_date 2023-05-05",
+    "Crossref eLife 87434 published-online 2024-06-03"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-017",
+   "category": "server_posted",
+   "identifiers": [
+    "10.1101/2023.12.14.23299828"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2023-12-15",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint"
+   },
+   "explanation": "medRxiv preprint: the server's v1 posting date is the first public appearance (the journal version, 10.1001/jamapediatrics.2024.1379, is later). The DOI suffix suggests 2023-12-14; the posting date decides. OpenAlex's 2024-06-03 is the journal's date.",
+   "evidence": [
+    "medRxiv API details 10.1101/2023.12.14.23299828: v1 date 2023-12-15, published 10.1001/jamapediatrics.2024.1379",
+    "OpenAlex publication_date 2024-06-03"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-018",
+   "category": "server_posted",
+   "identifiers": [
+    "10.1101/2023.07.10.548412"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2023-07-11",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint"
+   },
+   "explanation": "bioRxiv preprint: the server's v1 posting date is the first public appearance (the journal version, 10.7554/elife.89017.3, is later). The DOI suffix suggests 2023-07-10; the posting date decides.",
+   "evidence": [
+    "bioRxiv API details 10.1101/2023.07.10.548412: v1 date 2023-07-11, published 10.7554/elife.89017.3"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-019",
+   "category": "server_posted",
+   "identifiers": [
+    "10.1101/2023.08.14.553247"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2023-08-16",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint"
+   },
+   "explanation": "bioRxiv preprint: the server's v1 posting date is the first public appearance (the journal version, 10.7554/elife.91924.3, is later). The DOI suffix suggests 2023-08-14; the posting date decides.",
+   "evidence": [
+    "bioRxiv API details 10.1101/2023.08.14.553247: v1 date 2023-08-16, published 10.7554/elife.91924.3"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-020",
+   "category": "journal_of_older_preprint",
+   "identifiers": [
+    "10.7554/elife.92909"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2023-10-05",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2024-06-03",
+     "2024-06-03"
+    ],
+    "release_type": "published_version_of_preprint"
+   },
+   "explanation": "Added by its journal DOI. The journal record links the bioRxiv API preprint (has-preprint), posted 2023-10-05; the work's first public date is the preprint's, and the journal version (online 2024-06-03) is a published version of an earlier preprint, never new research.",
+   "evidence": [
+    "Crossref 10.7554/elife.92909: published-online 2024-06-03; relation has-preprint 10.1101/2023.10.03.560658",
+    "bioRxiv API 10.1101/2023.10.03.560658: v1 posted 2023-10-05"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-021",
+   "category": "journal_of_older_preprint",
+   "identifiers": [
+    "10.1093/plphys/kiae255"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2021-10-24",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2024-06-03",
+     "2024-06-03"
+    ],
+    "release_type": "published_version_of_preprint"
+   },
+   "explanation": "Added by its journal DOI. The journal record links the bioRxiv API preprint (has-preprint), posted 2021-10-24; the work's first public date is the preprint's, and the journal version (online 2024-06-03) is a published version of an earlier preprint, never new research.",
+   "evidence": [
+    "Crossref 10.1093/plphys/kiae255: published-online 2024-06-03; relation has-preprint 10.1101/2021.10.22.465218",
+    "bioRxiv API 10.1101/2021.10.22.465218: v1 posted 2021-10-24"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-022",
+   "category": "journal_of_older_preprint",
+   "identifiers": [
+    "10.1038/s42003-024-06342-y"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2023-07-30",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2024-06-03",
+     "2024-06-03"
+    ],
+    "release_type": "published_version_of_preprint"
+   },
+   "explanation": "Added by its journal DOI. The journal record links the bioRxiv API preprint (has-preprint), posted 2023-07-30; the work's first public date is the preprint's, and the journal version (online 2024-06-03) is a published version of an earlier preprint, never new research.",
+   "evidence": [
+    "Crossref 10.1038/s42003-024-06342-y: published-online 2024-06-03; relation has-preprint 10.1101/2023.07.27.550891",
+    "bioRxiv API 10.1101/2023.07.27.550891: v1 posted 2023-07-30"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-023",
+   "category": "journal_of_older_preprint",
+   "identifiers": [
+    "10.1038/s41598-024-63226-1"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2021-12-09",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2024-06-03",
+     "2024-06-03"
+    ],
+    "release_type": "published_version_of_preprint"
+   },
+   "explanation": "Added by its journal DOI. The journal record links the bioRxiv API preprint (has-preprint), posted 2021-12-09; the work's first public date is the preprint's, and the journal version (online 2024-06-03) is a published version of an earlier preprint, never new research.",
+   "evidence": [
+    "Crossref 10.1038/s41598-024-63226-1: published-online 2024-06-03; relation has-preprint 10.1101/2021.12.07.471480",
+    "bioRxiv API 10.1101/2021.12.07.471480: v1 posted 2021-12-09"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-024",
+   "category": "journal_of_older_preprint",
+   "identifiers": [
+    "10.1371/journal.pbio.3002664"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2023-10-02",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2024-06-03",
+     "2024-06-03"
+    ],
+    "release_type": "published_version_of_preprint"
+   },
+   "explanation": "Added by its journal DOI. The journal record links the bioRxiv API preprint (has-preprint), posted 2023-10-02; the work's first public date is the preprint's, and the journal version (online 2024-06-03) is a published version of an earlier preprint, never new research.",
+   "evidence": [
+    "Crossref 10.1371/journal.pbio.3002664: published-online 2024-06-03; relation has-preprint 10.1101/2023.10.02.560470",
+    "bioRxiv API 10.1101/2023.10.02.560470: v1 posted 2023-10-02"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-025",
+   "category": "journal_of_older_preprint",
+   "identifiers": [
+    "10.1021/acs.jcim.6c01012"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2026-07-21",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "window": [
+     "2026-09-04",
+     "2026-09-04"
+    ],
+    "release_type": "published_version_of_preprint"
+   },
+   "explanation": "Added by its journal DOI. The journal record links the ChemRxiv (Crossref posted-content) preprint (has-preprint), posted 2026-07-21; the work's first public date is the preprint's, and the journal version (online 2026-09-04) is a published version of an earlier preprint, never new research.",
+   "evidence": [
+    "Crossref 10.1021/acs.jcim.6c01012: published-online 2026-09-04; relation has-preprint 10.26434/chemrxiv.15006367/v1",
+    "ChemRxiv (Crossref posted-content) 10.26434/chemrxiv.15006367/v1: v1 posted 2026-07-21"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-026",
+   "category": "journal_of_older_preprint",
+   "identifiers": [
+    "10.1001/jamapediatrics.2024.1379"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2023-12-15",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint"
+   },
+   "explanation": "JAMA Pediatrics article added by DOI; its medRxiv preprint (posted 2023-12-15) is the first public appearance, not the journal's August 2024 issue.",
+   "evidence": [
+    "Crossref: published-print 2024-08-01, created 2024-06-03; has-preprint 10.1101/2023.12.14.23299828",
+    "medRxiv API: v1 2023-12-15"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-027",
+   "category": "journal_only",
+   "identifiers": [
+    "10.1080/14767058.2019.1659770"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2019-09-04",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "window": [
+     "2019-09-04",
+     "2019-09-04"
+    ],
+    "release_type": "new_publication"
+   },
+   "explanation": "A journal article with no known preprint: first public online 2019-09-04 (the print issue followed in 2021). OpenAlex's 2019-08-23 equals the Crossref created date (metadata), disagrees with the system of record and must not move the date.",
+   "evidence": [
+    "Crossref: published-online 2019-09-04, published-print 2021-07-03, created 2019-08-23",
+    "OpenAlex publication_date 2019-08-23"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-028",
+   "category": "journal_only",
+   "identifiers": [
+    "10.1111/psj.70147"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2026-08-07",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "window": [
+     "2026-08-07",
+     "2026-08-07"
+    ],
+    "release_type": "new_publication"
+   },
+   "explanation": "Journal article online 2026-08-07; the August 2026 issue is month-only and OpenAlex's 2026-08-01 is a month value (day 01).",
+   "evidence": [
+    "Crossref: published-online 2026-08-07, published-print 2026-08, issued 2026-08",
+    "OpenAlex publication_date 2026-08-01"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-029",
+   "category": "journal_only",
+   "identifiers": [
+    "10.31032/ijbpas/2023/12.10.1013"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2023-10-15",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published"
+   },
+   "explanation": "Journal article online 2023-10-15; the earlier created date (2023-10-12) is metadata.",
+   "evidence": [
+    "Crossref: published-online 2023-10-15, created 2023-10-12"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-030",
+   "category": "journal_only",
+   "identifiers": [
+    "10.1371/journal.pone.0301214"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2024-03-21",
+    "basis": "published_online",
+    "confidence": "verified",
+    "window": [
+     "2024-03-21",
+     "2024-03-21"
+    ],
+    "release_type": "correction_notice"
+   },
+   "explanation": "A PLOS ONE correction notice published 2024-03-21: in its window it is a correction notice, never new research.",
+   "evidence": [
+    "Crossref: published-online 2024-03-21; update-to correction of 10.1371/journal.pone.0161231"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-031",
+   "category": "metadata_vs_public",
+   "identifiers": [
+    "10.1371/journal.pone.0161231"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2016-08-22",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "window": [
+     "2026-10-15",
+     "2026-10-15"
+    ],
+    "release_type": "none"
+   },
+   "explanation": "A 2016 article whose Crossref record was re-indexed on 2026-10-15: indexing is metadata, so nothing places the work in that day's window.",
+   "evidence": [
+    "Crossref: published-online 2016-08-22, indexed 2026-10-15"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-032",
+   "category": "metadata_vs_public",
+   "identifiers": [
+    "10.1021/acs.jcim.5c01019"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2025-07-26",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "window": [
+     "2026-11-10",
+     "2026-11-10"
+    ],
+    "release_type": "none"
+   },
+   "explanation": "Online 2025-07-26; re-indexed 2026-11-10 (metadata only).",
+   "evidence": [
+    "Crossref: published-online 2025-07-26, published-print 2025-08-11, indexed 2026-11-10"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-033",
+   "category": "metadata_vs_public",
+   "identifiers": [
+    "10.31032/ijbpas/2023/12.10.1013"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2023-10-15",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "window": [
+     "2023-10-12",
+     "2023-10-12"
+    ],
+    "release_type": "none"
+   },
+   "explanation": "The Crossref record was created 2023-10-12, three days before the article went online: creation is not public availability.",
+   "evidence": [
+    "Crossref: created 2023-10-12, published-online 2023-10-15"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-034",
+   "category": "conflicting",
+   "identifiers": [
+    "10.1088/1361-6595/aaebdb"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2018-11-19",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published"
+   },
+   "explanation": "Crossref gives published-print 2018-11-01 and published-online 2018-11-19. The print date is the nominal date of the November 2018 issue (day 01), not a day the article was public: an article cannot appear in an issue before it is online. The first public appearance is the online date.",
+   "evidence": [
+    "Crossref: published-print 2018-11-01, published-online 2018-11-19, created 2018-10-26"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-035",
+   "category": "conflicting",
+   "identifiers": [
+    "10.1093/bib/bbag239"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": "2026-04-30",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published"
+   },
+   "explanation": "Crossref gives published-print 2026-03-01 (the nominal March issue) but the notice went online on 2026-04-30; the online date is the first public appearance.",
+   "evidence": [
+    "Crossref: published-print 2026-03-01, published-online 2026-04-30, created 2026-04-30"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-036",
+   "category": "insufficient_evidence",
+   "identifiers": [
+    "10.3844/ajeassp.2017.457.472"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain"
+   },
+   "explanation": "Only a nominal issue date (published-print 2017-02-01, day 01) and a record created 2017-07-18: no day of public availability is known, so the date is uncertain.",
+   "evidence": [
+    "Crossref: published-print 2017-02-01, issued 2017-02-01, created 2017-07-18"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-037",
+   "category": "reduced_precision",
+   "identifiers": [
+    "10.1016/0167-9473(95)00032-1"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain"
+   },
+   "explanation": "Month-only issue date (June 1996); OpenAlex's 1996-06-01 is the same month value.",
+   "evidence": [
+    "Crossref: published-print 1996-06, issued 1996-06",
+    "OpenAlex 1996-06-01"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-038",
+   "category": "reduced_precision",
+   "identifiers": [
+    "10.1063/1.59653"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain"
+   },
+   "explanation": "Year-only proceedings date (1999). OpenAlex reports 1999-01-01: a year value with reduced precision, never a day.",
+   "evidence": [
+    "Crossref: published-print 1999, issued 1999",
+    "OpenAlex publication_date 1999-01-01"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-039",
+   "category": "reduced_precision",
+   "identifiers": [
+    "10.4310/atmp.1998.v2.n2.a1"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain"
+   },
+   "explanation": "Year-only journal date (1998); OpenAlex 1998-01-01 is a year value.",
+   "evidence": [
+    "Crossref: published-print 1998",
+    "OpenAlex publication_date 1998-01-01"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-040",
+   "category": "reduced_precision",
+   "identifiers": [
+    "10.1023/a:1026654312961"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain"
+   },
+   "explanation": "Month-only issue date (April 1999); OpenAlex 1999-04-01 is a month value. (The arXiv preprint of this work is not linked from this record, so it is not known here.)",
+   "evidence": [
+    "Crossref: published-print 1999-04, issued 1999-04",
+    "OpenAlex 1999-04-01"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-041",
+   "category": "newly_indexed_older",
+   "identifiers": [
+    "1706.03762"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "source_agreement",
+    "candidate_public_date": "2017-06-12",
+    "window": "run_day",
+    "release_type": "newly_indexed_older"
+   },
+   "explanation": "A 2017 arXiv paper added today: newly indexed, never new research. OpenAlex and Semantic Scholar both report 2017-06-12 (a public claim of unknown upstream), so the date is source agreement, shown as unconfirmed.",
+   "evidence": [
+    "arXiv API: published 2017-06-12T17:57:34Z (v1)",
+    "OpenAlex publication_date 2017-06-12",
+    "Semantic Scholar publicationDate 2017-06-12"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-042",
+   "category": "newly_indexed_older",
+   "identifiers": [
+    "1512.03385"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "source_agreement",
+    "candidate_public_date": "2015-12-10",
+    "window": "run_day",
+    "release_type": "newly_indexed_older"
+   },
+   "explanation": "A 2015 arXiv paper added today: newly indexed. OpenAlex and S2 agree on 2015-12-10.",
+   "evidence": [
+    "arXiv API: published 2015-12-10T19:51:55Z (v1)",
+    "OpenAlex 2015-12-10",
+    "Semantic Scholar 2015-12-10"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  },
+  {
+   "id": "GD-B0-043",
+   "category": "insufficient_evidence",
+   "identifiers": [
+    "hep-th/9711200"
+   ],
+   "capture_feeds": [],
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain",
+    "window": "run_day",
+    "release_type": "newly_indexed_older"
+   },
+   "explanation": "Maldacena 1997, added today. The arXiv record's DOI brings in the IJTP printing, whose only dates are month-only (April 1999): a public claim exists but no day-precision public date, so the submission-only fallback does not apply and the date is uncertain. The 1997 submission shows the work is old: newly indexed, never new research.",
+   "evidence": [
+    "arXiv API: published 1997-11-27T23:53:13Z, doi 10.1023/A:1026654312961",
+    "Crossref 10.1023/a:1026654312961: issued 1999-04"
+   ],
+   "provenance": "recorded",
+   "labels": {
+    "status": "ai_proposed",
+    "proposed_by": "ai-assistant",
+    "annotators": [],
+    "adjudicator": null,
+    "approved_by": null,
+    "guideline": "g-latest-dates-guidelines-v0.1"
+   }
+  }
+ ]
+}

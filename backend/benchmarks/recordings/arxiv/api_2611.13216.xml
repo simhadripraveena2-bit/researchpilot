@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/bFQjAP3Y6Ha76r1+333bdmCeyEQ</id>
+  <title>arXiv Query: search_query=&amp;id_list=2611.13216&amp;start=0&amp;max_results=1</title>
+  <updated>2026-11-12T21:44:51Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=1&amp;id_list=2611.13216" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>1</opensearch:itemsPerPage>
+  <opensearch:totalResults>1</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2611.13216v1</id>
+    <title>Latin American Studies since the 1980s: From Apocalyptic Dreams to Assimilationist Consolidation</title>
+    <updated>2026-11-09T20:38:40Z</updated>
+    <link href="https://arxiv.org/abs/2611.13216v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2611.13216v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We investigate how Latin American Studies (LAS) has evolved since 1982 in three leading LAS journals. Using network analysis, text mining, and bibliometrics, we trace transformations in disciplinary positioning, authorship, and citation patterns. Our main claim is that LAS has undergone an assimilationist consolidation. The field is now institutionally recognisable, with core LAS journals occupying central positions in disciplinary networks and acting as bridges across fields. Yet this consolidation has reinforced hierarchies privileging Anglophone academic norms. Journals based in Latin America, once central, have been marginalised. The share of Latin American authors has grown, but their profiles converge towards Northern standards.</summary>
+    <category term="cs.DL" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-11-09T20:38:40Z</published>
+    <arxiv:primary_category term="cs.DL"/>
+    <author>
+      <name>Thiago Dumont Oliveira</name>
+    </author>
+    <author>
+      <name>Juan Grigera</name>
+    </author>
+    <author>
+      <name>Pedro Mendes Loureiro</name>
+    </author>
+  </entry>
+</feed>
