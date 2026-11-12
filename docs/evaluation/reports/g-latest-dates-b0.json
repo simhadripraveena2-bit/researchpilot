@@ -1,0 +1,1653 @@
+{
+ "benchmark": "G-LATEST-DATES",
+ "split": "B0",
+ "dataset_version": "b0-v0.1",
+ "run": {
+  "git_sha": "f13ce4d44866",
+  "version_matcher_rules": "d29-v1",
+  "dataset_sha256": "280009188325ae3f",
+  "recordings": "benchmarks/recordings, tests/fixtures/sources"
+ },
+ "labels": {
+  "ai_proposed": 43
+ },
+ "provenance": {
+  "recorded": 43
+ },
+ "gates": {
+  "every case evaluable": true,
+  "no incorrectly verified date": true,
+  "no uncertain date shown as confirmed": true,
+  "no journal date over an earlier preprint": true,
+  "no revision shown as new work": true
+ },
+ "verdict": "NOT a release decision: B0 development split; all gates pass on these cases. Release targets can only be judged on expert-labelled B3 run by the custodian.",
+ "metrics": {
+  "cases": 43,
+  "scored": 43,
+  "not_evaluable": [],
+  "accuracy": 1.0,
+  "first_public_date_accuracy": 1.0,
+  "confidence_accuracy": 1.0,
+  "incorrectly_verified": [],
+  "uncertain_class_accuracy": 1.0,
+  "uncertain_shown_as_confirmed": [],
+  "conflicts_detected": 1.0,
+  "journal_date_over_preprint": [],
+  "revision_shown_as_new_work": [],
+  "release_type_accuracy": 1.0,
+  "confusion": {
+   "single_source -> single_source": 1,
+   "source_agreement -> source_agreement": 2,
+   "uncertain -> uncertain": 6,
+   "verified -> verified": 34
+  },
+  "by_category": {
+   "arxiv_announced": {
+    "cases": 4,
+    "correct": 4
+   },
+   "arxiv_cross_listing": {
+    "cases": 7,
+    "correct": 7
+   },
+   "arxiv_revision": {
+    "cases": 2,
+    "correct": 2
+   },
+   "arxiv_submission_only": {
+    "cases": 2,
+    "correct": 2
+   },
+   "conflicting": {
+    "cases": 2,
+    "correct": 2
+   },
+   "insufficient_evidence": {
+    "cases": 2,
+    "correct": 2
+   },
+   "journal_of_older_preprint": {
+    "cases": 7,
+    "correct": 7
+   },
+   "journal_only": {
+    "cases": 4,
+    "correct": 4
+   },
+   "metadata_vs_public": {
+    "cases": 3,
+    "correct": 3
+   },
+   "newly_indexed_older": {
+    "cases": 2,
+    "correct": 2
+   },
+   "reduced_precision": {
+    "cases": 4,
+    "correct": 4
+   },
+   "server_posted": {
+    "cases": 4,
+    "correct": 4
+   }
+  }
+ },
+ "results": [
+  {
+   "case_id": "GD-B0-001",
+   "category": "arxiv_announced",
+   "expected": {
+    "first_public_date": "2026-11-11",
+    "basis": "announced",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "new_preprint"
+   },
+   "observed": {
+    "first_public_date": "2026-11-11",
+    "basis": "announced",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "new_preprint",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-002",
+   "category": "arxiv_announced",
+   "expected": {
+    "first_public_date": "2026-11-11",
+    "basis": "announced",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "new_preprint"
+   },
+   "observed": {
+    "first_public_date": "2026-11-11",
+    "basis": "announced",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "new_preprint",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-003",
+   "category": "arxiv_announced",
+   "expected": {
+    "first_public_date": "2026-11-11",
+    "basis": "announced",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "new_preprint"
+   },
+   "observed": {
+    "first_public_date": "2026-11-11",
+    "basis": "announced",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "new_preprint",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-004",
+   "category": "arxiv_announced",
+   "expected": {
+    "first_public_date": "2026-11-11",
+    "basis": "announced",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "new_preprint"
+   },
+   "observed": {
+    "first_public_date": "2026-11-11",
+    "basis": "announced",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "new_preprint",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-005",
+   "category": "arxiv_submission_only",
+   "expected": {
+    "first_public_date": "2026-11-09",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "observed": {
+    "first_public_date": "2026-11-09",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "none",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-006",
+   "category": "arxiv_submission_only",
+   "expected": {
+    "first_public_date": "2026-11-09",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "observed": {
+    "first_public_date": "2026-11-09",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "none",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-007",
+   "category": "arxiv_cross_listing",
+   "expected": {
+    "first_public_date": "2026-11-09",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "observed": {
+    "first_public_date": "2026-11-09",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "none",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-008",
+   "category": "arxiv_cross_listing",
+   "expected": {
+    "first_public_date": "2026-11-10",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "observed": {
+    "first_public_date": "2026-11-10",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "none",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-009",
+   "category": "arxiv_cross_listing",
+   "expected": {
+    "first_public_date": "2026-11-10",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "observed": {
+    "first_public_date": "2026-11-10",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "none",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-010",
+   "category": "arxiv_cross_listing",
+   "expected": {
+    "first_public_date": "2026-11-10",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "observed": {
+    "first_public_date": "2026-11-10",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "none",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-011",
+   "category": "arxiv_cross_listing",
+   "expected": {
+    "first_public_date": "2025-08-04",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "observed": {
+    "first_public_date": "2025-08-04",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "none",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-012",
+   "category": "arxiv_cross_listing",
+   "expected": {
+    "first_public_date": "2025-12-18",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "observed": {
+    "first_public_date": "2025-12-18",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "none",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-013",
+   "category": "arxiv_cross_listing",
+   "expected": {
+    "first_public_date": "2026-11-01",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "none"
+   },
+   "observed": {
+    "first_public_date": "2026-11-01",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "none",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-014",
+   "category": "arxiv_revision",
+   "expected": {
+    "first_public_date": "2026-09-18",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "revised_version"
+   },
+   "observed": {
+    "first_public_date": "2026-09-18",
+    "basis": "submission_only",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "revised_version",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-015",
+   "category": "arxiv_revision",
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "single_source",
+    "first_public_kind": null,
+    "candidate_public_date": "2026-04-24",
+    "window": [
+     "2026-11-11",
+     "2026-11-11"
+    ],
+    "release_type": "revised_version"
+   },
+   "observed": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "single_source",
+    "first_public_kind": null,
+    "candidate_public_date": "2026-04-24",
+    "release_type": "revised_version",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-016",
+   "category": "server_posted",
+   "expected": {
+    "first_public_date": "2022-10-22",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": null,
+    "release_type": null
+   },
+   "observed": {
+    "first_public_date": "2022-10-22",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": null,
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": null,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ],
+   "aggregators_unrecorded": []
+  },
+  {
+   "case_id": "GD-B0-017",
+   "category": "server_posted",
+   "expected": {
+    "first_public_date": "2023-12-15",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": null,
+    "release_type": null
+   },
+   "observed": {
+    "first_public_date": "2023-12-15",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": null,
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": null,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-018",
+   "category": "server_posted",
+   "expected": {
+    "first_public_date": "2023-07-11",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": null,
+    "release_type": null
+   },
+   "observed": {
+    "first_public_date": "2023-07-11",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": null,
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": null,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-019",
+   "category": "server_posted",
+   "expected": {
+    "first_public_date": "2023-08-16",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": null,
+    "release_type": null
+   },
+   "observed": {
+    "first_public_date": "2023-08-16",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": null,
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": null,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-020",
+   "category": "journal_of_older_preprint",
+   "expected": {
+    "first_public_date": "2023-10-05",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2024-06-03",
+     "2024-06-03"
+    ],
+    "release_type": "published_version_of_preprint"
+   },
+   "observed": {
+    "first_public_date": "2023-10-05",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "published_version_of_preprint",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-021",
+   "category": "journal_of_older_preprint",
+   "expected": {
+    "first_public_date": "2021-10-24",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2024-06-03",
+     "2024-06-03"
+    ],
+    "release_type": "published_version_of_preprint"
+   },
+   "observed": {
+    "first_public_date": "2021-10-24",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "published_version_of_preprint",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-022",
+   "category": "journal_of_older_preprint",
+   "expected": {
+    "first_public_date": "2023-07-30",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2024-06-03",
+     "2024-06-03"
+    ],
+    "release_type": "published_version_of_preprint"
+   },
+   "observed": {
+    "first_public_date": "2023-07-30",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "published_version_of_preprint",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-023",
+   "category": "journal_of_older_preprint",
+   "expected": {
+    "first_public_date": "2021-12-09",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2024-06-03",
+     "2024-06-03"
+    ],
+    "release_type": "published_version_of_preprint"
+   },
+   "observed": {
+    "first_public_date": "2021-12-09",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "published_version_of_preprint",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-024",
+   "category": "journal_of_older_preprint",
+   "expected": {
+    "first_public_date": "2023-10-02",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2024-06-03",
+     "2024-06-03"
+    ],
+    "release_type": "published_version_of_preprint"
+   },
+   "observed": {
+    "first_public_date": "2023-10-02",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "published_version_of_preprint",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-025",
+   "category": "journal_of_older_preprint",
+   "expected": {
+    "first_public_date": "2026-07-21",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": [
+     "2026-09-04",
+     "2026-09-04"
+    ],
+    "release_type": "published_version_of_preprint"
+   },
+   "observed": {
+    "first_public_date": "2026-07-21",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": "published_version_of_preprint",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-026",
+   "category": "journal_of_older_preprint",
+   "expected": {
+    "first_public_date": "2023-12-15",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "window": null,
+    "release_type": null
+   },
+   "observed": {
+    "first_public_date": "2023-12-15",
+    "basis": "posted",
+    "confidence": "verified",
+    "first_public_kind": "preprint",
+    "candidate_public_date": null,
+    "release_type": null,
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": null,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-027",
+   "category": "journal_only",
+   "expected": {
+    "first_public_date": "2019-09-04",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "candidate_public_date": null,
+    "window": [
+     "2019-09-04",
+     "2019-09-04"
+    ],
+    "release_type": "new_publication"
+   },
+   "observed": {
+    "first_public_date": "2019-09-04",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "candidate_public_date": null,
+    "release_type": "new_publication",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-028",
+   "category": "journal_only",
+   "expected": {
+    "first_public_date": "2026-08-07",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "candidate_public_date": null,
+    "window": [
+     "2026-08-07",
+     "2026-08-07"
+    ],
+    "release_type": "new_publication"
+   },
+   "observed": {
+    "first_public_date": "2026-08-07",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "candidate_public_date": null,
+    "release_type": "new_publication",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-029",
+   "category": "journal_only",
+   "expected": {
+    "first_public_date": "2023-10-15",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "candidate_public_date": null,
+    "window": null,
+    "release_type": null
+   },
+   "observed": {
+    "first_public_date": "2023-10-15",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "candidate_public_date": null,
+    "release_type": null,
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": null,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-030",
+   "category": "journal_only",
+   "expected": {
+    "first_public_date": "2024-03-21",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": null,
+    "candidate_public_date": null,
+    "window": [
+     "2024-03-21",
+     "2024-03-21"
+    ],
+    "release_type": "correction_notice"
+   },
+   "observed": {
+    "first_public_date": "2024-03-21",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "candidate_public_date": null,
+    "release_type": "correction_notice",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-031",
+   "category": "metadata_vs_public",
+   "expected": {
+    "first_public_date": "2016-08-22",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "candidate_public_date": null,
+    "window": [
+     "2026-10-15",
+     "2026-10-15"
+    ],
+    "release_type": "none"
+   },
+   "observed": {
+    "first_public_date": "2016-08-22",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "candidate_public_date": null,
+    "release_type": "none",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-032",
+   "category": "metadata_vs_public",
+   "expected": {
+    "first_public_date": "2025-07-26",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "candidate_public_date": null,
+    "window": [
+     "2026-11-10",
+     "2026-11-10"
+    ],
+    "release_type": "none"
+   },
+   "observed": {
+    "first_public_date": "2025-07-26",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "candidate_public_date": null,
+    "release_type": "none",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-033",
+   "category": "metadata_vs_public",
+   "expected": {
+    "first_public_date": "2023-10-15",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "candidate_public_date": null,
+    "window": [
+     "2023-10-12",
+     "2023-10-12"
+    ],
+    "release_type": "none"
+   },
+   "observed": {
+    "first_public_date": "2023-10-15",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "candidate_public_date": null,
+    "release_type": "none",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-034",
+   "category": "conflicting",
+   "expected": {
+    "first_public_date": "2018-11-19",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "candidate_public_date": null,
+    "window": null,
+    "release_type": null
+   },
+   "observed": {
+    "first_public_date": "2018-11-19",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "candidate_public_date": null,
+    "release_type": null,
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": null,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-035",
+   "category": "conflicting",
+   "expected": {
+    "first_public_date": "2026-04-30",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "candidate_public_date": null,
+    "window": null,
+    "release_type": null
+   },
+   "observed": {
+    "first_public_date": "2026-04-30",
+    "basis": "published_online",
+    "confidence": "verified",
+    "first_public_kind": "published",
+    "candidate_public_date": null,
+    "release_type": null,
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": null,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-036",
+   "category": "insufficient_evidence",
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain",
+    "first_public_kind": null,
+    "candidate_public_date": null,
+    "window": null,
+    "release_type": null
+   },
+   "observed": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain",
+    "first_public_kind": null,
+    "candidate_public_date": null,
+    "release_type": null,
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": null,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-037",
+   "category": "reduced_precision",
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain",
+    "first_public_kind": null,
+    "candidate_public_date": null,
+    "window": null,
+    "release_type": null
+   },
+   "observed": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain",
+    "first_public_kind": null,
+    "candidate_public_date": null,
+    "release_type": null,
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": null,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-038",
+   "category": "reduced_precision",
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain",
+    "first_public_kind": null,
+    "candidate_public_date": null,
+    "window": null,
+    "release_type": null
+   },
+   "observed": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain",
+    "first_public_kind": null,
+    "candidate_public_date": null,
+    "release_type": null,
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": null,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-039",
+   "category": "reduced_precision",
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain",
+    "first_public_kind": null,
+    "candidate_public_date": null,
+    "window": null,
+    "release_type": null
+   },
+   "observed": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain",
+    "first_public_kind": null,
+    "candidate_public_date": null,
+    "release_type": null,
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": null,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-040",
+   "category": "reduced_precision",
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain",
+    "first_public_kind": null,
+    "candidate_public_date": null,
+    "window": null,
+    "release_type": null
+   },
+   "observed": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain",
+    "first_public_kind": null,
+    "candidate_public_date": null,
+    "release_type": null,
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": null,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GD-B0-041",
+   "category": "newly_indexed_older",
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "source_agreement",
+    "first_public_kind": null,
+    "candidate_public_date": "2017-06-12",
+    "window": "run_day",
+    "release_type": "newly_indexed_older"
+   },
+   "observed": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "source_agreement",
+    "first_public_kind": null,
+    "candidate_public_date": "2017-06-12",
+    "release_type": "newly_indexed_older",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ],
+   "aggregators_unrecorded": []
+  },
+  {
+   "case_id": "GD-B0-042",
+   "category": "newly_indexed_older",
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "source_agreement",
+    "first_public_kind": null,
+    "candidate_public_date": "2015-12-10",
+    "window": "run_day",
+    "release_type": "newly_indexed_older"
+   },
+   "observed": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "source_agreement",
+    "first_public_kind": null,
+    "candidate_public_date": "2015-12-10",
+    "release_type": "newly_indexed_older",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ],
+   "aggregators_unrecorded": []
+  },
+  {
+   "case_id": "GD-B0-043",
+   "category": "insufficient_evidence",
+   "expected": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain",
+    "first_public_kind": null,
+    "candidate_public_date": null,
+    "window": "run_day",
+    "release_type": "newly_indexed_older"
+   },
+   "observed": {
+    "first_public_date": null,
+    "basis": null,
+    "confidence": "uncertain",
+    "first_public_kind": null,
+    "candidate_public_date": null,
+    "release_type": "newly_indexed_older",
+    "one_work": true
+   },
+   "date_correct": true,
+   "confidence_correct": true,
+   "release_correct": true,
+   "incorrectly_verified": false,
+   "journal_date_over_preprint": false,
+   "correct": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  }
+ ]
+}

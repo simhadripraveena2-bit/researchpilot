@@ -1,0 +1,1567 @@
+{
+ "benchmark": "G-MATCH",
+ "split": "B0",
+ "dataset_version": "b0-v0.1",
+ "run": {
+  "git_sha": "f13ce4d44866",
+  "version_matcher_rules": "d29-v1",
+  "dataset_sha256": "3d5a86ad4a4994ed",
+  "recordings": "benchmarks/recordings, tests/fixtures/sources"
+ },
+ "labels": {
+  "ai_proposed": 52
+ },
+ "provenance": {
+  "recorded": 52
+ },
+ "gates": {
+  "every case evaluable": true,
+  "no false-positive merge": true,
+  "no adversarial merge": true,
+  "no ambiguous pair merged": true,
+  "no order dependence": true,
+  "merges reversible": true,
+  "rejections sticky": true
+ },
+ "verdict": "NOT a release decision: B0 development split; all gates pass on these cases. Release targets can only be judged on expert-labelled B3 run by the custodian.",
+ "metrics": {
+  "cases": 52,
+  "scored": 52,
+  "not_evaluable": [],
+  "accuracy": 1.0,
+  "auto_merge_precision": 1.0,
+  "false_positive_merges": [],
+  "adversarial_merges": [],
+  "recall_decisive": 1.0,
+  "recall_without_decisive_link_merged_or_possible": 1.0,
+  "false_negatives": [],
+  "ambiguous_kept_possible": 1.0,
+  "ambiguous_merged": [],
+  "related_not_same_detected": 1.0,
+  "order_dependent": [],
+  "reversible": 1.0,
+  "rejection_sticky": 1.0,
+  "confusion": {
+   "auto_match -> auto_match": 19,
+   "no_match -> no_match": 15,
+   "possible_match -> possible_match": 7,
+   "related_not_same -> related_not_same": 11
+  },
+  "by_category": {
+   "ambiguous_no_link": {
+    "cases": 7,
+    "correct": 7
+   },
+   "comment_reply": {
+    "cases": 6,
+    "correct": 6
+   },
+   "correction_notice": {
+    "cases": 8,
+    "correct": 8
+   },
+   "explicit_link_different_title": {
+    "cases": 1,
+    "correct": 1
+   },
+   "part_series": {
+    "cases": 2,
+    "correct": 2
+   },
+   "preprint_journal": {
+    "cases": 14,
+    "correct": 14
+   },
+   "preprint_versions": {
+    "cases": 4,
+    "correct": 4
+   },
+   "related_extends": {
+    "cases": 2,
+    "correct": 2
+   },
+   "similar_title_different": {
+    "cases": 8,
+    "correct": 8
+   }
+  }
+ },
+ "results": [
+  {
+   "case_id": "GM-B0-001",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-002",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-003",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-004",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-005",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-006",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-007",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-008",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-009",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-010",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-011",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ],
+   "aggregators_unrecorded": []
+  },
+  {
+   "case_id": "GM-B0-012",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-013",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-014",
+   "category": "explicit_link_different_title",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-015",
+   "category": "preprint_journal",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ],
+   "aggregators_unrecorded": []
+  },
+  {
+   "case_id": "GM-B0-016",
+   "category": "preprint_versions",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-017",
+   "category": "preprint_versions",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-018",
+   "category": "preprint_versions",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-019",
+   "category": "ambiguous_no_link",
+   "adversarial": false,
+   "expected_outcome": "possible_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "possible_match",
+    "relation": "preprint_of",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "possible_match",
+    "relation": "published_version_of",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-020",
+   "category": "ambiguous_no_link",
+   "adversarial": false,
+   "expected_outcome": "possible_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "possible_match",
+    "relation": "preprint_of",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "possible_match",
+    "relation": "published_version_of",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-021",
+   "category": "ambiguous_no_link",
+   "adversarial": false,
+   "expected_outcome": "possible_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "possible_match",
+    "relation": "same_work",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "possible_match",
+    "relation": "same_work",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-022",
+   "category": "ambiguous_no_link",
+   "adversarial": false,
+   "expected_outcome": "possible_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "possible_match",
+    "relation": "same_work",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "possible_match",
+    "relation": "same_work",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-023",
+   "category": "preprint_versions",
+   "adversarial": false,
+   "expected_outcome": "auto_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "reversed_order": {
+    "outcome": "auto_match",
+    "relation": null,
+    "merged": true
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": true,
+   "rejection_sticky": true,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-024",
+   "category": "ambiguous_no_link",
+   "adversarial": false,
+   "expected_outcome": "possible_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "possible_match",
+    "relation": "same_work",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "possible_match",
+    "relation": "same_work",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-025",
+   "category": "ambiguous_no_link",
+   "adversarial": false,
+   "expected_outcome": "possible_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "possible_match",
+    "relation": "same_work",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "possible_match",
+    "relation": "same_work",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-026",
+   "category": "ambiguous_no_link",
+   "adversarial": false,
+   "expected_outcome": "possible_match",
+   "expected_relationship": "same_work",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "possible_match",
+    "relation": "same_work",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "possible_match",
+    "relation": "same_work",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-027",
+   "category": "similar_title_different",
+   "adversarial": true,
+   "expected_outcome": "no_match",
+   "expected_relationship": "different",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-028",
+   "category": "similar_title_different",
+   "adversarial": true,
+   "expected_outcome": "no_match",
+   "expected_relationship": "different",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-029",
+   "category": "similar_title_different",
+   "adversarial": true,
+   "expected_outcome": "no_match",
+   "expected_relationship": "different",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-030",
+   "category": "similar_title_different",
+   "adversarial": true,
+   "expected_outcome": "no_match",
+   "expected_relationship": "different",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-031",
+   "category": "similar_title_different",
+   "adversarial": true,
+   "expected_outcome": "no_match",
+   "expected_relationship": "different",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-032",
+   "category": "similar_title_different",
+   "adversarial": true,
+   "expected_outcome": "no_match",
+   "expected_relationship": "different",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-033",
+   "category": "similar_title_different",
+   "adversarial": true,
+   "expected_outcome": "no_match",
+   "expected_relationship": "different",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-034",
+   "category": "similar_title_different",
+   "adversarial": true,
+   "expected_outcome": "no_match",
+   "expected_relationship": "related_not_same",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-035",
+   "category": "part_series",
+   "adversarial": true,
+   "expected_outcome": "no_match",
+   "expected_relationship": "different",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-036",
+   "category": "part_series",
+   "adversarial": true,
+   "expected_outcome": "no_match",
+   "expected_relationship": "different",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-037",
+   "category": "comment_reply",
+   "adversarial": true,
+   "expected_outcome": "related_not_same",
+   "expected_relationship": "related_not_same",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "related_not_same",
+    "relation": "comment_or_reply_of",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "related_not_same",
+    "relation": "comment_or_reply_of",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-038",
+   "category": "comment_reply",
+   "adversarial": true,
+   "expected_outcome": "related_not_same",
+   "expected_relationship": "related_not_same",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "related_not_same",
+    "relation": "comment_or_reply_of",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "related_not_same",
+    "relation": "comment_or_reply_of",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-039",
+   "category": "comment_reply",
+   "adversarial": true,
+   "expected_outcome": "related_not_same",
+   "expected_relationship": "related_not_same",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "related_not_same",
+    "relation": "comment_or_reply_of",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "related_not_same",
+    "relation": "comment_or_reply_of",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-040",
+   "category": "comment_reply",
+   "adversarial": true,
+   "expected_outcome": "related_not_same",
+   "expected_relationship": "related_not_same",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "related_not_same",
+    "relation": "comment_or_reply_of",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "related_not_same",
+    "relation": "comment_or_reply_of",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-041",
+   "category": "comment_reply",
+   "adversarial": true,
+   "expected_outcome": "related_not_same",
+   "expected_relationship": "related_not_same",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "related_not_same",
+    "relation": "comment_or_reply_of",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "related_not_same",
+    "relation": "comment_or_reply_of",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-042",
+   "category": "comment_reply",
+   "adversarial": true,
+   "expected_outcome": "no_match",
+   "expected_relationship": "related_not_same",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-043",
+   "category": "correction_notice",
+   "adversarial": true,
+   "expected_outcome": "related_not_same",
+   "expected_relationship": "related_not_same",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "related_not_same",
+    "relation": "erratum_of",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "related_not_same",
+    "relation": "erratum_of",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-044",
+   "category": "correction_notice",
+   "adversarial": true,
+   "expected_outcome": "related_not_same",
+   "expected_relationship": "related_not_same",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "related_not_same",
+    "relation": "erratum_of",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "related_not_same",
+    "relation": "erratum_of",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-045",
+   "category": "correction_notice",
+   "adversarial": true,
+   "expected_outcome": "related_not_same",
+   "expected_relationship": "related_not_same",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "related_not_same",
+    "relation": "erratum_of",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "related_not_same",
+    "relation": "erratum_of",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-046",
+   "category": "correction_notice",
+   "adversarial": true,
+   "expected_outcome": "related_not_same",
+   "expected_relationship": "related_not_same",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "related_not_same",
+    "relation": "erratum_of",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "related_not_same",
+    "relation": "erratum_of",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-047",
+   "category": "correction_notice",
+   "adversarial": true,
+   "expected_outcome": "related_not_same",
+   "expected_relationship": "related_not_same",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "related_not_same",
+    "relation": "erratum_of",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "related_not_same",
+    "relation": "erratum_of",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-048",
+   "category": "correction_notice",
+   "adversarial": true,
+   "expected_outcome": "related_not_same",
+   "expected_relationship": "related_not_same",
+   "decisive_evidence": true,
+   "observed": {
+    "outcome": "related_not_same",
+    "relation": "erratum_of",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "related_not_same",
+    "relation": "erratum_of",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-049",
+   "category": "correction_notice",
+   "adversarial": true,
+   "expected_outcome": "no_match",
+   "expected_relationship": "related_not_same",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-050",
+   "category": "correction_notice",
+   "adversarial": true,
+   "expected_outcome": "no_match",
+   "expected_relationship": "related_not_same",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "no_match",
+    "relation": "unrelated",
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-051",
+   "category": "related_extends",
+   "adversarial": false,
+   "expected_outcome": "no_match",
+   "expected_relationship": "related_not_same",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "no_match",
+    "relation": null,
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "no_match",
+    "relation": null,
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  },
+  {
+   "case_id": "GM-B0-052",
+   "category": "related_extends",
+   "adversarial": false,
+   "expected_outcome": "no_match",
+   "expected_relationship": "related_not_same",
+   "decisive_evidence": false,
+   "observed": {
+    "outcome": "no_match",
+    "relation": null,
+    "merged": false
+   },
+   "reversed_order": {
+    "outcome": "no_match",
+    "relation": null,
+    "merged": false
+   },
+   "order_dependent": false,
+   "correct": true,
+   "reversible": null,
+   "rejection_sticky": null,
+   "error": null,
+   "aggregators_answered": [],
+   "aggregators_unrecorded": [
+    "api.openalex.org",
+    "api.semanticscholar.org"
+   ]
+  }
+ ]
+}
