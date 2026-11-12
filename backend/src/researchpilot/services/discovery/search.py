@@ -176,6 +176,7 @@ async def execute_searches(
     run_id: uuid.UUID,
     plan: DiscoveryPlan,
     checkpoint: Callable[[str, str], Awaitable[None]],
+    ensure_not_cancelled: Callable[[], Awaitable[None]],
 ) -> None:
     """Sends every query that has not succeeded yet. One source failing never stops the
     others; each result is committed as soon as it is in (so a crash loses nothing)."""
@@ -183,6 +184,7 @@ async def execute_searches(
         pending = await queries_to_run(session, run_id)
     failures: dict[SourceName, int] = {}
     for row in pending:
+        await ensure_not_cancelled()  # before every search: a cancelled run sends nothing more
         if failures.get(row.source, 0) >= SOURCE_FAILURE_LIMIT:
             await _finish_query(
                 sessions,

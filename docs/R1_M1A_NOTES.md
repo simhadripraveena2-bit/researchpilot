@@ -289,8 +289,13 @@ POST /projects/{id}/discovery-runs  (objective version recorded on the run)
 * **Durability and idempotency:** plan, search log and hit outcomes are committed as they
   happen; LangGraph checkpoints after each node. After a crash the run resumes at its node
   and skips what is recorded (tested by crashing mid-resolve); a retry (`POST /runs/{id}/retry`)
-  re-sends only failed or skipped searches and re-reads only failed hits. Cancellation is
-  checked between searches and hits.
+  re-sends only failed or skipped searches and re-reads only failed hits.
+* **Cancellation:** `WorkflowDeps.ensure_not_cancelled` is checked before every search, before
+  the arXiv prefetch and before every hit, outside the hit transactions; the `relate` and
+  `summary` steps check it on entry. A cancelled run keeps every committed outcome, leaves the
+  remaining hits `pending` (never marked failed or excluded because of the cancel), writes no
+  citations and no summary, and stays `cancelled` (the retry endpoint refuses it with 409).
+  Tested by cancelling between searches, before the prefetch and after two works were added.
 * **Recorded end-to-end fixtures:** `scripts/record_discovery_fixtures.py` ran the workflow
   for `tests/fixtures/discovery.py` against the real APIs on 2026-11-12 and saved every
   response (arXiv and Crossref answered everything; Semantic Scholar answered one query and

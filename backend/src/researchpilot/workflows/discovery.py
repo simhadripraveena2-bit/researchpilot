@@ -134,7 +134,14 @@ def build(deps: WorkflowDeps) -> StateGraph[DiscoveryState]:
         async with session_scope(deps.sessions) as session:
             the_plan = await load_plan(session, deps.run_id)
         assert the_plan is not None
-        await search.execute_searches(deps.sessions, sources, deps.run_id, the_plan, progress)
+        await search.execute_searches(
+            deps.sessions,
+            sources,
+            deps.run_id,
+            the_plan,
+            progress,
+            deps.ensure_not_cancelled,
+        )
         return {}
 
     async def resolve_results(state: DiscoveryState) -> DiscoveryState:
@@ -152,6 +159,7 @@ def build(deps: WorkflowDeps) -> StateGraph[DiscoveryState]:
             row.objective_version,
             the_plan,
             progress,
+            deps.ensure_not_cancelled,
         )
         return {}
 

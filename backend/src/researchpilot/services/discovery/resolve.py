@@ -290,12 +290,20 @@ async def resolve_hits(
     objective_version: int,
     plan: DiscoveryPlan,
     progress: Callable[[str, str], Awaitable[None]],
+    ensure_not_cancelled: Callable[[], Awaitable[None]],
 ) -> None:
+    """``ensure_not_cancelled`` (the workflow's ``WorkflowDeps.ensure_not_cancelled``) raises
+    ``RunCancelled`` once the run is cancelled. It is checked before the arXiv prefetch and
+    before every hit, outside any hit's transaction: hits already decided stay committed,
+    the rest stay ``pending`` (resumable), and nothing more is fetched, ingested, matched or
+    added to the project."""
     async with session_scope(sessions) as session:
         hits = await pending_hits(session, run_id)
         seen, works = await _seen(session, run_id)
+    await ensure_not_cancelled()
     prefetched = await _prefetch_arxiv(sessions, sources, hits)
     for n, hit in enumerate(hits, start=1):
+        await ensure_not_cancelled()
         if n % 10 == 1:
             await progress(
                 "resolve.progress", f"Checking results {n}-{min(n + 9, len(hits))} of {len(hits)}"

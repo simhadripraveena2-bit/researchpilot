@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import uuid
+from collections import Counter
 from datetime import UTC, datetime
 from typing import Any
 
@@ -26,6 +27,7 @@ from researchpilot.relations.ids import relation_uid
 from researchpilot.services.discovery import relate, resolve
 from researchpilot.services.discovery import summary as summary_mod
 from researchpilot.worker.main import build_worker
+from researchpilot.workflows.base import WorkflowDeps
 from tests.fixtures.discovery import OBJECTIVE, RUN_CONFIG
 from tests.fixtures.source_transport import SOURCES, FixtureTransport
 from tests.integration.conftest import API, TEST_S2_KEY, create_project
@@ -591,3 +593,192 @@ async def test_possible_matches_are_reported_and_never_merged(
             (ids,),
         ).fetchone()
     assert merged == (0,)
+
+
+# --- cancellation inside the workflow --------------------------------------------------------
+
+
+async def cancel_run(settings: Settings, run_id: str) -> None:
+    """Cancel through the normal run lifecycle (as POST /runs/{id}/cancel does)."""
+    from researchpilot.runs import service as runs
+
+    engine = make_engine(settings.database_url)
+    try:
+        async with session_scope(make_sessionmaker(engine)) as session:
+            await runs.cancel(session, uuid.UUID(run_id))
+    finally:
+        await engine.dispose()
+
+
+def decided_and_pending(conn: psycopg.Connection, run_id: str) -> tuple[list[Any], list[Any]]:
+    rows = conn.execute(
+        "SELECT r.outcome, r.item_id, r.outcome_detail, r.decided_at FROM search_results r "
+        "JOIN search_queries q ON q.id = r.query_id WHERE q.run_id = %s",
+        (run_id,),
+    ).fetchall()
+    return [r for r in rows if r[0] != "pending"], [r for r in rows if r[0] == "pending"]
+
+
+def assert_stopped_before_linking_and_summary(conn: psycopg.Connection, run_id: str) -> None:
+    status, manifest = conn.execute(
+        "SELECT status, manifest FROM research_runs WHERE id = %s", (run_id,)
+    ).fetchone()
+    assert status == "cancelled"
+    discovery = manifest.get("discovery", {})
+    assert "citations" not in discovery and "summary" not in discovery
+    messages = [
+        m for (m,) in conn.execute("SELECT message FROM run_events WHERE run_id = %s", (run_id,))
+    ]
+    assert not any(m.startswith("Found ") for m in messages)  # the summary step never ran
+    assert conn.execute(
+        "SELECT count(*) FROM jobs WHERE payload ->> 'run_id' = %s AND status IN "
+        "('queued', 'running')",
+        (run_id,),
+    ).fetchone() == (0,)
+
+
+async def test_cancelling_during_resolution_stops_before_the_next_hit(
+    authenticated_client: httpx.AsyncClient,
+    keyed: Settings,
+    sources_transport: FixtureTransport,
+    migrated_db: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = authenticated_client
+    project_id = await project_with_objective(client)
+    run_id = await start(client, project_id)
+    log: list[str] = []
+    real_add, real_ingest, real_match = (
+        resolve.relation_writer.add_to_project,
+        resolve._ingest,
+        resolve.match_work,
+    )
+    at_cancel: dict[str, int] = {}
+
+    async def add(*args: Any, **kwargs: Any) -> bool:
+        added = await real_add(*args, **kwargs)
+        log.append("add")
+        return added
+
+    # The user cancels right after the second work entered the project. The cancel commits
+    # between hits (as POST /runs/{id}/cancel would; doing it inside the hit's open
+    # transaction would only deadlock the test), and the real check then observes it.
+    real_check = WorkflowDeps.ensure_not_cancelled
+
+    async def check(self: WorkflowDeps) -> None:
+        if log.count("add") == 2 and "cancelled" not in log:
+            await cancel_run(keyed, run_id)
+            log.append("cancelled")
+            at_cancel["requests"] = len(sources_transport.requests)
+        await real_check(self)
+
+    async def ingest(*args: Any, **kwargs: Any) -> Any:
+        log.append("ingest")
+        return await real_ingest(*args, **kwargs)
+
+    async def match(*args: Any, **kwargs: Any) -> Any:
+        log.append("match")
+        return await real_match(*args, **kwargs)
+
+    monkeypatch.setattr(resolve.relation_writer, "add_to_project", add)
+    monkeypatch.setattr(WorkflowDeps, "ensure_not_cancelled", check)
+    monkeypatch.setattr(resolve, "_ingest", ingest)
+    monkeypatch.setattr(resolve, "match_work", match)
+    await drain(keyed, sources_transport)
+
+    # The hit being written when the cancel arrived finished; nothing after it started.
+    assert log[-1] == "cancelled" and log.count("add") == 2
+    assert log.count("ingest") == 2 and log.count("match") == 2
+    assert len(sources_transport.requests) == at_cancel["requests"]
+    with psycopg.connect(migrated_db) as conn:
+        assert conn.execute(
+            "SELECT count(*) FROM project_items WHERE project_id = %s", (project_id,)
+        ).fetchone() == (2,)
+        decided, pending = decided_and_pending(conn, run_id)
+        # Committed outcomes stay; the rest are untouched and resumable.
+        assert sum(1 for d in decided if d[0] == "added") == 2
+        assert all(d[3] is not None for d in decided)
+        assert not any(d[0] in ("failed", "excluded", "not_processed") for d in decided)
+        assert pending and all(p[1:] == (None, None, None) for p in pending)
+        assert_stopped_before_linking_and_summary(conn, run_id)
+    # A cancelled run is final: the retry endpoint refuses it.
+    resp = await client.post(f"{API}/runs/{run_id}/retry")
+    assert resp.status_code == 409
+    await drain(keyed, sources_transport)
+    assert (await get(client, f"/runs/{run_id}"))["status"] == "cancelled"
+
+
+async def test_cancelling_before_the_arxiv_prefetch_fetches_nothing(
+    authenticated_client: httpx.AsyncClient,
+    keyed: Settings,
+    sources_transport: FixtureTransport,
+    migrated_db: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    client = authenticated_client
+    project_id = await project_with_objective(client)
+    run_id = await start(client, project_id)
+    real_pending = resolve.pending_hits
+    prefetch_calls: list[int] = []
+
+    async def pending_then_cancel(*args: Any, **kwargs: Any) -> Any:
+        hits = await real_pending(*args, **kwargs)
+        await cancel_run(keyed, run_id)  # cancelled after loading hits, before the prefetch
+        return hits
+
+    async def spy_prefetch(*args: Any, **kwargs: Any) -> Any:
+        prefetch_calls.append(1)
+        return {}
+
+    monkeypatch.setattr(resolve, "pending_hits", pending_then_cancel)
+    monkeypatch.setattr(resolve, "_prefetch_arxiv", spy_prefetch)
+    await drain(keyed, sources_transport)
+    assert prefetch_calls == []
+    assert not [r for r in sources_transport.requests if "id_list" in r.url.params]
+    with psycopg.connect(migrated_db) as conn:
+        decided, pending = decided_and_pending(conn, run_id)
+        assert decided == [] and pending
+        assert conn.execute(
+            "SELECT count(*) FROM project_items WHERE project_id = %s", (project_id,)
+        ).fetchone() == (0,)
+        assert_stopped_before_linking_and_summary(conn, run_id)
+
+
+async def test_cancelling_between_searches_sends_no_further_query(
+    authenticated_client: httpx.AsyncClient,
+    keyed: Settings,
+    sources_transport: FixtureTransport,
+    migrated_db: str,
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    from researchpilot.services.discovery import search as search_mod
+
+    client = authenticated_client
+    project_id = await project_with_objective(client)
+    run_id = await start(client, project_id)
+    real_query = search_mod.run_source_query
+    sent: list[str] = []
+
+    async def query_then_cancel(sources: Any, source: Any, text: str, limit: int) -> Any:
+        sent.append(source.value)
+        outcome = await real_query(sources, source, text, limit)
+        if len(sent) == 2:
+            await cancel_run(keyed, run_id)
+        return outcome
+
+    monkeypatch.setattr(search_mod, "run_source_query", query_then_cancel)
+    await drain(keyed, sources_transport)
+    assert sent == ["arxiv_api", "crossref"]  # Q1 at arXiv and Crossref, then nothing more
+    assert len(sources_transport.requests) == 2
+    with psycopg.connect(migrated_db) as conn:
+        statuses_now = Counter(
+            s
+            for (s,) in conn.execute(
+                "SELECT status FROM search_queries WHERE run_id = %s", (run_id,)
+            )
+        )
+        # The two finished searches are kept; the others stay pending (not failed/skipped).
+        assert statuses_now == {"succeeded": 2, "pending": 14}
+        decided, _ = decided_and_pending(conn, run_id)
+        assert decided == []
+        assert_stopped_before_linking_and_summary(conn, run_id)
