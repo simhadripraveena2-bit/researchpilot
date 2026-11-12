@@ -28,6 +28,7 @@ from researchpilot.domain.enums import (
     ManifestationKind,
     MetadataLevel,
     PeerReviewLabel,
+    PublicationType,
     ReadingStatus,
     ReportingSource,
     SourceName,
@@ -145,6 +146,11 @@ class PaperManifestation(Base):
     primary_identifier_value: Mapped[str] = mapped_column(sa.Text, nullable=False)
     peer_review_label: Mapped[PeerReviewLabel] = mapped_column(
         enum_type(PeerReviewLabel, "peer_review_label"), nullable=False
+    )
+    publication_type: Mapped[PublicationType] = mapped_column(
+        enum_type(PublicationType, "publication_type"),
+        nullable=False,
+        server_default=PublicationType.OTHER.value,
     )
     url: Mapped[str | None] = mapped_column(sa.Text)
     license: Mapped[str | None] = mapped_column(sa.Text)

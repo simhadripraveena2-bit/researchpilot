@@ -24,6 +24,7 @@ from researchpilot.domain.enums import (
     DatePrecision,
     ManifestationKind,
     PeerReviewLabel,
+    PublicationType,
     ReportingSource,
     SourceName,
     UpstreamSource,
@@ -58,6 +59,47 @@ FIELD_EVENTS: dict[str, DateEvent] = {
 }
 
 
+# Crossref ``type`` -> publication type (notices are detected from ``update-to`` instead).
+CROSSREF_TYPES = {
+    "journal-article": PublicationType.JOURNAL_ARTICLE,
+    "proceedings-article": PublicationType.CONFERENCE_PAPER,
+    "posted-content": PublicationType.PREPRINT,
+    "book-chapter": PublicationType.BOOK_CHAPTER,
+    "book": PublicationType.BOOK,
+    "monograph": PublicationType.BOOK,
+    "dissertation": PublicationType.DISSERTATION,
+    "report": PublicationType.REPORT,
+    "dataset": PublicationType.DATASET,
+}
+NOTICE_KINDS = {
+    "correction": PublicationType.CORRECTION,
+    "erratum": PublicationType.CORRECTION,
+    "corrigendum": PublicationType.CORRECTION,
+    "retraction": PublicationType.RETRACTION,
+    "withdrawal": PublicationType.RETRACTION,
+    "removal": PublicationType.RETRACTION,
+    "expression_of_concern": PublicationType.EXPRESSION_OF_CONCERN,
+}
+# Links between a notice and the work it is about (Version Matcher: related, not same).
+NOTICE_LINKS = {
+    PublicationType.CORRECTION: ("is-correction-of", "has-correction"),
+    PublicationType.RETRACTION: ("is-retraction-of", "has-retraction"),
+    PublicationType.EXPRESSION_OF_CONCERN: (
+        "is-expression-of-concern-for",
+        "has-expression-of-concern",
+    ),
+}
+
+
+def publication_type(work: CrossrefWork) -> PublicationType:
+    for update in work.updates:
+        if update.type in NOTICE_KINDS:
+            return NOTICE_KINDS[update.type]
+    if work.is_preprint:
+        return PublicationType.PREPRINT
+    return CROSSREF_TYPES.get(work.type, PublicationType.OTHER)
+
+
 def classify(work: CrossrefWork) -> tuple[ManifestationKind, str, PeerReviewLabel]:
     if work.is_preprint:
         server = (work.institution or work.publisher or "preprint server").strip()
@@ -71,6 +113,27 @@ def classify(work: CrossrefWork) -> tuple[ManifestationKind, str, PeerReviewLabe
     if work.type in PUBLISHED_TYPES:
         return ManifestationKind.PUBLISHED, venue, PeerReviewLabel.JOURNAL_VERSION
     return ManifestationKind.OTHER, venue, PeerReviewLabel.UNKNOWN
+
+
+def notice_links(work: CrossrefWork) -> list[tuple[str, str, dict[str, object]]]:
+    """(link type, target DOI, evidence) for update-to and updated-by entries."""
+    out: list[tuple[str, str, dict[str, object]]] = []
+    for field, entries, side in (
+        ("update-to", work.updates, 0),
+        ("updated-by", work.updated_by, 1),
+    ):
+        for u in entries:
+            kind = NOTICE_KINDS.get(u.type)
+            if kind is None:
+                continue
+            out.append(
+                (
+                    NOTICE_LINKS[kind][side],
+                    u.doi,
+                    {"field": field, "type": u.type, "source": u.source},
+                )
+            )
+    return out
 
 
 async def ingest_crossref(session: AsyncSession, fetched: FetchedWork) -> IngestResult:
@@ -96,6 +159,7 @@ async def ingest_crossref(session: AsyncSession, fetched: FetchedWork) -> Ingest
             scheme=IdentifierScheme.DOI,
             value=work.doi,
             label=label,
+            publication_type=publication_type(work),
             url=work.url,
             is_open_access=None,
             record_id=record_id,
@@ -164,6 +228,10 @@ async def ingest_crossref(session: AsyncSession, fetched: FetchedWork) -> Ingest
         for rel in work.relations
         if (found := target(rel.id_type, rel.id)) is not None
         and found != (IdentifierScheme.DOI, work.doi)
+    ]
+    stated += [
+        StatedLink(link_type, IdentifierScheme.DOI, doi, evidence)
+        for link_type, doi, evidence in notice_links(work)
     ]
     await record_links(session, paper_id, manifestation_id, SourceName.CROSSREF, stated, record_id)
     await resolve_paper_dates(session, paper_id, retrieved_at)

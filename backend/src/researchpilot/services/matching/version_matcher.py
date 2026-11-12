@@ -48,6 +48,11 @@ RELATED_LINKS = {
     "has-comment": MatchRelation.COMMENT_OR_REPLY_OF,
     "is-correction-of": MatchRelation.ERRATUM_OF,
     "has-correction": MatchRelation.ERRATUM_OF,
+    # Crossref update-to / updated-by notices (stored with these link types)
+    "is-retraction-of": MatchRelation.ERRATUM_OF,
+    "has-retraction": MatchRelation.ERRATUM_OF,
+    "is-expression-of-concern-for": MatchRelation.ERRATUM_OF,
+    "has-expression-of-concern": MatchRelation.ERRATUM_OF,
 }
 LINK_STRENGTH = {
     **dict.fromkeys(DECISIVE_LINKS, "decisive"),

@@ -301,6 +301,26 @@ of a release date.
 | Revised version of an older paper | A version event (v2+) in the window, first public appearance before the window |
 | Older paper newly indexed | First public appearance before the window, `index_created` in the window (OpenAlex premium capability, or our first-seen date, labelled) |
 | Date uncertain | The event that would place the paper in a window tab has confidence `source_agreement`, `single_source`, `conflicting` or `uncertain` |
+| Correction notice | Every manifestation of the work is a notice about another work (correction, retraction, expression of concern; Crossref `update-to`) and one of its public events is in the window. Never research of its own; linked to the original as "related, not same" |
+
+**Publication types** are explicit per manifestation (`paper_manifestations.publication_type`):
+preprint, journal article, conference paper, book chapter, book, dissertation, report,
+dataset, correction, retraction, expression of concern, other. Notices are recognised from
+Crossref `update-to` / `updated-by` (Crossref types them as ordinary `journal-article`s).
+
+**Classifier rules in detail** (implemented in `services/dates/release_types.py`; pure, computed
+from stored events on read):
+- *New publication* also requires that no other preprint manifestation is known. A journal
+  event in the window for a work with an earlier preprint whose public date is not confirmed
+  (e.g. only an arXiv submission, or a preprint posting known only from Crossref) is *Date
+  uncertain*, not new research.
+- With an unconfirmed first public appearance nothing is promoted: a revision (v2+) or an index
+  event in the window counts as *Revised version* / *Older paper newly indexed* only when a
+  primary event shows the paper existed before the window (a month/year value counts if its
+  whole period is before the window); anything else in the window is *Date uncertain*.
+- An issue publication in the window of an article first public online before it is not a
+  release.
+- Acceptance and metadata dates never place a paper; index events never make a paper new.
 
 Rules that always apply:
 - Metadata dates never make a paper new.
@@ -569,6 +589,7 @@ Rules:
 
 | Method | Path | Purpose |
 |---|---|---|
+| GET | `/projects/{id}/releases` | release type of each project paper for a window: `days` (default rolling 7 d) or `from`/`to` (UTC dates, inclusive, or offset timestamps, `[from, to)`), `release_type`, `tz` (display only); returns the window in UTC and local time, counts by type, new-research count, and per entry the placing event (with local display), `boundary_day`, confidence, basis, first public appearance, publication type and peer-review label (M1a; computed on read, no scan) |
 | GET | `/projects/{id}/latest` | entries for a window: `from`, `to` (default rolling 7 d, UTC), `release_type`, `subtopic`, `method`, `source`, `tier`, `action`, `oa`, `status`; includes coverage, the last scan and the display time zone |
 | POST | `/projects/{id}/latest/scans` | start a scan for a window → `202 {run_id, scan_id}` |
 | GET | `/latest/scans/{scan_id}` | scan status, coverage, failures, counts by release type |

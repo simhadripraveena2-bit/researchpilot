@@ -16,6 +16,10 @@ Verified behaviour (2026-11-11; see docs/integrations/CROSSREF.md):
   ``accepted`` field tracks the latest preprint version - it is **not** a journal
   acceptance and is not recorded as one.
 * Titles and abstracts may contain JATS/HTML markup (``<i>de novo</i>``).
+* Notices are typed like ordinary articles (``journal-article``); only ``update-to``
+  (on the notice: ``[{DOI, type: correction|retraction|..., source, updated}]``) and
+  ``updated-by`` (on the original) identify them (verified on a correction and a retraction,
+  2026-11-12).
 * Search uses deep-paging cursors: ``cursor=*`` then ``next-cursor``; ``rows`` <= 1000.
 """
 
@@ -88,6 +92,17 @@ class CrossrefRelation:
 
 
 @dataclass(frozen=True)
+class CrossrefUpdate:
+    """A Crossref ``update-to`` / ``updated-by`` entry: a notice (correction, retraction,
+    expression of concern...) and the work it is about."""
+
+    doi: str
+    type: str
+    source: str | None
+    date: PartialDate | None
+
+
+@dataclass(frozen=True)
 class CrossrefWork:
     doi: str
     type: str
@@ -99,6 +114,8 @@ class CrossrefWork:
     authors: tuple[CrossrefAuthor, ...]
     dates: Mapping[str, PartialDate]
     relations: tuple[CrossrefRelation, ...]
+    updates: tuple[CrossrefUpdate, ...]  # update-to: this record is a notice about these
+    updated_by: tuple[CrossrefUpdate, ...]  # updated-by: notices about this record
     abstract: str | None
     url: str | None
     license_url: str | None
@@ -276,6 +293,24 @@ def parse_work(message: Mapping[str, Any]) -> CrossrefWork:
         (i.get("name") for i in message.get("institution", []) or [] if i.get("name")), None
     )
     licenses = message.get("license") or []
+
+    def updates(field: str) -> tuple[CrossrefUpdate, ...]:
+        out: list[CrossrefUpdate] = []
+        for u in message.get(field) or []:
+            try:
+                doi = normalize_doi(str(u.get("DOI", "")))
+            except InvalidIdentifier:
+                continue
+            out.append(
+                CrossrefUpdate(
+                    doi,
+                    str(u.get("type", "")).lower(),
+                    u.get("source"),
+                    parse_date(u.get("updated")),
+                )
+            )
+        return tuple(out)
+
     return CrossrefWork(
         doi=normalize_doi(message["DOI"]),
         type=str(message.get("type", "")),
@@ -287,6 +322,8 @@ def parse_work(message: Mapping[str, Any]) -> CrossrefWork:
         authors=tuple(authors),
         dates=dates,
         relations=tuple(relations),
+        updates=updates("update-to"),
+        updated_by=updates("updated-by"),
         abstract=clean_markup(message.get("abstract")),
         url=message.get("URL"),
         license_url=licenses[0].get("URL") if licenses else None,

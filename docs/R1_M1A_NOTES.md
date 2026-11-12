@@ -128,6 +128,26 @@ category and logs nothing.
 | Real authenticated recordings replace the constructed fixture | `tests/fixtures/sources/semantic_scholar/` | ResNet arXiv ↔ CVPR merge test |
 | Attribution requirements and website placement | [ATTRIBUTION.md](ATTRIBUTION.md) | — |
 
+## Release types and date windows (task 4a)
+
+What already existed and was reused: per-manifestation date events with provenance, the
+Date Resolver (confidence, first public appearance, `submission_only`), announcement capture,
+the Version Matcher, `users.timezone`. What was missing and is now built:
+
+| Part | Where | Tests |
+|---|---|---|
+| Explicit publication type per manifestation (preprint, journal article, conference paper, …, correction, retraction, expression of concern); migration `0007` with backfill; notices detected from Crossref `update-to`/`updated-by`, linked to originals as related-not-same | `domain/enums.py`, `services/papers/ingest*.py`, `integrations/crossref.py`, migration `0007` | `test_releases.py` (real correction + retraction) |
+| Windows: rolling 7 days `[now − 168 h, now)`, custom ranges as UTC days or offset instants, ≤ 366 days; date-only = UTC day with `boundary_day`; month/year never in windows ≤ 31 days | `domain/windows.py` | `tests/unit/test_windows.py` (R1-48 boundaries; property: zone never changes membership) |
+| Local display: IANA zones with DST, abbreviations, date-only values never shifted; `tzdata` dependency so slim images have the zone database | `domain/windows.py` | DST transitions Europe (2026-10-25) and North America (2026-03-08, 2026-11-01), UTC+5:30, UTC+14 |
+| Release-type classifier (new preprint, new publication, published version of an earlier preprint, revised version, correction notice, older paper newly indexed, date uncertain) | `services/dates/release_types.py`, `services/dates/releases.py` | `tests/unit/test_release_types.py` (30 cases incl. properties: later journal dates never make an announced preprint new; unconfirmed dates never promoted) |
+| API: `GET /projects/{id}/releases` (window, counts, entries with local display), `GET/PUT /me/preferences` (display time zone), `?tz=` on paper detail | `api/routers/releases.py`, `api/routers/papers.py` | `tests/integration/test_releases.py` (14 cases on real records) |
+
+Real cases: arXiv `2611.13190` → new preprint (announced 2026-11-11); `2604.22997` v2 →
+revised version; bioRxiv → eLife: new preprint in Oct 2022, revised version in Mar 2023,
+published version of an earlier preprint in Jun 2024 (never new research); Crossref correction
+and retraction notices → correction notice; CVPR 2016 first seen now → older paper newly
+indexed.
+
 ## Decisions and deviations
 
 | # | Topic | What was done | Why |
@@ -166,6 +186,12 @@ category and logs nothing.
 | 31 | `new` with a version > 1 | `preprint_announced` (version recorded in the evidence) | The first announcement of a paper replaced before it was announced |
 | 32 | Capture schedule | Once per UTC day after 06:00 UTC via the job queue (`jobs.dedupe_key`), not a separate scheduler | The feed is rebuilt ~05:00 UTC and keeps no history; no new infrastructure (§4.8.5) |
 | 33 | Categories | Configured list plus primary categories of projects' arXiv works | Objective-based category mapping arrives with M1c |
+| 36 | Correction notice | New release type `correction_notice` (and publication types correction/retraction/expression of concern) | Requested; notices are never research and must not appear as new publications |
+| 37 | Release types computed on read | `GET /projects/{id}/releases` classifies from stored events each time; no new table | Classification depends only on stored events and the window; snapshots and "Reclassified" badges belong to Latest Research scans (M1c, `latest_scan_entries`) |
+| 38 | Custom ranges | UTC calendar days or offset timestamps; the user's zone is display-only | EVALUATION §3.8 / R1-47: results must be identical whatever the zone |
+| 39 | New publication with a known earlier preprint | *Date uncertain*, not *New publication* | §4.8.4 requires that no earlier manifestation is known; covers the approved Nov 8 / Nov 15 case |
+| 40 | Unconfirmed first date | Revision / newly indexed only with primary evidence of existence before the window; otherwise *Date uncertain* | Nothing unconfirmed is promoted; a v2 still proves an older v1 when v1 is primary-dated |
+| 41 | `/me/preferences` | Display time zone (IANA, validated); allow-listed in the route inventory as user-level | ARCHITECTURE §4.11 contract |
 | 12 | Network access | A personal `researchpilot` cloud environment allows only the six source hosts | Required to verify source behaviour; CI uses recorded responses only |
 
 ## Corrections after review of 7f447bc
@@ -201,8 +227,14 @@ Both regression suites fail on 7f447bc and pass after the fix.
   capture runs (feeds keep no history).
 * The no-identifier auto-match needs abstract embeddings (M1b); such pairs are possible matches.
 * Announcement capture categories come from settings and projects' arXiv works until M1c.
-* Release types, window logic, `boundary_day` flags and time-zone display (D23) are not built
-  yet; they belong to M1a task 4a's remaining part and M1c.
+* Release types are computed on read; there are no snapshots, so a reclassification is not
+  flagged as such until Latest Research scans (M1c) store entries.
+* "No earlier preprint found in" lists the sources whose records the work has; it does not run a
+  new search for an earlier preprint (scans in M1c do).
+* Corrections are recognised from Crossref `update-to`; notices without it (e.g. some
+  publishers, other registries) are classified by their type only.
+* The frontend has no `LocalTime` component or Latest Research page yet (M1c); the API already
+  returns the local display strings.
 * Not started (outside this round): research objective + Planner (task 5), discovery workflow
   W1 with search log (task 6), graph-compatible relationship tables (task 6a), G-MATCH and
   G-LATEST-DATES benchmark sets (D19 evaluation roles).

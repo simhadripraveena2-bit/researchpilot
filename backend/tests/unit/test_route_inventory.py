@@ -16,6 +16,9 @@ NOT_PROJECT_SCOPED = {
     ("POST", "/api/v1/projects"),
     ("GET", "/api/v1/projects"),
     ("GET", "/api/v1/dashboard"),
+    # The caller's own preferences (display time zone); they touch only the user's own row.
+    ("GET", "/api/v1/me/preferences"),
+    ("PUT", "/api/v1/me/preferences"),
 }
 
 

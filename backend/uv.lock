@@ -1702,6 +1702,7 @@ dependencies = [
     { name = "pyyaml" },
     { name = "sqlalchemy", extra = ["asyncio"] },
     { name = "structlog" },
+    { name = "tzdata" },
     { name = "uvicorn", extra = ["standard"] },
 ]
 
@@ -1732,6 +1733,7 @@ requires-dist = [
     { name = "pyyaml", specifier = ">=6.0" },
     { name = "sqlalchemy", extras = ["asyncio"], specifier = ">=2.0.30" },
     { name = "structlog", specifier = ">=24.4" },
+    { name = "tzdata", specifier = ">=2026.6" },
     { name = "uvicorn", extras = ["standard"], specifier = ">=0.30" },
 ]
 

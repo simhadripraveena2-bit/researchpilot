@@ -5,12 +5,13 @@ from __future__ import annotations
 import uuid
 from datetime import date, datetime
 from decimal import Decimal
-from typing import Any
+from typing import Annotated, Any
 
-from fastapi import APIRouter, Request, Response, status
+from fastapi import APIRouter, Query, Request, Response, status
 from pydantic import BaseModel, Field
 
 from researchpilot.api.deps import ProjectScoped, Session
+from researchpilot.api.routers.releases import LocalTime, local_time, user_timezone
 from researchpilot.core.errors import Forbidden
 from researchpilot.domain.enums import (
     DateConfidence,
@@ -102,6 +103,8 @@ class DateEventOut(BaseModel):
     source_record_id: uuid.UUID | None
     retrieved_at: datetime
     flags: list[str]
+    local: LocalTime | None = None  # with ?tz= (or the user's zone): how the UI shows it
+    retrieved_local: LocalTime | None = None
 
 
 class AuthorOut(BaseModel):
@@ -148,8 +151,14 @@ async def list_papers(scope: ProjectScoped, session: Session) -> list[PaperSumma
 
 
 @router.get("/projects/{project_id}/papers/{paper_id}")
-async def get_paper(paper_id: uuid.UUID, scope: ProjectScoped, session: Session) -> PaperDetail:
+async def get_paper(
+    paper_id: uuid.UUID,
+    scope: ProjectScoped,
+    session: Session,
+    tz: Annotated[str | None, Query(description="IANA zone for display only")] = None,
+) -> PaperDetail:
     detail = await get_project_paper(session, scope.project_id, paper_id)
+    tz_name = tz or await user_timezone(session, scope.user_id)
     p = detail["paper"]
     return PaperDetail(
         id=p["id"],
@@ -168,7 +177,17 @@ async def get_paper(paper_id: uuid.UUID, scope: ProjectScoped, session: Session)
         ),
         manifestations=[Manifestation.model_validate(m) for m in detail["manifestations"]],
         identifiers=[IdentifierOut.model_validate(i) for i in detail["identifiers"]],
-        dates=[DateEventOut.model_validate(d) for d in detail["dates"]],
+        dates=[
+            DateEventOut.model_validate(d).model_copy(
+                update={
+                    "local": local_time(d["value"], DatePrecision(d["precision"]), tz_name),
+                    "retrieved_local": local_time(
+                        d["retrieved_at"], DatePrecision.TIMESTAMP, tz_name
+                    ),
+                }
+            )
+            for d in detail["dates"]
+        ],
         authors=[AuthorOut.model_validate(a) for a in detail["authors"]],
         inclusion=p["inclusion"],
         reading_status=p["reading_status"],

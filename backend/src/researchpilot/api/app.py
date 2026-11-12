@@ -11,7 +11,8 @@ from fastapi.routing import APIRoute
 
 from researchpilot import __version__
 from researchpilot.api.errors import install_error_handlers
-from researchpilot.api.routers import graph, health, papers, projects, runs
+from researchpilot.api.routers import graph, health, papers, projects, releases, runs
+from researchpilot.core.clock import SystemClock
 from researchpilot.core.logging import configure_logging
 from researchpilot.core.security import assert_safe_startup
 from researchpilot.core.settings import Settings, get_settings
@@ -22,7 +23,14 @@ from researchpilot.llm.factory import runtime_llm_config
 from researchpilot.worker.main import libpq_url
 
 API_PREFIX = "/api/v1"
-ROUTERS = (health.router, projects.router, papers.router, runs.router, graph.router)
+ROUTERS = (
+    health.router,
+    projects.router,
+    papers.router,
+    releases.router,
+    runs.router,
+    graph.router,
+)
 
 
 def iter_api_routes() -> list[tuple[str, APIRoute]]:
@@ -51,6 +59,7 @@ def create_app(
         configure_logging(settings.log_level, settings.log_json, settings.secret_values())
         engine = make_engine(settings.database_url)
         app.state.settings = settings
+        app.state.clock = SystemClock()  # replaceable in tests
         app.state.engine = engine
         app.state.sessions = make_sessionmaker(engine)
         app.state.libpq_url = libpq_url(settings.database_url)

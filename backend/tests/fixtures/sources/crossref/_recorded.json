@@ -98,6 +98,28 @@
   "status": 200,
   "url": "https://api.crossref.org/works/10.1063/1.59653"
  },
+ "works_10.1080%2F14767058.2019.1659770.json": {
+  "headers": {
+   "x-api-pool": "public-single",
+   "x-concurrency-limit": "1",
+   "x-rate-limit-interval": "1s",
+   "x-rate-limit-limit": "5"
+  },
+  "recorded": "2026-11-11",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1080/14767058.2019.1659770"
+ },
+ "works_10.1080%2F14767058.2026.2722700.json": {
+  "headers": {
+   "x-api-pool": "public-single",
+   "x-concurrency-limit": "1",
+   "x-rate-limit-interval": "1s",
+   "x-rate-limit-limit": "5"
+  },
+  "recorded": "2026-11-11",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1080/14767058.2026.2722700"
+ },
  "works_10.1101%2F2022.10.22.513336.json": {
   "headers": {
    "x-api-pool": "public-single",
@@ -130,6 +152,28 @@
   "recorded": "2026-11-11",
   "status": 200,
   "url": "https://api.crossref.org/works/10.1109/cvpr.2016.90"
+ },
+ "works_10.1111%2Fpsj.70147.json": {
+  "headers": {
+   "x-api-pool": "public-single",
+   "x-concurrency-limit": "1",
+   "x-rate-limit-interval": "1s",
+   "x-rate-limit-limit": "5"
+  },
+  "recorded": "2026-11-11",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1111/psj.70147"
+ },
+ "works_10.1111%2Fpsj.70162.json": {
+  "headers": {
+   "x-api-pool": "public-single",
+   "x-concurrency-limit": "1",
+   "x-rate-limit-interval": "1s",
+   "x-rate-limit-limit": "5"
+  },
+  "recorded": "2026-11-11",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1111/psj.70162"
  },
  "works_10.1234%2Frp-does-not-exist.json": {
   "headers": {

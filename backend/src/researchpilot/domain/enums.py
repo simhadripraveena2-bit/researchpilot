@@ -343,3 +343,41 @@ class MergeMethod(StrEnum):
     VERSION_RELATION = "version_relation"
     EVIDENCE_RULES = "evidence_rules"
     MANUAL = "manual"
+
+
+class PublicationType(StrEnum):
+    """What a manifestation is (explicit; independent of when it appeared)."""
+
+    PREPRINT = "preprint"
+    JOURNAL_ARTICLE = "journal_article"
+    CONFERENCE_PAPER = "conference_paper"
+    BOOK_CHAPTER = "book_chapter"
+    BOOK = "book"
+    DISSERTATION = "dissertation"
+    REPORT = "report"
+    DATASET = "dataset"
+    # Notices about another work (Crossref ``update-to``); never research of their own.
+    CORRECTION = "correction"
+    RETRACTION = "retraction"
+    EXPRESSION_OF_CONCERN = "expression_of_concern"
+    OTHER = "other"
+
+
+NOTICE_TYPES = frozenset(
+    {PublicationType.CORRECTION, PublicationType.RETRACTION, PublicationType.EXPRESSION_OF_CONCERN}
+)
+
+
+class ReleaseType(StrEnum):
+    """Why a work appears in a date window (ARCHITECTURE §4.8.4)."""
+
+    NEW_PREPRINT = "new_preprint"
+    NEW_PUBLICATION = "new_publication"
+    PUBLISHED_VERSION_OF_PREPRINT = "published_version_of_preprint"
+    REVISED_VERSION = "revised_version"
+    CORRECTION_NOTICE = "correction_notice"
+    NEWLY_INDEXED_OLDER = "newly_indexed_older"
+    DATE_UNCERTAIN = "date_uncertain"
+
+
+NEW_RESEARCH = frozenset({ReleaseType.NEW_PREPRINT, ReleaseType.NEW_PUBLICATION})

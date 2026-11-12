@@ -25,6 +25,7 @@ from researchpilot.domain.enums import (
     DatePrecision,
     ManifestationKind,
     PeerReviewLabel,
+    PublicationType,
     ReportingSource,
     SourceName,
     UpstreamSource,
@@ -71,6 +72,7 @@ async def ingest_arxiv(session: AsyncSession, fetched: FetchedEntry) -> IngestRe
             scheme=IdentifierScheme.ARXIV,
             value=entry.arxiv_id,
             label=PeerReviewLabel.PREPRINT_NOT_PEER_REVIEWED,  # moderated, not peer-reviewed
+            publication_type=PublicationType.PREPRINT,
             url=entry.abs_url,
             is_open_access=True,
             record_id=record_id,
@@ -240,14 +242,15 @@ async def create_manifestation(
     url: str | None,
     is_open_access: bool | None,
     record_id: uuid.UUID,
+    publication_type: PublicationType = PublicationType.OTHER,
 ) -> uuid.UUID:
     manifestation_id = uuid7()
     await session.execute(
         sa.text(
             "INSERT INTO paper_manifestations (id, paper_id, kind, server_or_venue, "
             "primary_identifier_scheme, primary_identifier_value, peer_review_label, url, "
-            "is_open_access, created_from_source_record_id) "
-            "VALUES (:id, :p, :k, :sv, :sc, :v, :l, :u, :oa, :r)"
+            "is_open_access, created_from_source_record_id, publication_type) "
+            "VALUES (:id, :p, :k, :sv, :sc, :v, :l, :u, :oa, :r, :pt)"
         ),
         {
             "id": manifestation_id,
@@ -260,6 +263,7 @@ async def create_manifestation(
             "u": url,
             "oa": is_open_access,
             "r": record_id,
+            "pt": publication_type.value,
         },
     )
     return manifestation_id
