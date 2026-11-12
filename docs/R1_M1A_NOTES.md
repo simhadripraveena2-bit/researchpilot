@@ -5,8 +5,8 @@ OpenAlex / Crossref / bioRxiv / medRxiv clients, paper manifestations, identifie
 records, deduplication and the Version Matcher, date events and the Date Resolver, and arXiv
 announcement capture; then release types and date windows (task 4a) and the research
 objective model and API (task 5, without the Planner) and the graph-compatible relationship
-infrastructure (task 6a). **Not** in this round: the Planner, the discovery workflow W1
-(task 6), and M1b–M1d. PostgreSQL is the only store; no Neo4j.
+infrastructure (task 6a), and the deterministic Planner with discovery workflow W1 (task 6).
+**Not** in this round: M1b–M1d (assessment, Latest Research, learning) and Neo4j. PostgreSQL is the only store; no Neo4j.
 
 ## Dependencies
 
@@ -248,6 +248,54 @@ type; glossary terms are not nodes). New tables: `evidence_spans`, `relation_dec
 * **Reads:** the PostgreSQL `GraphService` now serves 1-hop neighbours with scope
   visibility, assertion policy and project overlays.
 
+## Planner and discovery workflow W1 (task 6)
+
+`services/discovery/` (planner, search, resolve, relate, summary, runs), `workflows/discovery.py`,
+`api/routers/discovery.py`, migration `0010` (search log), page action "Find papers".
+
+```
+POST /projects/{id}/discovery-runs  (objective version recorded on the run)
+  -> prepare : load that objective version -> Planner -> plan in run manifest, search_queries rows
+  -> confirm : ◆ plain-language plan; rejected -> run cancelled, nothing searched
+  -> search  : each (query, source) not yet succeeded -> source client (rate limit, retries,
+               cache, circuit breaker) -> status + hits (search_results -> source_records)
+  -> resolve : each pending hit -> no identifier | excluded | duplicate | beyond limit
+               | ingest from system of record (arXiv / Crossref / bioRxiv / medRxiv;
+                 S2/OpenAlex hits resolved to DOI or arXiv, attached as secondary records)
+               -> decisive version links -> Version Matcher -> Date Resolver
+               -> RelationWriter.add_to_project (run id + run's objective version)
+  -> relate  : CITES among stored works from OpenAlex referenced_works (RelationWriter,
+               global, source_metadata, evidence = the record)
+  -> summary : manifest.discovery.summary; succeeded | partially_succeeded | failed
+```
+
+* **Planner** (deterministic, `rules-1`): core query from the main question; one query per
+  sub-question anchored on the main topic; expansions while the budget lasts (synonyms,
+  tasks/problem areas, concepts, preferred/required methods, datasets/benchmarks). The user's
+  own phrases stay whole (also in plural). arXiv queries use `AND`/`OR` groups and `ANDNOT`
+  for exclusions; other sources get plain text and exclusions are applied to the hits'
+  titles and abstracts. Avoided methods and excluded datasets/benchmarks flag hits instead of
+  dropping them. Compute, time and resource constraints are listed as not applied. The plan
+  records why each source is or is not used (bioRxiv/medRxiv: no topic search). `plan_id` is a
+  hash of the content: the same objective version and options always give the same plan.
+* **Sources:** arXiv (`search_query`, relevance), Crossref (`query`, `sort=relevance`, no
+  cursor - see decision 61), Semantic Scholar (`/paper/search`), OpenAlex (`/works?search=`).
+  A source failing twice in a run is not asked again in that run; an exhausted OpenAlex
+  budget stops OpenAlex at once. Hits are stored as source records first.
+* **Nothing is invented:** a hit without a DOI or arXiv ID is recorded (`no_identifier`) and
+  not ingested; aggregator metadata never becomes a primary date; possible matches are only
+  recorded (shown in the summary for review); CITES only between works we hold, from the
+  source's own reference list.
+* **Durability and idempotency:** plan, search log and hit outcomes are committed as they
+  happen; LangGraph checkpoints after each node. After a crash the run resumes at its node
+  and skips what is recorded (tested by crashing mid-resolve); a retry (`POST /runs/{id}/retry`)
+  re-sends only failed or skipped searches and re-reads only failed hits. Cancellation is
+  checked between searches and hits.
+* **Recorded end-to-end fixtures:** `scripts/record_discovery_fixtures.py` ran the workflow
+  for `tests/fixtures/discovery.py` against the real APIs on 2026-11-12 and saved every
+  response (arXiv and Crossref answered everything; Semantic Scholar answered one query and
+  was rate limited on two; OpenAlex's daily budget was exhausted). CI replays them.
+
 ## Decisions and deviations
 
 | # | Topic | What was done | Why |
@@ -311,6 +359,15 @@ type; glossary terms are not nodes). New tables: `evidence_spans`, `relation_dec
 | 58 | `evidence_spans` | Created now; `document_id` / `section_id` without FKs until documents exist (M1d) | Evidence by assertion needs span verification in the database |
 | 59 | Markers on re-creation | A marker is removed when the same uid exists or is eligible again (re-insert, un-reject, move back) | Otherwise a later sync could delete a live element |
 | 60 | Deletion log hash | HMAC-SHA256 with `DELETION_LOG_SALT`; without it a random salt is used and discarded | A one-way hash even when no salt is configured; never the raw id |
+| 61 | Crossref topic search | `query` + `sort=relevance`, first page only, no `cursor` | Verified 2026-11-12: with `cursor=*` Crossref ignores relevance (`search-terms: null`) and returns unrelated works ("Low Molecular Weight Heparin" for a GNN query) |
+| 62 | Planner | Deterministic rules, no LLM | Requested for this milestone; testable and reproducible. The LLM Planner of AGENT_DESIGN (drafting objectives) is not built; this is its rule-based fallback |
+| 63 | Plan storage | In the run manifest (`discovery.plan`), not a table | One plan per run, read with the run; the search log holds everything queryable |
+| 64 | `search_results` key | `PK(query_id, rank)`, `item_id` nullable, `outcome` | A hit must be recorded before it becomes a work, and also when it never does |
+| 65 | Hit resolution | DOI first for aggregator hits (as when adding by identifier); arXiv hits by arXiv ID; arXiv IDs from aggregators fetched in one batch | Same system-of-record rule as manual adds; arXiv allows one request per 3 s |
+| 66 | Items keep the run's objective version | `add_to_project(objective_version=...)` | An edit during the run must not change what the run's items record |
+| 67 | One active discovery run per project | 409 on a second start | Two runs would race for the same items and sources |
+| 68 | Not in W1 yet | Stage A, seed selection, citation expansion, the paper-set review checkpoint | They need the RIE (M1b) |
+| 69 | Retry of finished runs | `failed` / `partially_succeeded` discovery runs can be reopened (`queued`) | Partial source failure is expected (rate limits, budgets); a retry redoes only what failed |
 | 12 | Network access | A personal `researchpilot` cloud environment allows only the six source hosts | Required to verify source behaviour; CI uses recorded responses only |
 
 ## Corrections after review of 7f447bc
@@ -332,7 +389,7 @@ Both regression suites fail on 7f447bc and pass after the fix.
 * ARCHITECTURE §4.8.4 (and §4.8.5, §10) now state that `submission_only` applies only when no
   other public-availability event is known, with the Nov 8 / Nov 15 example.
 
-## Known limitations (after steps 1–5 and tasks 4a, 5 and 6a)
+## Known limitations (after steps 1–5 and tasks 4a, 5, 6 and 6a)
 
 * **Semantic Scholar** works with the approved key; without `S2_API_KEY` it is reported
   `unavailable`. Even with the key, occasional 429s occur at 1.25 s spacing; they are retried
@@ -354,13 +411,24 @@ Both regression suites fail on 7f447bc and pass after the fix.
   publishers, other registries) are classified by their type only.
 * The frontend has no `LocalTime` component or Latest Research page yet (M1c); the API already
   returns the local display strings.
-* **Objective:** no Planner yet: objectives are entered by the user (`source = user_edit`);
-  `planner` and `feedback_suggestion` exist only as values. Nothing uses the objective for
-  discovery or relevance yet (W1, M1b); runs and items only record its version.
+* **Objective:** objectives are entered by the user (`source = user_edit`); the Planner turns
+  them into search plans but does not draft objectives (no LLM). Relevance is not assessed
+  yet (M1b).
+* **Discovery:** results are kept in source rank order, not assessed (M1b): no tiers, no
+  citation expansion, no review of the paper set. The candidate limit counts distinct works.
+* Exclusions on Semantic Scholar hits use the title only (the search does not return
+  abstracts; adding the field would change every recorded request).
+* Planner queries are keyword-based; a question phrased with rare words can produce queries
+  that find little on arXiv's AND search (the plan and its results are shown so the user sees
+  this).
+* CITES is written only from OpenAlex reference lists of OpenAlex hits; S2 references are not
+  fetched (one request per paper at 1 request/s).
+* Release types in the summary use our first-seen date for works first seen in the run, so
+  older works show as "newly indexed (first seen by ResearchPilot)", as designed.
 * The objective page edits the core fields only; synonyms and constraints are API-only.
-* **Relationships:** nothing produces research relationships yet: citations, authorship,
-  affiliations (author resolution), entity links (extraction, R2) and relevance relations
-  (M1b) arrive with their workflows; the tables, rules and writer are ready.
+* **Relationships:** discovery writes IN_PROJECT, HAS_VERSION (through ingestion) and CITES
+  (OpenAlex metadata); authorship and affiliations (author resolution), entity links
+  (extraction, R2) and relevance relations (M1b) arrive with their workflows.
 * Deletion markers are written but not consumed until the Graph Sync Worker (R2); until then
   markers are purged at the 30-day cap without verification (no alert, nothing to verify).
 * Only project and account cascades set their own marker reason; other deletions default to
@@ -370,6 +438,5 @@ Both regression suites fail on 7f447bc and pass after the fix.
   `account_delete` markers if a user row is deleted.
 * No `objective.updated` reassessment consumer: the `objective.version_created` /
   `objective.activated` events are emitted but nothing consumes them until M1b.
-* Not started (outside this round): the Planner, discovery workflow W1 with search log
-  (task 6), G-MATCH and
-  G-LATEST-DATES benchmark sets (D19 evaluation roles), M1b–M1d, Neo4j.
+* Not started (outside this round): G-MATCH and G-LATEST-DATES benchmark sets (D19
+  evaluation roles), M1b–M1d, Neo4j.

@@ -46,6 +46,7 @@ from researchpilot.db.models.relations import (
     ResearchRelation,
 )
 from researchpilot.db.models.runs import Checkpoint, ResearchRun, RunEvent, TaskExecution
+from researchpilot.db.models.search import SearchQuery, SearchResult
 from researchpilot.db.models.sources import HttpCacheEntry, SourceRateLimit, SourceRecord
 
 __all__ = [
@@ -94,6 +95,8 @@ __all__ = [
     "ResearchRelation",
     "ResearchRun",
     "RunEvent",
+    "SearchQuery",
+    "SearchResult",
     "SourceRateLimit",
     "SourceRecord",
     "StructuralRelation",

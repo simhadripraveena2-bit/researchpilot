@@ -41,6 +41,7 @@ from researchpilot.integrations.base import (
 API_URL = "https://export.arxiv.org/api/query"
 ATOM = "{http://www.w3.org/2005/Atom}"
 ARXIV = "{http://arxiv.org/schemas/atom}"
+OPENSEARCH = "{http://a9.com/-/spec/opensearch/1.1/}"
 ERROR_ENTRY_ID = "https://arxiv.org/api/errors"
 MAX_IDS_PER_REQUEST = 50
 
@@ -127,6 +128,44 @@ class ArxivClient:
                     entry, record_id, response.fetched_at, response.cache_hit
                 )
         return results
+
+    async def search(self, query: str, *, max_results: int = 10, start: int = 0) -> ArxivSearchPage:
+        """Relevance-ranked topic search (``search_query``, arXiv query syntax). Each entry is
+        stored as a source record, like an ID lookup; an empty result is not an error."""
+        response = await self._client.get(
+            API_URL,
+            params={
+                "search_query": query,
+                "start": str(start),
+                "max_results": str(max(1, min(max_results, 100))),
+                "sortBy": "relevance",
+                "sortOrder": "descending",
+            },
+            endpoint_class="search",
+        )
+        entries = []
+        for entry in parse_feed(response.text):
+            record_id = await self._records.save(
+                SourceName.ARXIV_API,
+                entry.versioned_id,
+                "api/query",
+                {"entry_xml": entry.entry_xml},
+                response.fetched_at,
+            )
+            entries.append(FetchedEntry(entry, record_id, response.fetched_at, response.cache_hit))
+        return ArxivSearchPage(entries, total_results(response.text))
+
+
+def total_results(xml_text: str) -> int | None:
+    root = SafeET.fromstring(xml_text)
+    found = root.find(f"{OPENSEARCH}totalResults")
+    return int(found.text) if found is not None and found.text else None
+
+
+@dataclass(frozen=True)
+class ArxivSearchPage:
+    entries: list[FetchedEntry]
+    total: int | None
 
 
 def parse_feed(xml_text: str) -> list[ArxivEntry]:

@@ -135,6 +135,12 @@ class OpenAlexWork:
     indexed_in: tuple[str, ...]
     raw: Mapping[str, Any]
 
+    @property
+    def referenced_work_ids(self) -> tuple[str, ...]:
+        """OpenAlex ids (``W…``) of the works this one cites, as OpenAlex lists them."""
+        refs = self.raw.get("referenced_works") or []
+        return tuple(str(r).rsplit("/", 1)[-1] for r in refs if r)
+
     def reported_date(self) -> tuple[datetime, DatePrecision] | None:
         """``publication_date`` with honest precision (day 01 = month precision)."""
         if not self.publication_date:
@@ -210,18 +216,33 @@ class OpenAlexClient:
             params["filter"] = ",".join(filters)
         return params
 
-    async def search_page(self, **kwargs: Any) -> tuple[list[OpenAlexWork], str | None]:
-        """One metered page (budget-checked); returns works and the next cursor."""
+    async def search_page(self, **kwargs: Any) -> OpenAlexSearchPage:
+        """One metered page (budget-checked); every work is stored as a source record."""
         response = await self._client.get(
             f"{API_URL}/works", params=self.search_params(**kwargs), endpoint_class="search"
         )
         body = _json(response.text)
-        works = [parse_work(item) for item in body.get("results", [])]
-        for w in works:
-            await self._records.save(
-                SourceName.OPENALEX, w.id, "works", dict(w.raw), response.fetched_at
+        hits = []
+        for item in body.get("results", []):
+            work = parse_work(item)
+            record_id = await self._records.save(
+                SourceName.OPENALEX, work.id, "works", dict(work.raw), response.fetched_at
             )
-        return works, (body.get("meta") or {}).get("next_cursor")
+            hits.append(
+                FetchedOpenAlexWork(work, record_id, response.fetched_at, response.cache_hit)
+            )
+        meta = body.get("meta") or {}
+        count = meta.get("count")
+        return OpenAlexSearchPage(
+            hits, int(count) if count is not None else None, meta.get("next_cursor")
+        )
+
+
+@dataclass(frozen=True)
+class OpenAlexSearchPage:
+    hits: list[FetchedOpenAlexWork]
+    total: int | None
+    next_cursor: str | None
 
 
 def work_path(identifier: Identifier) -> str:

@@ -1,4 +1,23 @@
 {
+ "discovery_5da87f37834d.json": {
+  "headers": {
+   "content-type": "application/json",
+   "retry-after": "17868",
+   "x-ratelimit-cost-required-usd": "0.001",
+   "x-ratelimit-credits-required": "10",
+   "x-ratelimit-limit": "1000",
+   "x-ratelimit-limit-usd": "0.1",
+   "x-ratelimit-onetime-remaining": "0",
+   "x-ratelimit-prepaid-remaining-usd": "0",
+   "x-ratelimit-remaining": "0",
+   "x-ratelimit-remaining-usd": "0",
+   "x-ratelimit-reset": "17868"
+  },
+  "note": "recorded by scripts/record_discovery_fixtures.py; full x-ratelimit headers re-captured from the same request the same day (budget still exhausted)",
+  "recorded": "2026-11-12",
+  "status": 429,
+  "url": "https://api.openalex.org/works?per-page=5&cursor=%2A&search=graph+neural+network+molecular+property+prediction"
+ },
  "works_W2194775991.json": {
   "headers": {
    "x-ratelimit-cost-usd": "0",

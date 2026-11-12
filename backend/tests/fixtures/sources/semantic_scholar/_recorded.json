@@ -9,6 +9,33 @@
   "status": 429,
   "url": "https://api.semanticscholar.org/graph/v1/paper/ARXIV:1706.03762?fields=paperId"
  },
+ "discovery_2082a9752db8.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "note": "recorded by scripts/record_discovery_fixtures.py",
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.semanticscholar.org/graph/v1/paper/search?query=benchmarks+evaluate+molecular+property+prediction&limit=5&offset=0&fields=paperId%2CcorpusId%2CexternalIds%2Ctitle%2Cyear%2CpublicationDate%2Cvenue%2CpublicationTypes%2Cauthors"
+ },
+ "discovery_257fdbcf56bd.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "note": "recorded by scripts/record_discovery_fixtures.py",
+  "recorded": "2026-11-12",
+  "status": 429,
+  "url": "https://api.semanticscholar.org/graph/v1/paper/search?query=graph+neural+network+molecular+property+prediction&limit=5&offset=0&fields=paperId%2CcorpusId%2CexternalIds%2Ctitle%2Cyear%2CpublicationDate%2Cvenue%2CpublicationTypes%2Cauthors"
+ },
+ "discovery_cba62f18a624.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "note": "recorded by scripts/record_discovery_fixtures.py",
+  "recorded": "2026-11-12",
+  "status": 429,
+  "url": "https://api.semanticscholar.org/graph/v1/paper/search?query=molecular+property+prediction+message+passing+graph+transformers&limit=5&offset=0&fields=paperId%2CcorpusId%2CexternalIds%2Ctitle%2Cyear%2CpublicationDate%2Cvenue%2CpublicationTypes%2Cauthors"
+ },
  "paper_ARXIV_1512.03385.json": {
   "authenticated": true,
   "headers": {

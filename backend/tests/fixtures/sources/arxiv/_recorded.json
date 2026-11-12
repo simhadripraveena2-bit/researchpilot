@@ -10,5 +10,41 @@
   "recorded": "2026-11-11",
   "status": 200,
   "url": "https://export.arxiv.org/api/query?id_list=1512.03385"
+ },
+ "discovery_2eef086d045d.xml": {
+  "headers": {
+   "content-type": "application/atom+xml; charset=utf-8"
+  },
+  "note": "recorded by scripts/record_discovery_fixtures.py",
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://export.arxiv.org/api/query?search_query=all%3AGNN+AND+all%3A%22molecular+property+prediction%22+ANDNOT+all%3A%22protein+folding%22&start=0&max_results=5&sortBy=relevance&sortOrder=descending"
+ },
+ "discovery_3f2330eb7eb3.xml": {
+  "headers": {
+   "content-type": "application/atom+xml; charset=utf-8"
+  },
+  "note": "recorded by scripts/record_discovery_fixtures.py",
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://export.arxiv.org/api/query?search_query=all%3A%22molecular+property+prediction%22+AND+all%3A%22message+passing%22+AND+all%3Agraph+AND+all%3Atransformers+ANDNOT+all%3A%22protein+folding%22&start=0&max_results=5&sortBy=relevance&sortOrder=descending"
+ },
+ "discovery_9f59b2376fbc.xml": {
+  "headers": {
+   "content-type": "application/atom+xml; charset=utf-8"
+  },
+  "note": "recorded by scripts/record_discovery_fixtures.py",
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://export.arxiv.org/api/query?search_query=%28all%3A%22graph+neural+network%22+OR+all%3AGNN%29+AND+all%3A%22molecular+property+prediction%22+ANDNOT+all%3A%22protein+folding%22&start=0&max_results=5&sortBy=relevance&sortOrder=descending"
+ },
+ "discovery_f8042d632367.xml": {
+  "headers": {
+   "content-type": "application/atom+xml; charset=utf-8"
+  },
+  "note": "recorded by scripts/record_discovery_fixtures.py",
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://export.arxiv.org/api/query?search_query=all%3Abenchmarks+AND+all%3Aevaluate+AND+all%3A%22molecular+property+prediction%22+ANDNOT+all%3A%22protein+folding%22&start=0&max_results=5&sortBy=relevance&sortOrder=descending"
  }
 }

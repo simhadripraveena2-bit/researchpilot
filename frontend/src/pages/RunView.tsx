@@ -1,6 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useParams } from "react-router-dom";
 import { api } from "../api/client";
+import type { DiscoverySummary } from "../api/types";
 import { useRunEvents } from "../api/useRunEvents";
 import { ErrorNotice } from "../components/ErrorNotice";
 
@@ -26,7 +27,14 @@ export function RunView() {
 
   return (
     <section className="space-y-6">
-      <h1 className="text-2xl font-semibold">System check</h1>
+      <h1 className="text-2xl font-semibold">
+        {run.data?.workflow === "discovery" ? "Finding papers" : "System check"}
+      </h1>
+      {run.data?.objective_version != null && (
+        <p className="text-sm text-slate-600 dark:text-slate-400">
+          Using version {run.data.objective_version} of your research objective
+        </p>
+      )}
       {run.data && (
         <p aria-live="polite">
           Status: <strong>{run.data.status.replaceAll("_", " ")}</strong>
@@ -45,7 +53,9 @@ export function RunView() {
       </ol>
       {pending && (
         <div className="rounded-md border border-indigo-300 bg-indigo-50 p-4 dark:bg-indigo-950">
-          <p className="mb-3 font-medium">{pending.payload.question ?? "Continue?"}</p>
+          <p className="mb-3 whitespace-pre-line font-medium">
+            {pending.payload.question ?? "Continue?"}
+          </p>
           {decide.isError && <ErrorNotice error={decide.error} />}
           <div className="flex gap-2">
             <button
@@ -63,7 +73,73 @@ export function RunView() {
           </div>
         </div>
       )}
-      {run.data && TERMINAL.has(run.data.status) && <p>This check has finished.</p>}
+      {run.data && TERMINAL.has(run.data.status) &&
+        (run.data.workflow === "discovery" ? (
+          <DiscoveryResult runId={runId} />
+        ) : (
+          <p>This check has finished.</p>
+        ))}
     </section>
+  );
+}
+
+const SOURCE_NAMES: Record<string, string> = {
+  arxiv_api: "arXiv",
+  crossref: "Crossref",
+  semantic_scholar: "Semantic Scholar",
+  openalex: "OpenAlex",
+};
+const SOURCE_STATES: Record<string, string> = {
+  ok: "searched",
+  partial: "some searches failed",
+  budget_exhausted: "daily limit reached",
+  unavailable: "could not be reached",
+  not_run: "not searched",
+};
+
+function DiscoveryResult({ runId }: { runId: string }) {
+  const queryClient = useQueryClient();
+  const summary = useQuery({
+    queryKey: ["discovery-summary", runId],
+    queryFn: () => api.discoverySummary(runId),
+  });
+  const retry = useMutation({
+    mutationFn: () => api.retryRun(runId),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["run", runId] }),
+  });
+  if (summary.isError) return <ErrorNotice error={summary.error} />;
+  if (!summary.data) return null;
+  const s: DiscoverySummary = summary.data;
+  const canRetry = s.status === "partially_succeeded" || s.status === "failed";
+  return (
+    <div className="space-y-3 rounded-md border bg-white p-4 dark:bg-slate-900">
+      <h2 className="font-medium">What was found</h2>
+      <p>
+        {s.papers.total} papers ({s.papers.added} new to your project), from{" "}
+        {s.searches.succeeded} of {s.searches.planned} searches.
+      </p>
+      {s.version_matching.possible_matches_awaiting_review > 0 && (
+        <p>
+          {s.version_matching.possible_matches_awaiting_review} pairs may be versions of the same
+          paper; they are kept apart until you decide.
+        </p>
+      )}
+      <ul className="text-sm">
+        {s.sources.map((src) => (
+          <li key={src.source}>
+            {SOURCE_NAMES[src.source] ?? src.source}: {SOURCE_STATES[src.state] ?? src.state}
+          </li>
+        ))}
+      </ul>
+      {canRetry && (
+        <button
+          onClick={() => retry.mutate()}
+          disabled={retry.isPending}
+          className="rounded-md border px-3 py-2 text-sm"
+        >
+          Try the failed searches again
+        </button>
+      )}
+    </div>
   );
 }

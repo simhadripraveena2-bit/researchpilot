@@ -41,7 +41,7 @@ async def test_three_endpoints_with_the_key_through_the_production_policy() -> N
     paper = (await s2.fetch(Identifier(IdentifierScheme.ARXIV, "1512.03385"))).paper
     assert paper.paper_id == "2c03df8b48bf3fa39054345bafabfeff15bfd11d"
     page = await s2.search("deep residual learning image recognition", limit=2)
-    assert page.papers and page.next_offset == 2
+    assert page.hits and page.next_offset == 2
     refs = await s2.references(paper.paper_id, limit=3)
     assert len(refs.papers) == 3
     await http.aclose()

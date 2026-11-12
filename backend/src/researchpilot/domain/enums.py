@@ -499,3 +499,33 @@ class ResearchGroupKind(StrEnum):
     LAB = "lab"
     CONSORTIUM = "consortium"
     UNKNOWN = "unknown"
+
+
+class SearchOrigin(StrEnum):
+    USER = "user"
+    PLANNER = "planner"
+    RULE_EXPANSION = "rule_expansion"
+    LATEST_SCAN = "latest_scan"
+    GAP_OVERLAP_PROBE = "gap_overlap_probe"
+    GAP_CONTRADICTION_PROBE = "gap_contradiction_probe"
+    NOVELTY_PROBE = "novelty_probe"
+    MONITOR = "monitor"
+
+
+class SearchStatus(StrEnum):
+    PENDING = "pending"
+    SUCCEEDED = "succeeded"
+    FAILED = "failed"  # the source answered with an error or could not be reached
+    BUDGET_EXHAUSTED = "budget_exhausted"
+    SKIPPED = "skipped"  # not sent: the source was already failing in this run
+
+
+class HitOutcome(StrEnum):
+    PENDING = "pending"
+    ADDED = "added"  # a work, newly added to the project
+    ALREADY_IN_PROJECT = "already_in_project"
+    DUPLICATE = "duplicate"  # same work as an earlier hit in this run
+    EXCLUDED = "excluded"  # matches an exclusion of the objective
+    NO_IDENTIFIER = "no_identifier"  # no DOI or arXiv ID: no system of record to ingest from
+    FAILED = "failed"  # the system of record could not be reached
+    NOT_PROCESSED = "not_processed"  # beyond the run's candidate limit

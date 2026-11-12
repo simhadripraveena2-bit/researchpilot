@@ -78,8 +78,8 @@ real referential integrity across item types.
 |---|---|---|
 | `source_records` | `id, source enum, source_entity_id, endpoint, payload jsonb, payload_sha256, fetched_at, UNIQUE(source, source_entity_id, payload_sha256)` | R1 |
 | `http_cache` | `key PK, source, url, status, headers jsonb, body, fetched_at, expires_at` | R1 |
-| `search_queries` | `id, run_id, source, query_text, params jsonb, origin enum(user, planner, rule_expansion, latest_scan, gap_overlap_probe, gap_contradiction_probe, novelty_probe, monitor), rationale, status, result_count, total_available, cache_hit, error jsonb, executed_at` | R1 |
-| `search_results` | `query_id, item_id (paper), rank, source_record_id, PK(query_id, item_id)` | R1 |
+| `search_queries` | `id, run_id, source, query_text, params jsonb, origin enum(user, planner, rule_expansion, latest_scan, gap_overlap_probe, gap_contradiction_probe, novelty_probe, monitor), rationale, status, result_count, total_available, cache_hit, error jsonb, executed_at` — **M1a (0010):** + `plan_query_id` (Q1…, the planned query), `UNIQUE(run_id, plan_query_id, source)`, `attempts`, `created_at`; status enum(pending, succeeded, failed, budget_exhausted, skipped); `query_text` is the query in the source's own syntax, `params` holds the plain text, purpose, sub-question keys, page size and plan id | R1 |
+| `search_results` | `query_id, item_id (paper), rank, source_record_id, PK(query_id, item_id)` — **M1a (0010):** `PK(query_id, rank)`; `item_id` null until the hit becomes a work (SET NULL on delete); + `source_item_id`, `title`, `identifiers jsonb`, `outcome enum(pending, added, already_in_project, duplicate, excluded, no_identifier, failed, not_processed)`, `outcome_detail`, `decided_at`. A hit is recorded before (and whether or not) it becomes a work, so every result can be traced to its query, source, time and source record | R1 |
 
 ## 5. Papers, documents and evidence
 

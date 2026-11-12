@@ -19,6 +19,7 @@ from researchpilot.api.sse import run_event_stream
 from researchpilot.core.errors import Forbidden, ValidationFailed
 from researchpilot.domain.enums import ProjectRole, Workflow
 from researchpilot.runs import service
+from researchpilot.services.discovery.runs import start_discovery
 from researchpilot.workflows.registry import WORKFLOWS
 
 router = APIRouter(tags=["runs"])
@@ -44,9 +45,12 @@ async def start_run(
         "workflow": {"name": spec.name, "version": spec.version},
         "llm": request.app.state.llm_manifest,
     }
-    run_id = await service.create_run(
-        session, scope.project_id, body.workflow, body.config, manifest
-    )
+    if body.workflow is Workflow.DISCOVERY:  # same checks as POST .../discovery-runs
+        run_id = await start_discovery(session, scope.project_id, body.config, manifest)
+    else:
+        run_id = await service.create_run(
+            session, scope.project_id, body.workflow, body.config, manifest
+        )
     return Created(id=run_id)
 
 

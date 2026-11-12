@@ -1,0 +1,131 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/aG15/7heZOU6Mr7DUtWK8yp3jLk</id>
+  <title>arXiv Query: search_query=all:GNN AND all:"molecular property prediction" ANDNOT all:"protein folding"&amp;id_list=&amp;start=0&amp;max_results=5</title>
+  <updated>2026-11-12T16:07:59Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:GNN+AND+(all:%22molecular+property+prediction%22+ANDNOT+all:%22protein+folding%22)&amp;start=0&amp;max_results=5&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>5</opensearch:itemsPerPage>
+  <opensearch:totalResults>119</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2410.11323v2</id>
+    <title>KA-GNN: Kolmogorov-Arnold Graph Neural Networks for Molecular Property Prediction</title>
+    <updated>2024-12-18T06:23:29Z</updated>
+    <link href="https://arxiv.org/abs/2410.11323v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2410.11323v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>As key models in geometric deep learning, graph neural networks have demonstrated enormous power in molecular data analysis. Recently, a specially-designed learning scheme, known as Kolmogorov-Arnold Network (KAN), shows unique potential for the improvement of model accuracy, efficiency, and explainability. Here we propose the first non-trivial Kolmogorov-Arnold Network-based Graph Neural Networks (KA-GNNs), including KAN-based graph convolutional networks(KA-GCN) and KAN-based graph attention network (KA-GAT). The essential idea is to utilizes KAN's unique power to optimize GNN architectures at three major levels, including node embedding, message passing, and readout. Further, with the strong approximation capability of Fourier series, we develop Fourier series-based KAN model and provide a rigorous mathematical prove of the robust approximation capability of this Fourier KAN architecture. To validate our KA-GNNs, we consider seven most-widely-used benchmark datasets for molecular property prediction and extensively compare with existing state-of-the-art models. It has been found that our KA-GNNs can outperform traditional GNN models. More importantly, our Fourier KAN module can not only increase the model accuracy but also reduce the computational time. This work not only highlights the great power of KA-GNNs in molecular property prediction but also provides a novel geometric deep learning framework for the general non-Euclidean data analysis.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="q-bio.QM" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-10-15T06:44:57Z</published>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Longlong Li</name>
+    </author>
+    <author>
+      <name>Yipeng Zhang</name>
+    </author>
+    <author>
+      <name>Guanghui Wang</name>
+    </author>
+    <author>
+      <name>Kelin Xia</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2110.04126v4</id>
+    <title>3D Infomax improves GNNs for Molecular Property Prediction</title>
+    <updated>2022-06-04T22:57:54Z</updated>
+    <link href="https://arxiv.org/abs/2110.04126v4" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2110.04126v4" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Molecular property prediction is one of the fastest-growing applications of deep learning with critical real-world impacts. Including 3D molecular structure as input to learned models improves their performance for many molecular tasks. However, this information is infeasible to compute at the scale required by several real-world applications. We propose pre-training a model to reason about the geometry of molecules given only their 2D molecular graphs. Using methods from self-supervised learning, we maximize the mutual information between 3D summary vectors and the representations of a Graph Neural Network (GNN) such that they contain latent 3D information. During fine-tuning on molecules with unknown geometry, the GNN still generates implicit 3D information and can use it to improve downstream tasks. We show that 3D pre-training provides significant improvements for a wide range of properties, such as a 22% average MAE reduction on eight quantum mechanical properties. Moreover, the learned representations can be effectively transferred between datasets in different molecular spaces.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="q-bio.BM" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2021-10-08T13:30:49Z</published>
+    <arxiv:comment>39th International Conference on Machine Learning (ICML 2022). Also accepted at NeurIPS 2021 ML4PH, AI4S, and SSL workshops and as oral at ELLIS ML4Molecules. 24 pages, 7 figures, 18 tables</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <arxiv:journal_ref>39th International Conference on Machine Learning (ICML 2022)</arxiv:journal_ref>
+    <author>
+      <name>Hannes Stärk</name>
+    </author>
+    <author>
+      <name>Dominique Beaini</name>
+    </author>
+    <author>
+      <name>Gabriele Corso</name>
+    </author>
+    <author>
+      <name>Prudencio Tossou</name>
+    </author>
+    <author>
+      <name>Christian Dallago</name>
+    </author>
+    <author>
+      <name>Stephan Günnemann</name>
+    </author>
+    <author>
+      <name>Pietro Liò</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2111.10695v1</id>
+    <title>Image-Like Graph Representations for Improved Molecular Property Prediction</title>
+    <updated>2021-11-20T22:39:11Z</updated>
+    <link href="https://arxiv.org/abs/2111.10695v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2111.10695v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Research into deep learning models for molecular property prediction has primarily focused on the development of better Graph Neural Network (GNN) architectures. Though new GNN variants continue to improve performance, their modifications share a common theme of alleviating problems intrinsic to their fundamental graph-to-graph nature. In this work, we examine these limitations and propose a new molecular representation that bypasses the need for GNNs entirely, dubbed CubeMol. Our fixed-dimensional stochastic representation, when paired with a transformer model, exceeds the performance of state-of-the-art GNN models and provides a path for scalability.</summary>
+    <category term="q-bio.QM" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2021-11-20T22:39:11Z</published>
+    <arxiv:primary_category term="q-bio.QM"/>
+    <author>
+      <name>Toni Sagayaraj</name>
+    </author>
+    <author>
+      <name>Carsten Eickhoff</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2104.06046v2</id>
+    <title>Which Hyperparameters to Optimise? An Investigation of Evolutionary Hyperparameter Optimisation in Graph Neural Network For Molecular Property Prediction</title>
+    <updated>2021-04-14T09:45:54Z</updated>
+    <link href="https://arxiv.org/abs/2104.06046v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2104.06046v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Recently, the study of graph neural network (GNN) has attracted much attention and achieved promising performance in molecular property prediction. Most GNNs for molecular property prediction are proposed based on the idea of learning the representations for the nodes by aggregating the information of their neighbor nodes (e.g. atoms). Then, the representations can be passed to subsequent layers to deal with individual downstream tasks. Therefore, the architectures of GNNs can be considered as being composed of two core parts: graph-related layers and task-specific layers. Facing real-world molecular problems, the hyperparameter optimization for those layers are vital. Hyperparameter optimization (HPO) becomes expensive in this situation because evaluating candidate solutions requires massive computational resources to train and validate models. Furthermore, a larger search space often makes the HPO problems more challenging. In this research, we focus on the impact of selecting two types of GNN hyperparameters, those belonging to graph-related layers and those of task-specific layers, on the performance of GNN for molecular property prediction. In our experiments. we employed a state-of-the-art evolutionary algorithm (i.e., CMA-ES) for HPO. The results reveal that optimizing the two types of hyperparameters separately can gain the improvements on GNNs' performance, but optimising both types of hyperparameters simultaneously will lead to predominant improvements. Meanwhile, our study also further confirms the importance of HPO for GNNs in molecular property prediction problems.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2021-04-13T09:21:27Z</published>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Yingfang Yuan</name>
+    </author>
+    <author>
+      <name>Wenjun Wang</name>
+    </author>
+    <author>
+      <name>Wei Pang</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2504.05844v1</id>
+    <title>Adaptive Substructure-Aware Expert Model for Molecular Property Prediction</title>
+    <updated>2025-04-08T09:25:03Z</updated>
+    <link href="https://arxiv.org/abs/2504.05844v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2504.05844v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Molecular property prediction is essential for applications such as drug discovery and toxicity assessment. While Graph Neural Networks (GNNs) have shown promising results by modeling molecules as molecular graphs, their reliance on data-driven learning limits their ability to generalize, particularly in the presence of data imbalance and diverse molecular substructures. Existing methods often overlook the varying contributions of different substructures to molecular properties, treating them uniformly. To address these challenges, we propose ASE-Mol, a novel GNN-based framework that leverages a Mixture-of-Experts (MoE) approach for molecular property prediction. ASE-Mol incorporates BRICS decomposition and significant substructure awareness to dynamically identify positive and negative substructures. By integrating a MoE architecture, it reduces the adverse impact of negative motifs while improving adaptability to positive motifs. Experimental results on eight benchmark datasets demonstrate that ASE-Mol achieves state-of-the-art performance, with significant improvements in both accuracy and interpretability.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-04-08T09:25:03Z</published>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Tianyi Jiang</name>
+    </author>
+    <author>
+      <name>Zeyu Wang</name>
+    </author>
+    <author>
+      <name>Shanqing Yu</name>
+    </author>
+    <author>
+      <name>Qi Xuan</name>
+    </author>
+  </entry>
+</feed>

@@ -1,0 +1,185 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/eUq5yM/dmdr5TTpXhX77uTxWjNI</id>
+  <title>arXiv Query: search_query=all:benchmarks AND all:evaluate AND all:"molecular property prediction" ANDNOT all:"protein folding"&amp;id_list=&amp;start=0&amp;max_results=5</title>
+  <updated>2026-11-12T16:07:18Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:benchmarks+AND+(all:evaluate+AND+(all:%22molecular+property+prediction%22+ANDNOT+all:%22protein+folding%22))&amp;start=0&amp;max_results=5&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>5</opensearch:itemsPerPage>
+  <opensearch:totalResults>62</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2510.08900v1</id>
+    <title>Few-shot Molecular Property Prediction: A Survey</title>
+    <updated>2025-10-10T01:24:54Z</updated>
+    <link href="https://arxiv.org/abs/2510.08900v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2510.08900v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>AI-assisted molecular property prediction has become a promising technique in early-stage drug discovery and materials design in recent years. However, due to high-cost and complex wet-lab experiments, real-world molecules usually experience the issue of scarce annotations, leading to limited labeled data for effective supervised AI model learning. In light of this, few-shot molecular property prediction (FSMPP) has emerged as an expressive paradigm that enables learning from only a few labeled examples. Despite rapidly growing attention, existing FSMPP studies remain fragmented, without a coherent framework to capture methodological advances and domain-specific challenges. In this work, we present the first comprehensive and systematic survey of few-shot molecular property prediction. We begin by analyzing the few-shot phenomenon in molecular datasets and highlighting two core challenges: (1) cross-property generalization under distribution shifts, where each task corresponding to each property, may follow a different data distribution or even be inherently weakly related to others from a biochemical perspective, requiring the model to transfer knowledge across heterogeneous prediction tasks, and (2) cross-molecule generalization under structural heterogeneity, where molecules involved in different or same properties may exhibit significant structural diversity, making model difficult to achieve generalization. Then, we introduce a unified taxonomy that organizes existing methods into data, model, and learning paradigm levels, reflecting their strategies for extracting knowledge from scarce supervision in few-shot molecular property prediction. Next, we compare representative methods, summarize benchmark datasets and evaluation protocols. In the end, we identify key trends and future directions for advancing the continued research on FSMPP.</summary>
+    <category term="cs.CE" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-10-10T01:24:54Z</published>
+    <arxiv:comment>Its a survey about few-shot molecular property prediction</arxiv:comment>
+    <arxiv:primary_category term="cs.CE"/>
+    <author>
+      <name>Zeyu Wang</name>
+    </author>
+    <author>
+      <name>Tianyi Jiang</name>
+    </author>
+    <author>
+      <name>Huanchang Ma</name>
+    </author>
+    <author>
+      <name>Yao Lu</name>
+    </author>
+    <author>
+      <name>Xiaoze Bao</name>
+    </author>
+    <author>
+      <name>Shanqing Yu</name>
+    </author>
+    <author>
+      <name>Qi Xuan</name>
+    </author>
+    <author>
+      <name>Shirui Pan</name>
+    </author>
+    <author>
+      <name>Xin Zheng</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2605.10157v2</id>
+    <title>MolSight: Molecular Property Prediction with Images</title>
+    <updated>2026-06-14T19:32:45Z</updated>
+    <link href="https://arxiv.org/abs/2605.10157v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2605.10157v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Every molecule ever synthesised can be drawn as a 2D skeletal diagram, yet in modern property prediction this universally available representation has received less focus in favour of molecular graphs, 3D conformers, or billion-parameter language models, each imposing its own computational and data-engineering overhead. We present $\textbf{MolSight}$, the first systematic large-scale study of vision-based Molecular Property Prediction (MPP). Using 10 vision architectures, 7 pre-training strategies, and $2\,M$ molecule images, we evaluate performance across 10 downstream tasks spanning physical-property regression, drug-discovery classification, and quantum-chemistry prediction. To account for the wide variation in structural complexity across pre-training molecules, we further propose a $\textbf{chemistry-informed curriculum}$: five structural complexity descriptors partition the corpus into five tiers of increasing chemical difficulty, consistently outperforming non-curriculum baselines. We show that a single rendered bond-line image, processed by a vision encoder, is sufficient for competitive molecular property prediction, i.e. $\textit{chemical insight from sight alone}$. The best curriculum-trained configuration achieves the top result on $\textbf{5 of 10}$ benchmarks and top two on $\textbf{all 10}$, at $\textbf{$\textit{80$\times$ lower}$}$ FLOPs than the nearest multi-modal competitor.</summary>
+    <category term="cs.CV" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CL" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-05-11T08:05:18Z</published>
+    <arxiv:primary_category term="cs.CV"/>
+    <author>
+      <name>Aaditya Baranwal</name>
+    </author>
+    <author>
+      <name>Akshaj Gupta</name>
+    </author>
+    <author>
+      <name>Yogesh S Rawat</name>
+    </author>
+    <author>
+      <name>Shruti Vyas</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2307.07443v1</id>
+    <title>Can Large Language Models Empower Molecular Property Prediction?</title>
+    <updated>2023-07-14T16:06:42Z</updated>
+    <link href="https://arxiv.org/abs/2307.07443v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2307.07443v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Molecular property prediction has gained significant attention due to its transformative potential in multiple scientific disciplines. Conventionally, a molecule graph can be represented either as a graph-structured data or a SMILES text. Recently, the rapid development of Large Language Models (LLMs) has revolutionized the field of NLP. Although it is natural to utilize LLMs to assist in understanding molecules represented by SMILES, the exploration of how LLMs will impact molecular property prediction is still in its early stage. In this work, we advance towards this objective through two perspectives: zero/few-shot molecular classification, and using the new explanations generated by LLMs as representations of molecules. To be specific, we first prompt LLMs to do in-context molecular classification and evaluate their performance. After that, we employ LLMs to generate semantically enriched explanations for the original SMILES and then leverage that to fine-tune a small-scale LM model for multiple downstream tasks. The experimental results highlight the superiority of text explanations as molecular representations across multiple benchmark datasets, and confirm the immense potential of LLMs in molecular property prediction tasks. Codes are available at \url{https://github.com/ChnQ/LLM4Mol}.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="q-bio.QM" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2023-07-14T16:06:42Z</published>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Chen Qian</name>
+    </author>
+    <author>
+      <name>Huayi Tang</name>
+    </author>
+    <author>
+      <name>Zhirui Yang</name>
+    </author>
+    <author>
+      <name>Hong Liang</name>
+    </author>
+    <author>
+      <name>Yong Liu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2604.16586v1</id>
+    <title>A Systematic Survey and Benchmark of Deep Learning for Molecular Property Prediction in the Foundation Model Era</title>
+    <updated>2026-04-17T15:16:33Z</updated>
+    <link href="https://arxiv.org/abs/2604.16586v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2604.16586v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Molecular property prediction integrates quantum chemistry, cheminformatics, and deep learning to connect molecular structure with physicochemical and biological behavior. This survey traces four complementary paradigms, including Quantum, Descriptor Machine Learning, Geometric Deep Learning, and Foundation Models, and outlines a unified taxonomy linking molecular representations, model architectures, and interdisciplinary applications. Benchmark analyses integrate evidence from both widely used datasets and datasets reflecting industry perspectives, encompassing quantum, physicochemical, physiological, and biophysical domains. The survey examines current standards in data curation, splitting strategies, and evaluation protocols, highlighting challenges including inconsistent stereochemistry, heterogeneous assay sources, and reproducibility limitations under random or poorly defined splits. These observations motivate the modernization of benchmark design toward more transparent, time- and scaffold-aware methodologies. We further propose three forward-looking directions: (i) physics-aware learning embedding quantum consistency, (ii) uncertainty-calibrated foundation models for trustworthy inference, and (iii) realistic multimodal benchmark ecosystems integrating computational and experimental data. Repository: https://github.com/Zongru-Li/Survey-and-Benchmarks-of-DL-for-Molecular-Property-Prediction-in-the-Foundation-Model-Era.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="q-bio.QM" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-04-17T15:16:33Z</published>
+    <arxiv:comment>32 pages. It is just accepted by Journal of Chemical Theory and Computation 2026</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <arxiv:journal_ref>Journal of Chemical Theory and Computation 2026</arxiv:journal_ref>
+    <author>
+      <name>Zongru Li</name>
+    </author>
+    <author>
+      <name>Xingsheng Chen</name>
+    </author>
+    <author>
+      <name>Honggang Wen</name>
+    </author>
+    <author>
+      <name>Regina Qianru Zhang</name>
+    </author>
+    <author>
+      <name>Ming Li</name>
+    </author>
+    <author>
+      <name>Xiaojin Zhang</name>
+    </author>
+    <author>
+      <name>Hongzhi Yin</name>
+    </author>
+    <author>
+      <name>Qiang Yang</name>
+    </author>
+    <author>
+      <name>Kwok-Yan Lam</name>
+    </author>
+    <author>
+      <name>Pietro Lio</name>
+    </author>
+    <author>
+      <name>Siu-Ming Yiu</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2611.13945v1</id>
+    <title>Chem World: A Large-Scale Benchmark and Physics-Aware Framework for Trustworthy Molecular Property Prediction</title>
+    <updated>2026-11-10T11:30:39Z</updated>
+    <link href="https://arxiv.org/abs/2611.13945v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2611.13945v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Molecular property prediction is fundamental to computational chemistry and drug formulation research, yet existing benchmarks remain fragmented across datasets, properties, and evaluation protocols, limiting systematic evaluation of model generalization. We introduce Chem World, a large-scale benchmark integrating 17 public datasets with over 800,000 molecular and chemical-system instances across 10 property tracks, covering single-molecule and multi-component systems, including drug solubility. Chem World provides a unified testbed for evaluating molecular representations and compositional modeling across diverse chemical properties. Building on the benchmark, we propose PACM (Physics-Aware Compositional Modeling), which combines molecular representations with composition-aware modeling and domain-specific physical constraints. Extensive experiments show that molecular language models provide strong and transferable representations, while PACM consistently improves prediction across diverse chemical systems. Chem World and our PACM-powered drug-property prediction Agent support generalizable chemical modeling and offer a foundation for AI-assisted biomedical research and drug formulation development.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-11-10T11:30:39Z</published>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Tianyou Bai</name>
+    </author>
+    <author>
+      <name>Huan Wang</name>
+    </author>
+    <author>
+      <name>Mingchen Gao</name>
+    </author>
+    <author>
+      <name>Tongrui Yang</name>
+    </author>
+    <author>
+      <name>Fangyue Lin</name>
+    </author>
+    <author>
+      <name>Pinze Ren</name>
+    </author>
+    <author>
+      <name>Zhenlin Zhao</name>
+    </author>
+    <author>
+      <name>Siming Dong</name>
+    </author>
+  </entry>
+</feed>

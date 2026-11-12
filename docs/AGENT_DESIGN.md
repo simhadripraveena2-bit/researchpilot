@@ -214,6 +214,12 @@ plan_objective (Planner) → ◆ confirm objective & search plan (plain language
 → ◆ review paper set (tiers + reasons; beginner/advanced views)
 → emit discovery.completed
 ```
+**Implemented in M1a (R1_M1A_NOTES):** `load objective version → deterministic Planner (rules,
+no LLM) → ◆ confirm search plan → search_sources (search log) → resolve hits (system of
+record, dedupe, version links, Version Matcher, dates) → IN_PROJECT → CITES from source
+metadata → summary`. Stage A, seed selection, citation expansion and the review step arrive
+with the RIE (M1b); the LLM Planner drafting objectives is not built (the rule-based plan is
+its fallback).
 
 ### W2 Assessment (R1; re-run on events)
 ```

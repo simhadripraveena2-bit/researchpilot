@@ -1,4 +1,40 @@
 {
+ "discovery_008d7433611a.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "note": "recorded by scripts/record_discovery_fixtures.py",
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works?query=benchmarks+evaluate+molecular+property+prediction&rows=5&sort=relevance"
+ },
+ "discovery_6df6ea7197f0.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "note": "recorded by scripts/record_discovery_fixtures.py",
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works?query=graph+neural+network+molecular+property+prediction&rows=5&sort=relevance"
+ },
+ "discovery_8567d405ba61.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "note": "recorded by scripts/record_discovery_fixtures.py",
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works?query=molecular+property+prediction+message+passing+graph+transformers&rows=5&sort=relevance"
+ },
+ "discovery_b11cb5061a8a.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "note": "recorded by scripts/record_discovery_fixtures.py",
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works?query=GNN+molecular+property+prediction&rows=5&sort=relevance"
+ },
  "search_has_preprint_page1.json": {
   "headers": {
    "x-api-pool": "public-array",
@@ -54,6 +90,15 @@
   "status": 200,
   "url": "https://api.crossref.org/works/10.1016/0167-9473(95)00033-x"
  },
+ "works_10.1021%2Facs.jcim.6c00961.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "note": "recorded by scripts/record_discovery_fixtures.py",
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1021/acs.jcim.6c00961"
+ },
  "works_10.1023%2Fa%3A1026654312961.json": {
   "headers": {
    "x-api-pool": "public-single",
@@ -64,6 +109,15 @@
   "recorded": "2026-11-11",
   "status": 200,
   "url": "https://api.crossref.org/works/10.1023/a:1026654312961"
+ },
+ "works_10.1038%2Fs42004-026-01922-x.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "note": "recorded for the discovery tests (Crossref lookup when arXiv is down)",
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1038/s42004-026-01922-x"
  },
  "works_10.1038%2Fs43586-024-00294-7.json": {
   "headers": {
@@ -153,6 +207,15 @@
   "status": 200,
   "url": "https://api.crossref.org/works/10.1109/cvpr.2016.90"
  },
+ "works_10.1109%2Fjbhi.2024.3464674.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "note": "recorded by scripts/record_discovery_fixtures.py",
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.1109/jbhi.2024.3464674"
+ },
  "works_10.1111%2Fpsj.70147.json": {
   "headers": {
    "x-api-pool": "public-single",
@@ -185,6 +248,15 @@
   "recorded": "2026-11-11",
   "status": 404,
   "url": "https://api.crossref.org/works/10.1234/rp-does-not-exist"
+ },
+ "works_10.21203%2Frs.3.rs-6756851%2Fv1.json": {
+  "headers": {
+   "content-type": "application/json"
+  },
+  "note": "recorded for the discovery tests (Crossref lookup when arXiv is down)",
+  "recorded": "2026-11-12",
+  "status": 200,
+  "url": "https://api.crossref.org/works/10.21203/rs.3.rs-6756851/v1"
  },
  "works_10.3390%2Finsects17070712.json": {
   "headers": {

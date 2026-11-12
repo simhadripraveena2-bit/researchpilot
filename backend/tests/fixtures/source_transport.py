@@ -1,6 +1,7 @@
 """Serves recorded source responses (tests/fixtures/sources) instead of the network.
 
-arXiv responses are looked up by ``id_list``; other sources by the exact recorded request
+arXiv ID lookups are served by ``id_list`` (file name); arXiv searches and other sources by
+the exact recorded request
 (``<source>/_recorded.json``: URL, status and headers per file), with query parameters
 compared regardless of order.
 """
@@ -24,6 +25,7 @@ HOST_DIRS = {
     "api.semanticscholar.org": "semantic_scholar",
     "api.openalex.org": "openalex",
     "rss.arxiv.org": "arxiv_rss",
+    "export.arxiv.org": "arxiv",  # searches (search_query); ID lookups use file names
 }
 
 
@@ -68,7 +70,11 @@ class FixtureTransport(httpx.AsyncBaseTransport):
         host = request.url.host
         if host in self.overrides:
             return self.overrides[host](request)
-        if host == "export.arxiv.org" and request.url.path == "/api/query":
+        if (
+            host == "export.arxiv.org"
+            and request.url.path == "/api/query"
+            and "search_query" not in request.url.params
+        ):
             ids = request.url.params.get("id_list", "")
             name = "api_" + ids.replace("/", "_").replace(",", "+") + ".xml"
             path = SOURCES / "arxiv" / name

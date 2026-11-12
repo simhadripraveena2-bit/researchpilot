@@ -147,6 +147,6 @@ async def test_rejecting_the_checkpoint_stops_the_run(
 
 async def test_unavailable_workflow_is_rejected(client: httpx.AsyncClient) -> None:
     project_id = await create_project(client)
-    resp = await client.post(f"{API}/projects/{project_id}/runs", json={"workflow": "discovery"})
+    resp = await client.post(f"{API}/projects/{project_id}/runs", json={"workflow": "assessment"})
     assert resp.status_code == 422
     assert "not available yet" in resp.json()["detail"]

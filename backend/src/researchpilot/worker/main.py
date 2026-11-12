@@ -264,10 +264,10 @@ async def build_worker(
     engine = make_engine(settings.database_url)
     sessions = make_sessionmaker(engine)
     saver, pool = await open_checkpointer(settings)
-    runner = WorkflowRunner(sessions, llm or build_runtime_gateway(settings), saver)
+    sources = build_sources(settings, sessions, source_transport, rate_limits=source_rate_limits)
+    runner = WorkflowRunner(sessions, llm or build_runtime_gateway(settings), saver, sources)
     dispatcher = Dispatcher(sessions)
     register_consumers(dispatcher)
-    sources = build_sources(settings, sessions, source_transport, rate_limits=source_rate_limits)
 
     async def close() -> None:
         await sources.aclose()

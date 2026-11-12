@@ -216,6 +216,26 @@ class CrossrefClient:
             next_cursor=message.get("next-cursor"),
         )
 
+    async def topic_search(self, query: str, *, rows: int = 20) -> SearchPage:
+        """First page of a relevance-ranked topic search (``query``, ``sort=relevance``).
+
+        Verified 2026-11-12: with ``cursor=*`` Crossref ignores relevance (the response
+        reports ``search-terms: null`` and returns unrelated works), so topic searches send
+        no cursor; deep paging is not needed for a relevance-ranked first page.
+        """
+        params = {"query": query, "rows": max(1, min(rows, MAX_ROWS)), "sort": "relevance"}
+        response = await self._client.get(API_URL, params=params, endpoint_class="search")
+        message = _message(response.text, "work-list")
+        works = [
+            await self._store(parse_work(item), response.fetched_at, response.cache_hit)
+            for item in message.get("items", [])
+        ]
+        return SearchPage(
+            works=works,
+            total_results=int(message.get("total-results", 0)),
+            next_cursor=None,
+        )
+
     async def _store(
         self, work: CrossrefWork, fetched_at: datetime, cache_hit: bool
     ) -> FetchedWork:

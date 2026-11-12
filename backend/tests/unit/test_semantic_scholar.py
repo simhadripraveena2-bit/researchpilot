@@ -103,7 +103,7 @@ async def test_authenticated_endpoints_and_pagination() -> None:
         "deep residual learning image recognition", limit=2, offset=page1.next_offset or 0
     )
     assert (page1.total, page1.next_offset, page2.next_offset) == (55050, 2, 4)
-    assert {p.paper_id for p in page1.papers}.isdisjoint({p.paper_id for p in page2.papers})
+    assert {h.paper.paper_id for h in page1.hits}.isdisjoint({h.paper.paper_id for h in page2.hits})
     refs = await client.references(fetched.paper.paper_id, limit=3)
     assert (len(refs.papers), refs.next_offset) == (3, 3)
     assert all(r.headers["x-api-key"] == KEY for r in transport.requests)

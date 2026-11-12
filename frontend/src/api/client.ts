@@ -1,5 +1,6 @@
 import type {
   Checkpoint,
+  DiscoverySummary,
   Journey,
   ObjectiveContent,
   ObjectiveVersion,
@@ -53,6 +54,15 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ status }),
     }),
+  startDiscovery: (projectId: string) =>
+    request<{ id: string; objective_version: number }>(`/projects/${projectId}/discovery-runs`, {
+      method: "POST",
+      body: JSON.stringify({}),
+    }),
+  discoverySummary: (runId: string) =>
+    request<DiscoverySummary>(`/runs/${runId}/discovery/summary`),
+  retryRun: (runId: string) =>
+    request<{ status: string }>(`/runs/${runId}/retry`, { method: "POST" }),
   getObjective: (projectId: string, version?: number) =>
     request<ObjectiveVersion>(
       `/projects/${projectId}/objective${version ? `?version=${version}` : ""}`,

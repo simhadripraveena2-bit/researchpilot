@@ -32,7 +32,9 @@ from researchpilot.domain.enums import (
 )
 from researchpilot.domain.identifiers import Identifier, IdentifierScheme
 from researchpilot.integrations.base import SourceBudgetExhausted, SourceError, SourceNotFound
+from researchpilot.integrations.openalex import FetchedOpenAlexWork
 from researchpilot.integrations.registry import Sources
+from researchpilot.integrations.semantic_scholar import FetchedS2Paper
 from researchpilot.services.dates.store import resolve_paper_dates
 from researchpilot.services.matching.links import StatedLink, record_links
 from researchpilot.services.papers.ingest import add_date
@@ -99,7 +101,21 @@ async def _openalex(
     manifestation_id: uuid.UUID,
     identifier: Identifier,
 ) -> None:
-    fetched = await sources.openalex.fetch(identifier)
+    await apply_openalex(
+        session, paper_id, manifestation_id, identifier, await sources.openalex.fetch(identifier)
+    )
+
+
+async def apply_openalex(
+    session: AsyncSession,
+    paper_id: uuid.UUID,
+    manifestation_id: uuid.UUID,
+    identifier: Identifier,
+    fetched: FetchedOpenAlexWork,
+) -> None:
+    """Attach an OpenAlex record (from a lookup or a search hit) to a manifestation:
+    its id, secondary dates and the identifiers it lists. ``identifier`` is the one the
+    record was found by (never recorded as a listing link to itself)."""
     work, record_id, at = fetched.work, fetched.source_record_id, fetched.fetched_at
     await _link_record(session, paper_id, manifestation_id, record_id)
     await _add_own_identifier(
@@ -178,7 +194,23 @@ async def _semantic_scholar(
     manifestation_id: uuid.UUID,
     identifier: Identifier,
 ) -> None:
-    fetched = await sources.semantic_scholar.fetch(identifier)
+    await apply_semantic_scholar(
+        session,
+        paper_id,
+        manifestation_id,
+        identifier,
+        await sources.semantic_scholar.fetch(identifier),
+    )
+
+
+async def apply_semantic_scholar(
+    session: AsyncSession,
+    paper_id: uuid.UUID,
+    manifestation_id: uuid.UUID,
+    identifier: Identifier,
+    fetched: FetchedS2Paper,
+) -> None:
+    """Attach a Semantic Scholar record (lookup or search hit) to a manifestation."""
     paper, record_id, at = fetched.paper, fetched.source_record_id, fetched.fetched_at
     await _link_record(session, paper_id, manifestation_id, record_id)
     await _add_own_identifier(

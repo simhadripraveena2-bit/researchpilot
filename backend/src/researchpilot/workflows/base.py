@@ -10,6 +10,7 @@ from typing import Any
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from researchpilot.db.session import session_scope
+from researchpilot.integrations.registry import Sources
 from researchpilot.llm.gateway import LLMGateway
 from researchpilot.runs.events import record_event
 from researchpilot.runs.service import RunCancelled, is_cancelled
@@ -21,6 +22,7 @@ class WorkflowDeps:
     config: dict[str, Any]
     sessions: async_sessionmaker[AsyncSession]
     llm: LLMGateway
+    sources: Sources | None = None  # scholarly source clients (discovery workflows)
 
     async def ensure_not_cancelled(self) -> None:
         """Cooperative cancellation point: stop the workflow if its run was cancelled."""

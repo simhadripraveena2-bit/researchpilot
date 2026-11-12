@@ -516,15 +516,18 @@ class RelationWriter:
         *,
         run_id: uuid.UUID | None = None,
         from_item_id: uuid.UUID | None = None,
+        objective_version: int | None = None,
     ) -> bool:
-        """IN_PROJECT. Records the active objective version (kept for good). False if the item
+        """IN_PROJECT. Records the objective version it was found with (kept for good): the
+        run's version when given, otherwise the project's active version. False if the item
         was already in the project (its original record is unchanged)."""
         added = await session.scalar(
             sa.text(
                 "INSERT INTO project_items (project_id, item_id, discovered_via, "
                 "discovered_in_run_id, discovered_from_item_id, objective_version) "
-                "VALUES (:p, :i, :v, :r, :f, (SELECT o.version FROM projects pr "
-                "JOIN research_objectives o ON o.id = pr.active_objective_id WHERE pr.id = :p)) "
+                "VALUES (:p, :i, :v, :r, :f, coalesce(CAST(:ov AS integer), (SELECT o.version "
+                "FROM projects pr JOIN research_objectives o ON o.id = pr.active_objective_id "
+                "WHERE pr.id = :p))) "
                 "ON CONFLICT DO NOTHING RETURNING item_id"
             ),
             {
@@ -533,6 +536,7 @@ class RelationWriter:
                 "v": discovered_via.value,
                 "r": run_id,
                 "f": from_item_id,
+                "ov": objective_version,
             },
         )
         return added is not None

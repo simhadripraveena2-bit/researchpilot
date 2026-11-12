@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 from dataclasses import dataclass, replace
 
 import httpx
@@ -17,6 +18,7 @@ from researchpilot.integrations.base import (
     PostgresHttpCache,
     PostgresRateLimiter,
     RateLimiter,
+    Sleep,
     SourceClient,
     SourceRecordStore,
 )
@@ -54,6 +56,10 @@ class Sources:
         await self.http.aclose()
 
 
+async def _no_sleep(seconds: float) -> None:
+    return None
+
+
 def user_agent(settings: Settings) -> str:
     # A contact address is sent only when the operator configured one (CONTACT_EMAIL).
     contact = f"; mailto:{settings.contact_email}" if settings.contact_email else ""
@@ -74,16 +80,26 @@ def build_sources(
         follow_redirects=True,
     )
     limiter: RateLimiter = PostgresRateLimiter(sessions) if rate_limits else _NoWait()
+    # Tests with recorded responses also skip retry backoff (retries still happen).
+    sleep: Sleep = asyncio.sleep if rate_limits else _no_sleep
     cache = PostgresHttpCache(sessions)
     records = SourceRecordStore(sessions)
     return Sources(
         http=http,
         records=records,
-        arxiv=ArxivClient(SourceClient(ARXIV_POLICY, http, limiter, cache), records),
-        arxiv_feed=ArxivFeedClient(SourceClient(FEED_POLICY, http, limiter, cache), records),
-        crossref=CrossrefClient(SourceClient(CROSSREF_POLICY, http, limiter, cache), records),
-        biorxiv=PreprintServerClient(SourceClient(BIORXIV_POLICY, http, limiter, cache), records),
-        medrxiv=PreprintServerClient(SourceClient(MEDRXIV_POLICY, http, limiter, cache), records),
+        arxiv=ArxivClient(SourceClient(ARXIV_POLICY, http, limiter, cache, sleep=sleep), records),
+        arxiv_feed=ArxivFeedClient(
+            SourceClient(FEED_POLICY, http, limiter, cache, sleep=sleep), records
+        ),
+        crossref=CrossrefClient(
+            SourceClient(CROSSREF_POLICY, http, limiter, cache, sleep=sleep), records
+        ),
+        biorxiv=PreprintServerClient(
+            SourceClient(BIORXIV_POLICY, http, limiter, cache, sleep=sleep), records
+        ),
+        medrxiv=PreprintServerClient(
+            SourceClient(MEDRXIV_POLICY, http, limiter, cache, sleep=sleep), records
+        ),
         openalex=OpenAlexClient(
             SourceClient(
                 OPENALEX_POLICY,
@@ -91,6 +107,7 @@ def build_sources(
                 limiter,
                 cache,
                 headers=_bearer(settings.openalex_api_key),
+                sleep=sleep,
                 budget=OpenAlexBudget(settings.openalex_daily_budget_usd),
             ),
             records,
@@ -104,6 +121,7 @@ def build_sources(
                 limiter,
                 cache,
                 headers=_key(settings.s2_api_key),
+                sleep=sleep,
             ),
             records,
         ),

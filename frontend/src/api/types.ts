@@ -48,6 +48,7 @@ export interface Run {
   project_id: string;
   workflow: string;
   status: RunStatus;
+  objective_version?: number | null;
   created_at: string;
   started_at: string | null;
   finished_at: string | null;
@@ -137,4 +138,23 @@ export interface ObjectiveVersionSummary {
   based_on_version: number | null;
   change_summary: string | null;
   created_at: string;
+}
+
+export interface DiscoverySourceReport {
+  source: string;
+  state: "ok" | "partial" | "budget_exhausted" | "unavailable" | "not_run";
+  queries: number;
+  succeeded: number;
+}
+
+/** GET /runs/{id}/discovery/summary (subset shown in the UI). */
+export interface DiscoverySummary {
+  run_id: string;
+  status: RunStatus;
+  objective_version: number;
+  searches: { planned: number; succeeded: number };
+  sources: DiscoverySourceReport[];
+  papers: { total: number; added: number; already_in_project: number; flagged: number };
+  version_matching: { merges: number; possible_matches_awaiting_review: number };
+  excluded_terms: string[];
 }

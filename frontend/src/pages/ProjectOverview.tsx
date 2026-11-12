@@ -11,6 +11,10 @@ export function ProjectOverview() {
   const project = useQuery({ queryKey: ["project", projectId], queryFn: () => api.getProject(projectId) });
   const journey = useQuery({ queryKey: ["journey", projectId], queryFn: () => api.journey(projectId) });
   const runs = useQuery({ queryKey: ["runs", projectId], queryFn: () => api.listRuns(projectId) });
+  const discover = useMutation({
+    mutationFn: () => api.startDiscovery(projectId),
+    onSuccess: ({ id }) => navigate(`/projects/${projectId}/runs/${id}`),
+  });
   const check = useMutation({
     mutationFn: () => api.startSystemCheck(projectId),
     onSuccess: ({ id }) => navigate(`/projects/${projectId}/runs/${id}`),
@@ -39,10 +43,22 @@ export function ProjectOverview() {
         </Link>
       </div>
       <div className="rounded-md border bg-white p-4 dark:bg-slate-900">
+        <h2 className="font-medium">Find papers</h2>
+        <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
+          Search arXiv, Crossref, Semantic Scholar and OpenAlex using your research objective.
+          You will see the search plan and confirm it first.
+        </p>
+        {discover.isError && <ErrorNotice error={discover.error} />}
+        <button
+          onClick={() => discover.mutate()}
+          disabled={discover.isPending}
+          className="mb-6 rounded-md bg-indigo-600 px-3 py-2 text-sm font-medium text-white disabled:opacity-60"
+        >
+          Find papers
+        </button>
         <h2 className="font-medium">System check</h2>
         <p className="mb-3 text-sm text-slate-600 dark:text-slate-400">
-          Paper search arrives in the next release. Meanwhile you can run a short check that
-          everything works, including a step where you are asked to confirm.
+          A short check that everything works, including a step where you are asked to confirm.
         </p>
         {check.isError && <ErrorNotice error={check.error} />}
         <button

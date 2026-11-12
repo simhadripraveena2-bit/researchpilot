@@ -128,8 +128,9 @@ class SemanticScholarClient:
         )
         return FetchedS2Paper(paper, record_id, response.fetched_at, response.cache_hit)
 
-    async def search(self, query: str, *, limit: int = 20, offset: int = 0) -> S2Page:
-        """One page of relevance search (``/paper/search``)."""
+    async def search(self, query: str, *, limit: int = 20, offset: int = 0) -> S2SearchPage:
+        """One page of relevance search (``/paper/search``); every hit is stored as a source
+        record and returned with its record id."""
         response = await self._client.get(
             f"{API_URL}/paper/search",
             params={
@@ -142,9 +143,18 @@ class SemanticScholarClient:
         )
         body = _json(response.text)
         rows, nxt = _page(body, None)
-        return S2Page(
-            [await self._store(r, response.fetched_at) for r in rows], body.get("total"), nxt
-        )
+        hits = []
+        for row in rows:
+            paper = parse_paper(row)
+            record_id = await self._records.save(
+                SourceName.SEMANTIC_SCHOLAR,
+                paper.paper_id,
+                "paper/search",
+                dict(row),
+                response.fetched_at,
+            )
+            hits.append(FetchedS2Paper(paper, record_id, response.fetched_at, response.cache_hit))
+        return S2SearchPage(hits, body.get("total"), nxt)
 
     async def references(self, paper_id: str, *, limit: int = 100, offset: int = 0) -> S2Page:
         """One page of the papers a paper cites (``/paper/{id}/references``)."""
@@ -160,12 +170,12 @@ class SemanticScholarClient:
         rows, nxt = _page(_json(response.text), "citedPaper")
         return S2Page([parse_paper(r) for r in rows], None, nxt)
 
-    async def _store(self, raw: Mapping[str, Any], fetched_at: datetime) -> S2Paper:
-        paper = parse_paper(raw)
-        await self._records.save(
-            SourceName.SEMANTIC_SCHOLAR, paper.paper_id, "paper/search", dict(raw), fetched_at
-        )
-        return paper
+
+@dataclass(frozen=True)
+class S2SearchPage:
+    hits: list[FetchedS2Paper]
+    total: int | None
+    next_offset: int | None
 
 
 @dataclass(frozen=True)

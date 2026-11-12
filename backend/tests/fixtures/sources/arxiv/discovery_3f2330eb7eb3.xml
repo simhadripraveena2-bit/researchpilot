@@ -1,0 +1,162 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/4mkO0eOtVH4cBBDbroUEmOkn9gg</id>
+  <title>arXiv Query: search_query=all:"molecular property prediction" AND all:"message passing" AND all:graph AND all:transformers ANDNOT all:"protein folding"&amp;id_list=&amp;start=0&amp;max_results=5</title>
+  <updated>2026-11-12T16:07:34Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=all:%22molecular+property+prediction%22+AND+(all:%22message+passing%22+AND+(all:graph+AND+(all:transformers+ANDNOT+all:%22protein+folding%22)))&amp;start=0&amp;max_results=5&amp;id_list=" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>5</opensearch:itemsPerPage>
+  <opensearch:totalResults>14</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2302.02947v2</id>
+    <title>GPS++: Reviving the Art of Message Passing for Molecular Property Prediction</title>
+    <updated>2023-05-12T15:52:18Z</updated>
+    <link href="https://arxiv.org/abs/2302.02947v2" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2302.02947v2" rel="related" type="application/pdf" title="pdf"/>
+    <summary>We present GPS++, a hybrid Message Passing Neural Network / Graph Transformer model for molecular property prediction. Our model integrates a well-tuned local message passing component and biased global attention with other key ideas from prior literature to achieve state-of-the-art results on large-scale molecular dataset PCQM4Mv2. Through a thorough ablation study we highlight the impact of individual components and find that nearly all of the model's performance can be maintained without any use of global self-attention, showing that message passing is still a competitive approach for 3D molecular property prediction despite the recent dominance of graph transformers. We also find that our approach is significantly more accurate than prior art when 3D positional information is not available.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2023-02-06T17:30:22Z</published>
+    <arxiv:comment>arXiv admin note: text overlap with arXiv:2212.02229</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Dominic Masters</name>
+    </author>
+    <author>
+      <name>Josef Dean</name>
+    </author>
+    <author>
+      <name>Kerstin Klaser</name>
+    </author>
+    <author>
+      <name>Zhiyi Li</name>
+    </author>
+    <author>
+      <name>Sam Maddrell-Mander</name>
+    </author>
+    <author>
+      <name>Adam Sanders</name>
+    </author>
+    <author>
+      <name>Hatem Helal</name>
+    </author>
+    <author>
+      <name>Deniz Beker</name>
+    </author>
+    <author>
+      <name>Andrew Fitzgibbon</name>
+    </author>
+    <author>
+      <name>Shenyang Huang</name>
+    </author>
+    <author>
+      <name>Ladislav Rampášek</name>
+    </author>
+    <author>
+      <name>Dominique Beaini</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2111.04718v4</id>
+    <title>Directional Message Passing on Molecular Graphs via Synthetic Coordinates</title>
+    <updated>2022-04-05T12:22:39Z</updated>
+    <link href="https://arxiv.org/abs/2111.04718v4" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2111.04718v4" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Graph neural networks that leverage coordinates via directional message passing have recently set the state of the art on multiple molecular property prediction tasks. However, they rely on atom position information that is often unavailable, and obtaining it is usually prohibitively expensive or even impossible. In this paper we propose synthetic coordinates that enable the use of advanced GNNs without requiring the true molecular configuration. We propose two distances as synthetic coordinates: Distance bounds that specify the rough range of molecular configurations, and graph-based distances using a symmetric variant of personalized PageRank. To leverage both distance and angular information we propose a method of transforming normal graph neural networks into directional MPNNs. We show that with this transformation we can reduce the error of a normal graph neural network by 55% on the ZINC benchmark. We furthermore set the state of the art on ZINC and coordinate-free QM9 by incorporating synthetic coordinates in the SMP and DimeNet++ models. Our implementation is available online.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="physics.chem-ph" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="physics.comp-ph" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="q-bio.QM" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2021-11-08T18:53:58Z</published>
+    <arxiv:comment>Published as a conference paper at NeurIPS 2021. Author name changed from Johannes Klicpera to Johannes Gasteiger</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Johannes Gasteiger</name>
+    </author>
+    <author>
+      <name>Chandan Yeshwanth</name>
+    </author>
+    <author>
+      <name>Stephan Günnemann</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2411.13688v1</id>
+    <title>Investigating Graph Neural Networks and Classical Feature-Extraction Techniques in Activity-Cliff and Molecular Property Prediction</title>
+    <updated>2024-11-20T20:07:48Z</updated>
+    <link href="https://arxiv.org/abs/2411.13688v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2411.13688v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Molecular featurisation refers to the transformation of molecular data into numerical feature vectors. It is one of the key research areas in molecular machine learning and computational drug discovery. Recently, message-passing graph neural networks (GNNs) have emerged as a novel method to learn differentiable features directly from molecular graphs. While such techniques hold great promise, further investigations are needed to clarify if and when they indeed manage to definitively outcompete classical molecular featurisations such as extended-connectivity fingerprints (ECFPs) and physicochemical-descriptor vectors (PDVs). We systematically explore and further develop classical and graph-based molecular featurisation methods for two important tasks: molecular property prediction, in particular, quantitative structure-activity relationship (QSAR) prediction, and the largely unexplored challenge of activity-cliff (AC) prediction. We first give a technical description and critical analysis of PDVs, ECFPs and message-passing GNNs, with a focus on graph isomorphism networks (GINs). We then conduct a rigorous computational study to compare the performance of PDVs, ECFPs and GINs for QSAR and AC-prediction. Following this, we mathematically describe and computationally evaluate a novel twin neural network model for AC-prediction. We further introduce an operation called substructure pooling for the vectorisation of structural fingerprints as a natural counterpart to graph pooling in GNN architectures. We go on to propose Sort &amp; Slice, a simple substructure-pooling technique for ECFPs that robustly outperforms hash-based folding at molecular property prediction. Finally, we outline two ideas for future research: (i) a graph-based self-supervised learning strategy to make classical molecular featurisations trainable, and (ii) trainable substructure-pooling via differentiable self-attention.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="q-bio.BM" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="stat.ML" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2024-11-20T20:07:48Z</published>
+    <arxiv:comment>Doctoral Thesis (Mathematical Institute, University of Oxford)</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Markus Dablander</name>
+    </author>
+    <arxiv:doi>10.5287/ora-xkardwd6z</arxiv:doi>
+    <link rel="related" href="https://doi.org/10.5287/ora-xkardwd6z" title="doi"/>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2504.20127v3</id>
+    <title>Learning Hierarchical Interaction for Accurate Molecular Property Prediction</title>
+    <updated>2025-05-12T00:56:02Z</updated>
+    <link href="https://arxiv.org/abs/2504.20127v3" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2504.20127v3" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Discovering molecules with desirable molecular properties, including ADMET profiles, is of great importance in drug discovery. Existing approaches typically employ deep learning models, such as Graph Neural Networks (GNNs) and Transformers, to predict these molecular properties by learning from diverse chemical information. However, these models often fail to efficiently capture and utilize the hierarchical nature of molecular structures, and often lack mechanisms for effective interaction among multi-level features. To address these limitations, we propose a Hierarchical Interaction Message Passing Mechanism, which serves as the foundation of our novel model, the Hierarchical Interaction Message Net (HimNet). Our method enables interaction-aware representation learning across atomic, motif, and molecular levels via hierarchical attention-guided message passing. This design allows HimNet to effectively balance global and local information, ensuring rich and task-relevant feature extraction for downstream property prediction tasks, such as Blood-Brain Barrier Permeability (BBBP). We systematically evaluate HimNet on eleven datasets, including eight widely-used MoleculeNet benchmarks and three challenging, high-value datasets for metabolic stability, malaria activity, and liver microsomal clearance, covering a broad range of pharmacologically relevant properties. Extensive experiments demonstrate that HimNet achieves the best or near-best performance in most molecular property prediction tasks. Furthermore, our method exhibits promising hierarchical interpretability, aligning well with chemical intuition on representative molecules. We believe that HimNet offers an accurate and efficient solution for molecular activity and ADMET property prediction, contributing to advanced decision-making in the early stages of drug discovery.</summary>
+    <category term="q-bio.BM" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-04-28T15:19:28Z</published>
+    <arxiv:primary_category term="q-bio.BM"/>
+    <author>
+      <name>Huiyang Hong</name>
+    </author>
+    <author>
+      <name>Xinkai Wu</name>
+    </author>
+    <author>
+      <name>Hongyu Sun</name>
+    </author>
+    <author>
+      <name>Chaoyang Xie</name>
+    </author>
+    <author>
+      <name>Qi Wang</name>
+    </author>
+    <author>
+      <name>Yuquan Li</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2106.15516v3</id>
+    <title>GeoT: A Geometry-aware Transformer for Reliable Molecular Property Prediction and Chemically Interpretable Representation Learning</title>
+    <updated>2023-06-28T13:51:49Z</updated>
+    <link href="https://arxiv.org/abs/2106.15516v3" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2106.15516v3" rel="related" type="application/pdf" title="pdf"/>
+    <summary>In recent years, molecular representation learning has emerged as a key area of focus in various chemical tasks. However, many existing models fail to fully consider the geometric information of molecular structures, resulting in less intuitive representations. Moreover, the widely used message-passing mechanism is limited to provide the interpretation of experimental results from a chemical perspective. To address these challenges, we introduce a novel Transformer-based framework for molecular representation learning, named the Geometry-aware Transformer (GeoT). GeoT learns molecular graph structures through attention-based mechanisms specifically designed to offer reliable interpretability, as well as molecular property prediction. Consequently, GeoT can generate attention maps of interatomic relationships associated with training objectives. In addition, GeoT demonstrates comparable performance to MPNN-based models while achieving reduced computational complexity. Our comprehensive experiments, including an empirical simulation, reveal that GeoT effectively learns the chemical insights into molecular structures, bridging the gap between artificial intelligence and molecular sciences.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="physics.chem-ph" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2021-06-29T15:47:18Z</published>
+    <arxiv:comment>This paper is currently under review. The code is available at this URL: https://github.com/oleneyl/geometry-aware-transformer</arxiv:comment>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Bumju Kwak</name>
+    </author>
+    <author>
+      <name>Jiwon Park</name>
+    </author>
+    <author>
+      <name>Taewon Kang</name>
+    </author>
+    <author>
+      <name>Jeonghee Jo</name>
+    </author>
+    <author>
+      <name>Byunghan Lee</name>
+    </author>
+    <author>
+      <name>Sungroh Yoon</name>
+    </author>
+  </entry>
+</feed>

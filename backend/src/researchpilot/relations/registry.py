@@ -231,6 +231,7 @@ DECLARED_NON_SOURCES: dict[str, str] = {
     "evidence_spans.manifestation_id": "node data (version the quote comes from)",
     "author_affiliations.paper_id": "edge property of AFFILIATED_WITH",
     "entity_links.manifestation_id": "edge property (version the evidence comes from)",
+    "search_results.item_id": "search log (the work a search hit became)",
     **{f"{t}.manifestation_id": "node data (owning version)" for t in _MANIFESTATION_DATA},
     **{
         f"{t}.paper_id": "node data (owning version's work, denormalised; moves with HAS_VERSION)"

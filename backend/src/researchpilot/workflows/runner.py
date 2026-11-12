@@ -12,6 +12,7 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker
 
 from researchpilot.db.session import session_scope
 from researchpilot.domain.enums import RunStatus, Workflow
+from researchpilot.integrations.registry import Sources
 from researchpilot.llm.gateway import LLMGateway
 from researchpilot.runs import service
 from researchpilot.workflows.base import WorkflowDeps
@@ -24,10 +25,12 @@ class WorkflowRunner:
         sessions: async_sessionmaker[AsyncSession],
         llm: LLMGateway,
         checkpointer: AsyncPostgresSaver,
+        sources: Sources | None = None,
     ) -> None:
         self._sessions = sessions
         self._llm = llm
         self._checkpointer = checkpointer
+        self._sources = sources
 
     async def execute(self, run_id: uuid.UUID, resume: dict[str, Any] | None = None) -> RunStatus:
         async with session_scope(self._sessions) as session:
@@ -42,7 +45,11 @@ class WorkflowRunner:
 
         spec = WORKFLOWS[Workflow(row.workflow)]
         deps = WorkflowDeps(
-            run_id=run_id, config=dict(row.config), sessions=self._sessions, llm=self._llm
+            run_id=run_id,
+            config=dict(row.config),
+            sessions=self._sessions,
+            llm=self._llm,
+            sources=self._sources,
         )
         graph = spec.build(deps).compile(checkpointer=self._checkpointer)
         thread = {"configurable": {"thread_id": str(run_id)}}
@@ -67,12 +74,22 @@ class WorkflowRunner:
         if "__interrupt__" in result:
             return await self._pause(run_id, result["__interrupt__"][0].value)
 
+        outcome = result.get("outcome")
+        status, message, error = {
+            "stopped": (RunStatus.CANCELLED, "Stopped at your request", None),
+            "failed": (
+                RunStatus.FAILED,
+                "Could not finish",
+                {"message": str(result.get("error") or "the workflow failed")},
+            ),
+            "partial": (
+                RunStatus.PARTIALLY_SUCCEEDED,
+                "Finished, but some sources could not be searched",
+                None,
+            ),
+        }.get(str(outcome), (RunStatus.SUCCEEDED, "Finished", None))
         async with session_scope(self._sessions) as session:
-            stopped = result.get("outcome") == "stopped"
-            status = RunStatus.CANCELLED if stopped else RunStatus.SUCCEEDED
-            finished = await service.finish(
-                session, run_id, status, "Stopped at your request" if stopped else "Finished"
-            )
+            finished = await service.finish(session, run_id, status, message, error)
         # A run cancelled after its last step keeps its CANCELLED status (finish is a no-op).
         return status if finished else RunStatus.CANCELLED
 

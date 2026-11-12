@@ -1,0 +1,89 @@
+<?xml version='1.0' encoding='UTF-8'?>
+<feed xmlns:opensearch="http://a9.com/-/spec/opensearch/1.1/" xmlns:arxiv="http://arxiv.org/schemas/atom" xmlns="http://www.w3.org/2005/Atom">
+  <id>https://arxiv.org/api/8D3uYyKrPtBt6TgE1RvyKMt++O4</id>
+  <title>arXiv Query: search_query=&amp;id_list=2602.22405,2505.01912&amp;start=0&amp;max_results=2</title>
+  <updated>2026-11-12T16:11:05Z</updated>
+  <link href="https://arxiv.org/api/query?search_query=&amp;start=0&amp;max_results=2&amp;id_list=2602.22405,2505.01912" type="application/atom+xml"/>
+  <opensearch:itemsPerPage>2</opensearch:itemsPerPage>
+  <opensearch:totalResults>2</opensearch:totalResults>
+  <opensearch:startIndex>0</opensearch:startIndex>
+  <entry>
+    <id>http://arxiv.org/abs/2505.01912v3</id>
+    <title>BOOM: Benchmarking Out-Of-distribution Molecular Property Predictions of Machine Learning Models</title>
+    <updated>2026-09-15T22:05:23Z</updated>
+    <link href="https://arxiv.org/abs/2505.01912v3" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2505.01912v3" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Data-driven molecular discovery leverages artificial intelligence/machine learning (AI/ML) and generative modeling to filter and design novel molecules. Discovering novel molecules requires accurate out-of-distribution (OOD) predictions, but ML models struggle to generalize OOD. Currently, no systematic benchmarks exist for molecular OOD prediction tasks. We present $\mathbf{BOOM}$, $\mathbf{b}$enchmarks for $\mathbf{o}$ut-$\mathbf{o}$f-distribution $\mathbf{m}$olecular property predictions: a chemically-informed benchmark for OOD performance on common molecular property prediction tasks. We evaluate over 150 model-task combinations to benchmark deep learning models on OOD performance. Overall, we find that no existing model achieves strong generalization across all tasks: even the top-performing model exhibited an average OOD error 3x higher than in-distribution. Current chemical foundation models do not show strong OOD extrapolation, while models with high inductive bias can perform well on OOD tasks with simple, specific properties. We perform extensive ablation experiments, highlighting how data generation, pre-training, hyperparameter optimization, model architecture, and molecular representation impact OOD performance. Developing models with strong OOD generalization is a new frontier challenge in chemical ML. This open-source benchmark is available at https://github.com/FLASK-LLNL/BOOM</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cond-mat.mtrl-sci" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.AI" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2025-05-03T19:51:23Z</published>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Evan R. Antoniuk</name>
+    </author>
+    <author>
+      <name>Shehtab Zaman</name>
+    </author>
+    <author>
+      <name>Tal Ben-Nun</name>
+    </author>
+    <author>
+      <name>Peggy Li</name>
+    </author>
+    <author>
+      <name>James Diffenderfer</name>
+    </author>
+    <author>
+      <name>Busra Sahin</name>
+    </author>
+    <author>
+      <name>Obadiah Smolenski</name>
+    </author>
+    <author>
+      <name>Everett Grethel</name>
+    </author>
+    <author>
+      <name>Tim Hsu</name>
+    </author>
+    <author>
+      <name>Anna M. Hiszpanski</name>
+    </author>
+    <author>
+      <name>Kenneth Chiu</name>
+    </author>
+    <author>
+      <name>Bhavya Kailkhura</name>
+    </author>
+    <author>
+      <name>Brian Van Essen</name>
+    </author>
+  </entry>
+  <entry>
+    <id>http://arxiv.org/abs/2602.22405v1</id>
+    <title>MolFM-Lite: Multi-Modal Molecular Property Prediction with Conformer Ensemble Attention and Cross-Modal Fusion</title>
+    <updated>2026-02-25T20:59:14Z</updated>
+    <link href="https://arxiv.org/abs/2602.22405v1" rel="alternate" type="text/html"/>
+    <link href="https://arxiv.org/pdf/2602.22405v1" rel="related" type="application/pdf" title="pdf"/>
+    <summary>Most machine learning models for molecular property prediction rely on a single molecular representation (either a sequence, a graph, or a 3D structure) and treat molecular geometry as static. We present MolFM-Lite, a multi-modal model that jointly encodes SELFIES sequences (1D), molecular graphs (2D), and conformer ensembles (3D) through cross-attention fusion, while conditioning predictions on experimental context via Feature-wise Linear Modulation (FiLM). Our main methodological contributions are: (1) a conformer ensemble attention mechanism that combines learnable attention with Boltzmann-weighted priors over multiple RDKit-generated conformers, capturing the thermodynamic distribution of molecular shapes; and (2) a cross-modal fusion layer where each modality can attend to others, enabling complementary information sharing. We evaluate on four MoleculeNet scaffold-split benchmarks using our model's own splits, and report all baselines re-evaluated under the same protocol. Comprehensive ablation studies across all four datasets confirm that each architectural component contributes independently, with tri-modal fusion providing 7-11% AUC improvement over single-modality baselines and conformer ensembles adding approximately 2% over single-conformer variants. Pre-training on ZINC250K (~250K molecules) using cross-modal contrastive and masked-atom objectives enables effective weight initialization at modest compute cost. We release all code, trained models, and data splits to support reproducibility.</summary>
+    <category term="cs.LG" scheme="http://arxiv.org/schemas/atom"/>
+    <category term="cs.CV" scheme="http://arxiv.org/schemas/atom"/>
+    <published>2026-02-25T20:59:14Z</published>
+    <arxiv:primary_category term="cs.LG"/>
+    <author>
+      <name>Syed Omer Shah</name>
+    </author>
+    <author>
+      <name>Mohammed Maqsood Ahmed</name>
+    </author>
+    <author>
+      <name>Danish Mohiuddin Mohammed</name>
+    </author>
+    <author>
+      <name>Shahnawaz Alam</name>
+    </author>
+    <author>
+      <name>Mohd Vahaj ur Rahman</name>
+    </author>
+  </entry>
+</feed>
