@@ -1,22 +1,31 @@
-"""Generate the B0 review sheets (G-MATCH, G-LATEST-DATES) for human reviewers.
+"""Generate the two-stage blind B0 review sheets (G-MATCH, G-LATEST-DATES).
 
-    uv run python scripts/b0_review_sheets.py          # write the sheets
-    uv run python scripts/b0_review_sheets.py --check  # fail if they are out of date
+    uv run python scripts/b0_review_sheets.py          # write sheets (and new answer files)
+    uv run python scripts/b0_review_sheets.py --check  # fail if anything is out of date
 
-For every case the sheet shows the AI-proposed label, the expected system behaviour, the
-original recorded source records (summarised from the files themselves, with their paths),
-the evidence and provenance, and known ambiguities or missing evidence. It never changes a
-label: reviewers record decisions in ``docs/evaluation/review/*_decisions.csv`` (created
-empty once, never overwritten). A label changes only when a person edits the dataset
-(``benchmarks/build_b0.py``) after review - see docs/evaluation/review/README.md.
+Stage 1 (independent ground truth): per case, the identifiers, the original recorded source
+records with their paths and request URLs, primary-source URLs and record evidence. It
+shows **no** AI-proposed label, expected system behaviour, AI explanation, AI notes, case
+category or benchmark result, and cases appear in a fixed shuffled order (case IDs are kept).
+Reviewers answer in ``stage1/*_stage1.csv``.
 
-Output is deterministic (no timestamps), so ``--check`` can run in CI.
+Stage 2 (expected policy): for a case whose Stage 1 row is complete, the AI-proposed label,
+expected system behaviour, explanation and notes are revealed next to the reviewer's Stage 1
+answer. At that moment the Stage 1 row is fingerprinted in ``stage1_locks.json``; any later
+change to a locked Stage 1 answer makes the generator stop with an error. Reviewers answer in
+``stage2/*_stage2.csv``.
+
+The generator creates each answer CSV once (only case IDs filled in) and never writes to it
+again; it never changes a label or fills a reviewer field. Output is deterministic (no
+timestamps), so ``--check`` can run in CI. See docs/evaluation/review/README.md.
 """
 
 from __future__ import annotations
 
 import argparse
 import csv
+import hashlib
+import io
 import json
 import re
 import sys
@@ -36,16 +45,62 @@ DATASETS = {
 }
 DIRS = ("crossref", "biorxiv", "openalex", "semantic_scholar", "arxiv_rss")
 ATOM = {"a": "http://www.w3.org/2005/Atom", "arxiv": "http://arxiv.org/schemas/atom"}
-DECISION_COLUMNS = [
+STAGE1_MATCH_COLUMNS = [
     "case_id",
-    "ai_proposed_label",
+    "reviewer",
+    "true_relationship",  # same_work | related_not_same | different | cannot_determine
+    "relationship_detail",  # one of RELATIONSHIP_DETAILS
+    "evidence_urls",  # primary pages opened, separated by spaces
+    "notes",
+    "submitted_at",  # ISO date; filling it submits the row and unlocks Stage 2
+]
+STAGE1_DATE_COLUMNS = [
+    "case_id",
+    "reviewer",
+    "determinable",  # yes | not_determinable
+    "true_first_public_date",  # YYYY-MM-DD (only if determinable)
+    "true_event",  # one of TRUE_EVENTS (only if determinable)
+    "true_manifestation",  # preprint | published | other (only if determinable)
+    "evidence_urls",
+    "notes",
+    "submitted_at",
+]
+STAGE2_COLUMNS = [
+    "case_id",
     "reviewer",
     "decision",  # confirm | correct | reject_case | unsure
     "corrected_label",
     "reason",
-    "evidence_checked",  # primary pages actually opened (URLs)
+    "evidence_urls",
     "review_date",
 ]
+RELATIONSHIPS = {"same_work", "related_not_same", "different", "cannot_determine"}
+RELATIONSHIP_DETAILS = {
+    "preprint_and_published",
+    "versions_of_one_preprint",
+    "reprint_or_translation",
+    "copy_or_redeposit",
+    "proceedings_and_paper",
+    "comment_or_reply",
+    "correction_retraction_notice",
+    "component_or_supplement",
+    "peer_review_document",
+    "extension_or_follow_up",
+    "part_of_series",
+    "same_title_unrelated",
+    "unrelated",
+    "other",
+}
+DETERMINABLE = {"yes", "not_determinable"}
+TRUE_EVENTS = {
+    "arxiv_announcement",
+    "arxiv_submission",
+    "server_posting",
+    "online_publication",
+    "issue_publication",
+    "other",
+}
+MANIFESTATIONS = {"preprint", "published", "other"}
 DECISIONS = {"confirm", "correct", "reject_case", "unsure"}
 
 # --- reviewer notes written by the AI assistant during preparation ---------------------
@@ -270,7 +325,7 @@ def crossref_summary(rec: Recordings, doi: str) -> tuple[list[str], list[str]]:
     r = rec.get("api.crossref.org", f"/works/{doi}")
     if r is None:
         return [f"Crossref `{doi}`: **not recorded**"], []
-    head = f"Crossref `{doi}` (HTTP {r.status}, recorded {r.recorded}; `{_rel(r.path)}`)"
+    head = f"Crossref `{doi}` (HTTP {r.status}, recorded {r.recorded}; `{_rel(r.path)}`; <{r.url}>)"
     data = _json(r.path)
     if r.status != 200 or not isinstance(data, dict):
         return [head + ": no record"], []
@@ -329,7 +384,7 @@ def biorxiv_summary(rec: Recordings, doi: str) -> tuple[list[str], list[str]]:
             continue
         data = _json(r.path) or {}
         coll = data.get("collection") or []
-        head = f"{server} API `{doi}` (recorded {r.recorded}; `{_rel(r.path)}`)"
+        head = f"{server} API `{doi}` (recorded {r.recorded}; `{_rel(r.path)}`; <{r.url}>)"
         if not coll:
             lines.append(head + ": no posts")
             continue
@@ -358,7 +413,8 @@ def arxiv_summary(rec: Recordings, arxiv_id: str) -> tuple[list[str], list[str]]
     authors = [a.findtext("a:name", "", ATOM) for a in entry.findall("a:author", ATOM)]
     doi = text("arxiv:doi")
     lines = [
-        f"arXiv API `{arxiv_id}` (`{_rel(path)}`)",
+        f"arXiv API `{arxiv_id}` (`{_rel(path)}`; "
+        f"<https://export.arxiv.org/api/query?id_list={arxiv_id}&max_results=1>)",
         f"  - title: {re.sub(r'\\s+', ' ', text('a:title'))[:140]}",
         f"  - authors ({len(authors)}): {', '.join(authors[:6])}"
         + (" ..." if len(authors) > 6 else ""),
@@ -382,7 +438,7 @@ def aggregator_summary(rec: Recordings, identifier: str) -> list[str]:
     if oa is not None:
         d = _json(oa.path) or {}
         lines.append(
-            f"OpenAlex (`{_rel(oa.path)}`, HTTP {oa.status}): publication_date "
+            f"OpenAlex (`{_rel(oa.path)}`, HTTP {oa.status}, <{oa.url}>): publication_date "
             f"{d.get('publication_date', '-')}, created_date {d.get('created_date', '-')}"
         )
     s2 = rec.get("api.semanticscholar.org", s2_path)
@@ -390,14 +446,13 @@ def aggregator_summary(rec: Recordings, identifier: str) -> list[str]:
         d = _json(s2.path) or {}
         ids = d.get("externalIds") or {}
         lines.append(
-            f"Semantic Scholar (`{_rel(s2.path)}`, HTTP {s2.status}): publicationDate "
+            f"Semantic Scholar (`{_rel(s2.path)}`, HTTP {s2.status}, <{s2.url}>): "
+            "publicationDate "
             f"{d.get('publicationDate', '-')}; ids "
             + ", ".join(f"{k}={v}" for k, v in sorted(ids.items()) if k in ("ArXiv", "DOI"))
         )
     if not lines:
-        lines.append(
-            "OpenAlex / Semantic Scholar: not recorded (treated as unavailable in the run)"
-        )
+        lines.append("OpenAlex / Semantic Scholar: not recorded (not available to the system)")
     return lines
 
 
@@ -448,21 +503,67 @@ def feed_lines(rec: Recordings, feeds: list[str], ids: list[str]) -> list[str]:
     return out
 
 
-# --- sheets ----------------------------------------------------------------------------------
+# --- shared case content ---------------------------------------------------------------------
 
 
-def load_decisions(path: Path, ids: list[str]) -> dict[str, dict[str, str]]:
-    if not path.exists():
-        return {}
-    with path.open(newline="") as handle:
-        rows = list(csv.DictReader(handle))
-    unknown = sorted({r["case_id"] for r in rows} - set(ids))
-    if unknown:
-        raise SystemExit(f"{path}: unknown case ids {unknown}")
-    bad = sorted({r["decision"] for r in rows if r["decision"]} - DECISIONS)
-    if bad:
-        raise SystemExit(f"{path}: unknown decisions {bad} (allowed: {sorted(DECISIONS)})")
-    return {r["case_id"]: r for r in rows}
+class ReviewError(SystemExit):
+    """Reviewer files are inconsistent; nothing is written."""
+
+
+def _ids(c: dict[str, Any], match: bool) -> list[str]:
+    return [c["a"], c["b"]] if match else list(c["identifiers"])
+
+
+def primary_urls(rec: Recordings, identifier: str) -> list[str]:
+    """Pages a reviewer opens to establish the truth (not the recorded API responses)."""
+    if _is_arxiv(identifier):
+        return [
+            f"https://arxiv.org/abs/{identifier} (abstract page, submission history)",
+            "https://arxiv.org/list/<primary category>/... (announcement listings)",
+        ]
+    urls = [f"https://doi.org/{identifier} (publisher / landing page)"]
+    if identifier.lower().startswith("10.1101/"):
+        for server in ("biorxiv", "medrxiv"):
+            r = rec.get("api.biorxiv.org", f"/details/{server}/{identifier}")
+            if r is not None and (_json(r.path) or {}).get("collection"):
+                urls.append(f"https://www.{server}.org/content/{identifier} (posting history)")
+    return urls
+
+
+def record_block(c: dict[str, Any], rec: Recordings, match: bool) -> tuple[list[str], list[str]]:
+    """The recorded source records of a case, as neutral evidence. Returns lines and the
+    records that are missing."""
+    ids = _ids(c, match)
+    lines = ["- **Primary sources to check:**"]
+    for identifier in ids:
+        lines += [f"  - {url}" for url in primary_urls(rec, identifier)]
+    lines.append(
+        "- **Original source records (recorded API responses: what the system can see, "
+        "not the ground truth):**"
+    )
+    missing: list[str] = []
+    cited: set[str] = set()
+    for identifier in ids:
+        rec_lines, linked = records(rec, identifier)
+        lines += [f"  - {line}" if not line.startswith("  ") else f"  {line}" for line in rec_lines]
+        missing += [line for line in rec_lines if "not recorded**" in line]
+        if not match:
+            cited |= set(linked) - {i.lower() for i in ids}
+    for identifier in sorted(cited):
+        rec_lines, _ = records(rec, identifier)
+        lines.append(f"  - (record cited as a version by a record above) `{identifier}`:")
+        lines += [f"    - {line.strip().removeprefix('- ')}" for line in rec_lines]
+        missing += [line for line in rec_lines if "not recorded**" in line]
+    if not match and c.get("capture_feeds"):
+        lines += [
+            f"  - {line}" if not line.startswith("  ") else f"  {line}"
+            for line in feed_lines(rec, c["capture_feeds"], ids)
+        ]
+    if match:
+        titles = {i: title_of(rec, i) for i in ids}
+        if all(titles.values()) and len({_norm(t) for t in titles.values() if t}) > 1:
+            lines.append("- **Note:** the titles in the two records are not identical.")
+    return lines, missing
 
 
 def match_label(c: dict[str, Any]) -> str:
@@ -475,161 +576,353 @@ def date_label(c: dict[str, Any]) -> str:
     return f"{e.get('first_public_date') or 'none'} ({e.get('basis') or '-'}), {e['confidence']}"
 
 
-def _review_lines(decision: dict[str, str] | None) -> list[str]:
-    if not decision or not decision.get("decision"):
-        return [
-            "- **Review status:** not reviewed (label is AI-proposed)",
-            "- **Reviewer decision:** _(blank: record in the decisions CSV)_",
-        ]
-    return [
-        f"- **Review status:** reviewed by `{decision['reviewer']}` on "
-        f"{decision['review_date']}: **{decision['decision']}**",
-        f"- **Reviewer decision:** {decision['corrected_label'] or '(label confirmed)'}; "
-        f"reason: {decision['reason']}; checked: {decision['evidence_checked']}",
-    ]
-
-
-def sheet(benchmark: str, data: dict[str, Any], rec: Recordings, decisions_path: Path) -> str:
-    match = benchmark == "G-MATCH"
-    cases = data.get("match_cases", []) if match else data.get("date_cases", [])
-    decisions = load_decisions(decisions_path, [c["id"] for c in cases])
-    reviewed = sum(1 for d in decisions.values() if d.get("decision"))
+def policy_block(c: dict[str, Any], match: bool) -> list[str]:
+    """Everything Stage 1 hides: the AI-proposed label and expected system behaviour."""
+    e = c["expected"]
     lines = [
-        f"# {benchmark} B0 review sheet ({data['version']})",
-        "",
-        "Generated by `backend/scripts/b0_review_sheets.py` from "
-        f"`{_rel(DATASETS[benchmark])}` and the recorded responses. Do not edit by hand.",
-        "",
-        "**Every label on this sheet is AI-proposed** (`labels.status = ai_proposed`, "
-        "`proposed_by = ai-assistant`). None is human-reviewed or expert-validated until a "
-        "reviewer decision is recorded in "
-        f"`{_rel(decisions_path)}` and a person updates the dataset.",
-        "",
-        f"Review progress: **{reviewed} / {len(cases)}** cases have a recorded decision.",
-        "",
-        "How to review: docs/evaluation/review/README.md. Open the primary pages (arXiv "
-        "abstract page and listing, preprint-server page, publisher landing page); the "
-        "recorded API responses below are what the system saw, not the ground truth.",
-        "",
+        f"- **Category (AI):** {c['category']}"
+        + (" (adversarial)" if c.get("adversarial") else ""),
+        f"- **AI-proposed label:** {match_label(c) if match else date_label(c)} "
+        f"(status `{c['labels']['status']}`, guideline `{c['labels']['guideline']}`)",
     ]
+    if match:
+        lines.append(f"- **Ground truth (AI-proposed):** `{e['relationship']}`")
+        lines.append(
+            f"- **Expected system behaviour:** outcome `{e['outcome']}`; auto-merge allowed: "
+            f"{'yes' if e['auto_merge_allowed'] else 'no'}; user confirmation required: "
+            f"{'yes' if e['user_confirmation_required'] else 'no'}; decisive evidence: "
+            f"{'yes' if e['decisive_evidence'] else 'no'}; both orders must agree; a merge "
+            "must be reversible and its rejection sticky"
+        )
+    else:
+        extra = []
+        if e.get("first_public_kind"):
+            extra.append(f"first public manifestation `{e['first_public_kind']}`")
+        if e.get("candidate_public_date"):
+            extra.append(f"unconfirmed candidate {e['candidate_public_date']}")
+        if e.get("window"):
+            w = e["window"]
+            window = w if isinstance(w, str) else f"{w[0]}..{w[1]}"
+            extra.append(f"window {window} -> release type `{e.get('release_type')}`")
+        lines.append(
+            "- **Ground truth (AI-proposed):** not recorded separately in B0 (the B0 label is "
+            "the expected system behaviour; compare it with your Stage 1 truth)"
+        )
+        lines.append(
+            f"- **Expected system behaviour:** first public date "
+            f"{e.get('first_public_date') or 'none'} (basis {e.get('basis') or '-'}), "
+            f"confidence `{e['confidence']}`" + ("; " + "; ".join(extra) if extra else "")
+        )
+    lines += [f"- **Explanation (AI):** {c['explanation']}", "- **Evidence (AI-cited):**"]
+    lines += [f"  - {item}" for item in c["evidence"]]
+    flags = list(NOTES.get(c["id"], []))
+    if match and e["relationship"] == "same_work" and e["outcome"] != "auto_match":
+        flags.append(
+            "TRUTH vs POLICY: AI-proposed truth is same_work; the expected output is a possible "
+            "match because no link exists in the records."
+        )
+    if match and e["relationship"] == "related_not_same" and e["outcome"] == "no_match":
+        flags.append(
+            "TRUTH vs POLICY: related_not_same without a matcher-usable link; the expected "
+            "output is no_match."
+        )
     if not match:
-        lines += [GENERAL_DATE_NOTE, ""]
-    for c in cases:
-        ids = [c["a"], c["b"]] if match else c["identifiers"]
-        e = c["expected"]
-        lines += [
-            f"## {c['id']} - {c['category']}" + (" (adversarial)" if c.get("adversarial") else ""),
-            "",
-            f"- **Identifiers:** {', '.join(f'`{i}`' for i in ids)}"
-            + (
-                f"; captured feeds: {', '.join(c['capture_feeds'])}"
-                if c.get("capture_feeds")
-                else ""
-            ),
-            f"- **AI-proposed label:** {match_label(c) if match else date_label(c)} "
-            f"(status `{c['labels']['status']}`, guideline `{c['labels']['guideline']}`)",
+        flags.append(GENERAL_DATE_NOTE)
+    lines.append("- **AI notes for the reviewer:**")
+    lines += [f"  - {f}" for f in flags] or ["  - none"]
+    return lines
+
+
+# --- answer files ------------------------------------------------------------------------------
+
+
+def _read_csv(path: Path, columns: list[str], ids: list[str]) -> dict[str, dict[str, str]]:
+    if not path.exists():
+        return {}
+    with path.open(newline="") as handle:
+        reader = csv.DictReader(handle)
+        if reader.fieldnames != columns:
+            raise ReviewError(f"{path}: columns must be {columns}, found {reader.fieldnames}")
+        rows = list(reader)
+    found = [r["case_id"] for r in rows]
+    if sorted(found) != sorted(set(found)) or set(found) - set(ids):
+        raise ReviewError(f"{path}: duplicate or unknown case ids")
+    return {r["case_id"]: {k: (v or "").strip() for k, v in r.items()} for r in rows}
+
+
+def _check_values(
+    path: Path, case_id: str, row: dict[str, str], allowed: dict[str, set[str]]
+) -> None:
+    for column, values in allowed.items():
+        if row.get(column) and row[column] not in values:
+            raise ReviewError(
+                f"{path}: {case_id}: {column}={row[column]!r} not in {sorted(values)}"
+            )
+
+
+def stage1_complete(row: dict[str, str] | None, match: bool, path: Path) -> bool:
+    """A Stage 1 row is submitted when ``submitted_at`` is set; it must then be complete."""
+    if not row or not row.get("submitted_at"):
+        return False
+    case_id = row["case_id"]
+    missing = [k for k in ("reviewer", "evidence_urls") if not row.get(k)]
+    if match:
+        missing += [k for k in ("true_relationship", "relationship_detail") if not row.get(k)]
+    elif row.get("determinable") == "yes":
+        missing += [
+            k
+            for k in ("true_first_public_date", "true_event", "true_manifestation")
+            if not row.get(k)
         ]
-        if match:
-            lines.append(
-                f"- **Expected system behaviour:** outcome `{e['outcome']}`; auto-merge allowed: "
-                f"{'yes' if e['auto_merge_allowed'] else 'no'}; user confirmation required: "
-                f"{'yes' if e['user_confirmation_required'] else 'no'}; decisive evidence: "
-                f"{'yes' if e['decisive_evidence'] else 'no'}; both orders must agree; a merge "
-                "must be reversible and its rejection sticky"
-            )
-        else:
-            extra = []
-            if e.get("first_public_kind"):
-                extra.append(f"first public manifestation `{e['first_public_kind']}`")
-            if e.get("candidate_public_date"):
-                extra.append(f"unconfirmed candidate {e['candidate_public_date']}")
-            if e.get("window"):
-                w = e["window"]
-                window = w if isinstance(w, str) else f"{w[0]}..{w[1]}"
-                extra.append(f"window {window} -> release type `{e.get('release_type')}`")
-            lines.append(
-                f"- **Expected system behaviour:** first public date "
-                f"{e.get('first_public_date') or 'none'} (basis {e.get('basis') or '-'}), "
-                f"confidence `{e['confidence']}`" + ("; " + "; ".join(extra) if extra else "")
-            )
-        lines += [f"- **Explanation (AI):** {c['explanation']}", "- **Evidence (AI-cited):**"]
-        lines += [f"  - {item}" for item in c["evidence"]]
-        lines.append("- **Original source records (as recorded):**")
-        missing = []
-        followed: set[str] = set()
-        for identifier in ids:
-            rec_lines, linked = records(rec, identifier)
-            lines += [
-                f"  - {line}" if not line.startswith("  ") else f"  {line}" for line in rec_lines
-            ]
-            missing += [line for line in rec_lines if "not recorded**" in line]
-            if not match:
-                followed |= set(linked) - {i.lower() for i in ids}
-        for identifier in sorted(followed):
-            rec_lines, _ = records(rec, identifier)
-            lines.append(f"  - (linked version, fetched by ingestion) `{identifier}`:")
-            lines += [f"    - {line.strip().removeprefix('- ')}" for line in rec_lines]
-            missing += [line for line in rec_lines if "not recorded**" in line]
-        if not match and c.get("capture_feeds"):
-            lines += [
-                f"  - {line}" if not line.startswith("  ") else f"  {line}"
-                for line in feed_lines(rec, c["capture_feeds"], ids)
-            ]
-        flags = list(NOTES.get(c["id"], []))
-        if match and e["relationship"] == "same_work" and e["outcome"] != "auto_match":
-            flags.append(
-                "TRUTH vs POLICY: ground truth is same_work; the expected output is a possible "
-                "match because no link exists in the records."
-            )
-        if match and e["relationship"] == "related_not_same" and e["outcome"] == "no_match":
-            flags.append(
-                "TRUTH vs POLICY: related_not_same without a matcher-usable link; the "
-                "expected output is no_match."
-            )
-        if match:
-            titles = {i: title_of(rec, i) for i in ids}
-            if all(titles.values()) and len({_norm(t) for t in titles.values() if t}) > 1:
-                flags.append(
-                    "TITLES DIFFER between the two records (retitled or different work): "
-                    + " | ".join(f"`{i}`: {t}" for i, t in titles.items())
-                    + (
-                        ". If same work, consider category explicit_link_different_title."
-                        if e["relationship"] == "same_work"
-                        and c["category"] != "explicit_link_different_title"
-                        else ""
-                    )
-                )
-        flags += [f"MISSING EVIDENCE: {m.strip()}" for m in missing]
-        lines.append("- **Ambiguity / missing evidence:**")
-        lines += [f"  - {f}" for f in flags] or ["  - none noted (reviewer to confirm)"]
-        lines += [*_review_lines(decisions.get(c["id"])), ""]
-    return "\n".join(lines)
+    elif row.get("determinable") != "not_determinable":
+        missing.append("determinable")
+    if missing:
+        raise ReviewError(f"{path}: {case_id} is submitted but lacks {missing}")
+    if not match and row.get("determinable") == "yes":
+        if not re.fullmatch(r"\d{4}-\d{2}-\d{2}", row["true_first_public_date"]):
+            raise ReviewError(f"{path}: {case_id}: true_first_public_date must be YYYY-MM-DD")
+    return True
 
 
-def empty_decisions(cases: list[dict[str, Any]], benchmark: str) -> str:
-    from io import StringIO
+def fingerprint(row: dict[str, str]) -> str:
+    return hashlib.sha256(json.dumps(row, sort_keys=True).encode()).hexdigest()
 
-    buffer = StringIO()
-    writer = csv.DictWriter(buffer, DECISION_COLUMNS, lineterminator="\n")
+
+def blank_csv(columns: list[str], ids: list[str]) -> str:
+    buffer = io.StringIO()
+    writer = csv.DictWriter(buffer, columns, lineterminator="\n")
     writer.writeheader()
-    for c in cases:
-        label = match_label(c) if benchmark == "G-MATCH" else date_label(c)
-        writer.writerow({"case_id": c["id"], "ai_proposed_label": label})
+    for case_id in ids:
+        writer.writerow({"case_id": case_id})
     return buffer.getvalue()
 
 
-def build() -> dict[Path, str]:
-    out: dict[Path, str] = {}
-    for benchmark, path in DATASETS.items():
+def presentation_order(ids: list[str]) -> list[str]:
+    """Fixed shuffled order: consecutive IDs share a category, so ID order would hint at
+    the AI's categories."""
+    return sorted(ids, key=lambda i: hashlib.sha256(f"b0-review:{i}".encode()).hexdigest())
+
+
+# --- sheets ------------------------------------------------------------------------------------
+
+
+def stage1_sheet(
+    benchmark: str,
+    data: dict[str, Any],
+    rec: Recordings,
+    answers: dict[str, dict[str, str]],
+    csv_path: Path,
+    out: Path,
+) -> str:
+    match = benchmark == "G-MATCH"
+    cases = {c["id"]: c for c in (data.get("match_cases") or data.get("date_cases") or [])}
+    submitted = sum(1 for a in answers.values() if a.get("submitted_at"))
+    if match:
+        task = [
+            "Decide, from the primary sources, how the two identifiers are related.",
+            "",
+            f"- `true_relationship`: {', '.join(sorted(RELATIONSHIPS))}",
+            f"- `relationship_detail`: {', '.join(sorted(RELATIONSHIP_DETAILS))}",
+        ]
+    else:
+        task = [
+            "Decide, from the primary sources, when the work (all its versions) first became "
+            "publicly available.",
+            "",
+            f"- `determinable`: {', '.join(sorted(DETERMINABLE))}. Use `not_determinable` when "
+            "the sources do not establish a day; leave the date fields empty then.",
+            "- `true_first_public_date`: YYYY-MM-DD",
+            f"- `true_event`: {', '.join(sorted(TRUE_EVENTS))}",
+            f"- `true_manifestation`: {', '.join(sorted(MANIFESTATIONS))}",
+        ]
+    lines = [
+        f"# {benchmark} B0 review - Stage 1: independent ground truth",
+        "",
+        "Generated by `backend/scripts/b0_review_sheets.py`. Do not edit by hand.",
+        "",
+        "This sheet deliberately shows **no AI-proposed label, expected system behaviour, "
+        "explanation, category or benchmark result**. Do not open the Stage 2 sheets, the "
+        "benchmark datasets (`backend/benchmarks/`) or the reports (`docs/evaluation/reports/`) "
+        "before submitting Stage 1 for a case.",
+        "",
+        *task,
+        "",
+        f"Record answers in `{csv_path.relative_to(out)}` (one row per case; `evidence_urls` "
+        "are the primary pages you opened; set `submitted_at` to the date when the row is "
+        "final: a submitted row is locked once Stage 2 is revealed).",
+        "",
+        f"Submitted: **{submitted} / {len(cases)}**. Cases are listed in a fixed shuffled order.",
+        "",
+    ]
+    for case_id in presentation_order(list(cases)):
+        c = cases[case_id]
+        ids = _ids(c, match)
+        block, missing = record_block(c, rec, match)
+        lines += [
+            f"## {case_id}",
+            "",
+            f"- **Identifiers:** {', '.join(f'`{i}`' for i in ids)}"
+            + (
+                f"; arXiv announcement feeds captured for this case: "
+                f"{', '.join(c['capture_feeds'])}"
+                if c.get("capture_feeds")
+                else ""
+            ),
+            *block,
+        ]
+        if missing:
+            lines += [f"- **Missing record:** {m.strip()}" for m in missing]
+        status = "submitted" if answers.get(case_id, {}).get("submitted_at") else "open"
+        lines += [f"- **Stage 1 status:** {status}", ""]
+    return "\n".join(lines)
+
+
+def stage2_sheet(
+    benchmark: str,
+    data: dict[str, Any],
+    rec: Recordings,
+    stage1: dict[str, dict[str, str]],
+    revealed: set[str],
+    stage2: dict[str, dict[str, str]],
+    csv_path: Path,
+    out: Path,
+) -> str:
+    match = benchmark == "G-MATCH"
+    cases = {c["id"]: c for c in (data.get("match_cases") or data.get("date_cases") or [])}
+    decided = sum(1 for r in stage2.values() if r.get("decision"))
+    lines = [
+        f"# {benchmark} B0 review - Stage 2: expected-policy assessment",
+        "",
+        "Generated by `backend/scripts/b0_review_sheets.py`. Do not edit by hand.",
+        "",
+        "A case appears here **only after its Stage 1 row is submitted**; its Stage 1 answer is "
+        "then locked (`stage1_locks.json`). **All labels below are AI-proposed** "
+        "(`labels.status = ai_proposed`); none is human-reviewed until a decision is recorded "
+        "and a person updates the dataset.",
+        "",
+        "Two different questions:",
+        "",
+        "- **Ground truth** (Stage 1): what is true, from the primary sources.",
+        "- **Expected system behaviour** (this stage): does the AI-proposed expectation follow "
+        "from the documented guideline (`docs/evaluation/G_MATCH_GUIDELINES.md`, "
+        "`G_LATEST_DATES_GUIDELINES.md`) and the records available to the system? It may "
+        "legitimately differ from the truth (see the TRUTH vs POLICY notes).",
+        "",
+        f"Record decisions in `{csv_path.relative_to(out)}`: `decision` is one of "
+        f"{', '.join(sorted(DECISIONS))}; `corrected_label` only for `correct`; `reason`; "
+        "`evidence_urls`; `review_date`.",
+        "",
+        f"Revealed: **{len(revealed)} / {len(cases)}**; decided: **{decided} / {len(cases)}**.",
+        "",
+    ]
+    for case_id in sorted(cases):
+        if case_id not in revealed:
+            lines += [f"## {case_id}", "", "- Locked: Stage 1 not submitted.", ""]
+            continue
+        c = cases[case_id]
+        s1 = stage1[case_id]
+        if match:
+            truth = f"`{s1['true_relationship']}` ({s1['relationship_detail']})"
+        elif s1["determinable"] == "yes":
+            truth = (
+                f"{s1['true_first_public_date']} ({s1['true_event']}, {s1['true_manifestation']})"
+            )
+        else:
+            truth = "not determinable"
+        block, _ = record_block(c, rec, match)
+        d = stage2.get(case_id, {})
+        lines += [
+            f"## {case_id}",
+            "",
+            f"- **Identifiers:** {', '.join(f'`{i}`' for i in _ids(c, match))}",
+            f"- **Your Stage 1 ground truth (locked):** {truth}; by `{s1['reviewer']}` on "
+            f"{s1['submitted_at']}; evidence: {s1['evidence_urls']}"
+            + (f"; notes: {s1['notes']}" if s1.get("notes") else ""),
+            *policy_block(c, match),
+            *block,
+            "- **Stage 2 decision:** "
+            + (
+                f"**{d['decision']}** by `{d.get('reviewer', '')}` on {d.get('review_date', '')}"
+                + (f"; corrected label: {d['corrected_label']}" if d.get("corrected_label") else "")
+                + f"; reason: {d.get('reason', '')}"
+                if d.get("decision")
+                else "_(blank: record in the Stage 2 CSV)_"
+            ),
+            "",
+        ]
+    return "\n".join(lines)
+
+
+# --- build ---------------------------------------------------------------------------------------
+
+
+def build(out: Path = OUT, datasets: dict[str, Path] = DATASETS) -> dict[Path, str]:
+    """Everything the generator would write. Never includes an existing answer CSV."""
+    files: dict[Path, str] = {}
+    locks_path = out / "stage1_locks.json"
+    locks: dict[str, str] = json.loads(locks_path.read_text()) if locks_path.exists() else {}
+    new_locks = dict(locks)
+    for benchmark, path in datasets.items():
+        match = benchmark == "G-MATCH"
         data = json.loads(path.read_text())
         rec = Recordings([(path.parent / r).resolve() for r in data["recordings"]])
-        stem = benchmark.lower().replace("-", "_")
-        decisions = OUT / f"{stem}_b0_decisions.csv"
         cases = data.get("match_cases") or data.get("date_cases") or []
-        if not decisions.exists():
-            out[decisions] = empty_decisions(cases, benchmark)
-        out[OUT / f"{stem.upper()}_B0_REVIEW.md"] = sheet(benchmark, data, rec, decisions)
-    return out
+        ids = [c["id"] for c in cases]
+        stem = benchmark.lower().replace("-", "_")
+        s1_path = out / "stage1" / f"{stem}_b0_stage1.csv"
+        s2_path = out / "stage2" / f"{stem}_b0_stage2.csv"
+        s1_cols = STAGE1_MATCH_COLUMNS if match else STAGE1_DATE_COLUMNS
+        stage1 = _read_csv(s1_path, s1_cols, ids)
+        stage2 = _read_csv(s2_path, STAGE2_COLUMNS, ids)
+        allowed = (
+            {"true_relationship": RELATIONSHIPS, "relationship_detail": RELATIONSHIP_DETAILS}
+            if match
+            else {
+                "determinable": DETERMINABLE,
+                "true_event": TRUE_EVENTS,
+                "true_manifestation": MANIFESTATIONS,
+            }
+        )
+        revealed: set[str] = set()
+        for case_id in ids:
+            row = stage1.get(case_id)
+            if row:
+                _check_values(s1_path, case_id, row, allowed)
+            if case_id in locks:
+                if row is None or fingerprint(row) != locks[case_id]:
+                    raise ReviewError(
+                        f"{s1_path}: Stage 1 answer for {case_id} changed after Stage 2 was "
+                        "revealed; restore it (see git history). Locked answers cannot change."
+                    )
+                revealed.add(case_id)
+            elif stage1_complete(row, match, s1_path):
+                assert row is not None
+                new_locks[case_id] = fingerprint(row)
+                revealed.add(case_id)
+        for case_id, row in stage2.items():
+            _check_values(s2_path, case_id, row, {"decision": DECISIONS})
+            if any(v for k, v in row.items() if k != "case_id") and case_id not in revealed:
+                raise ReviewError(f"{s2_path}: {case_id} has a Stage 2 answer before Stage 1")
+        if not s1_path.exists():
+            files[s1_path] = blank_csv(s1_cols, presentation_order(ids))
+        if not s2_path.exists():
+            files[s2_path] = blank_csv(STAGE2_COLUMNS, ids)
+        files[out / "stage1" / f"{stem.upper()}_B0_STAGE1.md"] = stage1_sheet(
+            benchmark, data, rec, stage1, s1_path, out / "stage1"
+        )
+        files[out / "stage2" / f"{stem.upper()}_B0_STAGE2.md"] = stage2_sheet(
+            benchmark, data, rec, stage1, revealed, stage2, s2_path, out / "stage2"
+        )
+    files[locks_path] = json.dumps(dict(sorted(new_locks.items())), indent=1) + "\n"
+    return files
+
+
+def write(files: dict[Path, str]) -> None:
+    for path, text in files.items():
+        if path.suffix == ".csv" and path.exists():
+            raise ReviewError(f"refusing to overwrite reviewer file {path}")
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_text(text)
 
 
 def main() -> None:
@@ -644,9 +937,8 @@ def main() -> None:
             sys.exit(1)
         print("review sheets up to date")
         return
-    OUT.mkdir(parents=True, exist_ok=True)
-    for path, text in files.items():
-        path.write_text(text)
+    write(files)
+    for path in files:
         print(_rel(path))
 
 

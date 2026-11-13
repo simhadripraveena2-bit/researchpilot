@@ -17,7 +17,7 @@ B1 labels and a B3 custodian. No result so far is evidence of held-out performan
 | Protocol guard (split rules, B3 refusal, aggregate-only B3) | Done; procedural limits documented | `B3_ISOLATION.md` |
 | B0 datasets | 52 + 43 real cases; **all labels AI-proposed** | `backend/benchmarks/` |
 | B0 results | All gates pass on AI-proposed labels | `reports/` (not a release estimate) |
-| B0 review sheets | Generated for all 95 cases; **0 / 95 reviewed** | `review/` |
+| B0 review (two-stage blind) | Stage 1 (independent ground truth) and Stage 2 (expected-policy check) sheets generated for all 95 cases; **Stage 1: 0 / 95 submitted; Stage 2: 0 / 95 decided** | `review/README.md` |
 | Annotation guidelines | Draft v0.1, with gaps listed | `G_MATCH_GUIDELINES.md`, `G_LATEST_DATES_GUIDELINES.md` |
 | Evaluation roles (D19) | **No role assigned**; template ready | `EVALUATION_ROLES.md` |
 | B1 protocol | Designed, not approved, not started | `B1_PROTOCOL.md` |
@@ -54,13 +54,31 @@ No label was changed. The review sheets flag:
 | # | Step | Who | Blocks |
 |---|---|---|---|
 | 1 | Name the evaluation lead and the B3 custodian (D19: "before M1a ends") | Project owner | M1a close |
-| 2 | Review the 95 B0 labels (priority list in `review/README.md`); rule on guideline gaps | Team reviewer(s); evaluation lead | Trustworthy B0 regression baseline |
+| 2 | Review the 95 B0 cases in two blind stages (`review/README.md`): Stage 1 ground truth, then Stage 2 expected-policy decisions; rule on guideline gaps; report truth-vs-policy gaps | Team reviewer(s); evaluation lead | Trustworthy B0 regression baseline |
 | 3 | Implement the B1 schema, form generator, agreement calculator and work-hash CI check | Developers (code) | B1 start |
 | 4 | Approve B1 sample design and sizes; name annotators and adjudicator | Evaluation lead | B1 start |
 | 5 | Pilot (20 items per benchmark), agreement check, guideline revision | Annotators, lead | Full B1 |
 | 6 | Full B1 annotation, adjudication, approval, freeze | Annotators, adjudicator, lead | Calibration (D30) |
 | 7 | Set up B3 storage, access, hashing, overlap check; draw and label B3 | Custodian, B3 annotators | Release decision |
 | 8 | Locked B3 run on a tagged commit; aggregate report | Custodian | R1 release gate |
+
+## B0 review process (two-stage, blind)
+
+- **Stage 1** asks for the ground truth from primary sources (G-MATCH: relationship and
+  detail; G-LATEST-DATES: true first public date, event and manifestation, or "not
+  determinable"). It shows no AI label, expected behaviour, explanation, category or
+  benchmark result.
+- **Stage 2** reveals the AI-proposed label and expected system behaviour for a case only
+  after its Stage 1 answer is submitted. That answer is then locked by fingerprint. The
+  reviewer confirms, corrects, rejects the case or marks it unsure, with reasons and
+  evidence.
+- The generator never writes reviewer files and never changes labels. Tests cover blindness,
+  the reveal order, locking and preservation.
+- **Limitation:** blindness is procedural for anyone with repository access. Datasets,
+  reports and earlier commits contain the labels. Reviewers should work from the Stage 1
+  packet only (sheet and CSV).
+- **After review:** compare Stage 1 truths with the AI-proposed expectations. This measures
+  the truth-vs-policy gaps, such as GD-B0-041/042 and the submission-only cases.
 
 ## What can and cannot be claimed today
 

@@ -261,7 +261,7 @@ rate ≥ 0.95 of raw outputs.
 - B1–B3 do not exist. B3 isolation (what code enforces, what it cannot, and the custodian
   proposal) is described in `docs/evaluation/B3_ISOLATION.md`.
 - Governance (no roles assigned yet, D19): `docs/evaluation/EVALUATION_ROLES.md` (template),
-  `B1_PROTOCOL.md`, `COVERAGE_PLAN.md`, `B3_CHECKLIST.md`, B0 review sheets in
+  `B1_PROTOCOL.md`, `COVERAGE_PLAN.md`, `B3_CHECKLIST.md`, two-stage blind B0 review in
   `docs/evaluation/review/` (0 of 95 reviewed), readiness in `M1A_EVALUATION_READINESS.md`.
 
 ## 4. How evaluation runs
